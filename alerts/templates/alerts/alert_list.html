@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>告警管理 - 网络管理系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        /* ── NetBox-style layout ── */
+        body { background: #f8f9fa; display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* Top navbar */
+        .nb-topbar {
+            background: #1a2332;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid #0d1520;
+        }
+        .nb-topbar-brand {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nb-topbar-brand svg { color: #4dabf7; }
+        .nb-topbar-spacer { flex: 1; }
+        .nb-topbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.3125rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+            color: #adb5bd;
+            background: transparent;
+        }
+        .nb-topbar-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nb-topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #adb5bd;
+            font-size: 0.8125rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .nb-topbar-avatar {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: #2c3e50;
+            border: 1px solid #3d5166;
+            color: #74c0fc;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.6875rem;
+        }
+        .nb-logout-btn {
+            background: none; border: none; cursor: pointer;
+            color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem;
+            border-radius: 4px; transition: background 0.15s;
+        }
+        .nb-logout-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+        /* ── Main layout: sidebar + content ── */
+        .nb-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
+
+        /* Sidebar */
+        .nb-sidebar {
+
+            width: 220px;
+
+            min-width: 220px;
+
+            background: #1e2d3d;
+
+            border-right: 1px solid #162030;
+
+            padding: 1rem 0;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 0;
+
+            position: fixed;
+
+            top: 48px;
+
+            left: 0;
+
+            height: calc(100vh - 48px);
+
+            overflow-y: auto;
+
+        }
+        .nb-sidebar-section {
+            padding: 0.5rem 0.75rem 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #4a6080;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .nb-sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.4375rem 1rem;
+            color: #8ba3bc;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.12s, color 0.12s;
+            border-left: 3px solid transparent;
+        }
+        .nb-sidebar-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: #c9d8e8;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item.active {
+            background: rgba(77,171,247,0.1);
+            color: #74c0fc;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+        .nb-sidebar-divider { height: 1px; background: #162030; margin: 0.5rem 0; }
+
+        /* Alert badge dot */
+        .nb-sidebar-item { position: relative; }
+        .nb-sidebar-alert-dot {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background: #dc2626;
+            border-radius: 50%;
+            display: none;
+            animation: pulse-dot 2s infinite;
+        }
+        .nb-sidebar-alert-dot.has-alerts { display: block; }
+        @keyframes pulse-dot {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
+            70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        /* Main content */
+        .nb-main { flex: 1; padding: 1.5rem; overflow-x: hidden; margin-left: 220px; }
+
+        /* Page header */
+        .nb-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .nb-page-title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #1a2332;
+            letter-spacing: -0.02em;
+        }
+        .nb-page-subtitle { font-size: 0.875rem; color: #6c757d; margin-top: 0.125rem; }
+
+        /* Data table */
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
+        .data-table th { background: var(--gray-50); padding: 1rem; text-align: left; border-bottom: 2px solid var(--gray-200); font-weight: 600; color: var(--gray-700); }
+        .data-table td { padding: 1rem; border-bottom: 1px solid var(--gray-100); }
+        .data-table tbody tr:hover { background: var(--gray-50); }
+        .link-primary { color: var(--primary-color); text-decoration: none; }
+
+        /* Action bar */
+        .nb-action-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .nb-select {
+            padding: 0.4375rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            background: white;
+        }
+
+        .nb-search-box {
+            display: flex;
+            gap: 0.5rem;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .nb-search-box input {
+            flex: 1;
+            padding: 0.4375rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+        }
+
+        /* Severity & Status */
+        .severity-critical { color: #dc2626; font-weight: 600; }
+        .severity-important { color: #ea580c; font-weight: 600; }
+        .severity-normal { color: #65a30d; font-weight: 600; }
+        .status-active { color: #dc2626; }
+        .status-acknowledged { color: #2563eb; }
+        .status-ignored { color: #6b7280; }
+
+        /* Action buttons */
+        .nb-action-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            margin-right: 0.25rem;
+        }
+        .nb-action-btn.ack { background: #dbeafe; color: #2563eb; }
+        .nb-action-btn.ignore { background: #f3f4f6; color: #6b7280; }
+        .nb-action-btn.delete { background: #fee2e2; color: #b91c1c; }
+        .nb-action-btn.bulk { padding: 0.4375rem 0.75rem; font-size: 0.8125rem; }
+        .select-column {
+            width: 44px;
+            text-align: center;
+        }
+        .row-checkbox,
+        #selectAllAlerts {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .bulk-selection-info {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top navbar -->
+<nav class="nb-topbar">
+    <a href="{% url 'homepage:homepage' %}" class="nb-topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        网络管理系统
+    </a>
+    <div class="nb-topbar-spacer"></div>
+    <div class="nb-topbar-actions">
+        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
+        <div class="nb-topbar-user">
+            <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
+            <span>{{ user.username }}</span>
+            {% if user.is_superuser %}<span style="color:#4dabf7;font-size:0.75rem;">(管理员)</span>{% endif %}
+        </div>
+        <form method="post" action="{% url 'homepage:logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="nb-logout-btn">退出</button>
+        </form>
+    </div>
+</nav>
+
+<div class="nb-layout">
+    <!-- Sidebar -->
+    <aside class="nb-sidebar">
+        <div class="nb-sidebar-section">导航</div>
+        <a href="{% url 'homepage:homepage' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            仪表盘
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">功能模块</div>
+        <a href="{% url 'devices:device_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            设备管理
+        </a>
+        {% include 'includes/device_config_sidebar_item.html' %}
+        <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            性能监控
+        </a>
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            IP管理
+        </a>
+        <a href="{% url 'alerts:alert_list' %}" class="nb-sidebar-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            告警管理
+            <span class="nb-sidebar-alert-dot" id="sidebarAlertDot"></span>
+        </a>
+        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            设备日志
+        </a>
+        <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            账户管理
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">系统</div>
+        <a href="/admin/" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            管理后台
+        </a>
+    </aside>
+
+    <!-- Main content -->
+    <main class="nb-main">
+        <!-- Page header -->
+        <div class="nb-page-header">
+            <div>
+                <div class="nb-page-title">告警管理</div>
+                <div class="nb-page-subtitle">查看和处理系统告警信息</div>
+            </div>
+        </div>
+
+        <!-- Action bar -->
+        <div class="nb-action-bar">
+            <button class="nb-action-btn ack bulk" onclick="acknowledgeAllAlerts()">全部确认</button>
+            <button class="nb-action-btn delete bulk" onclick="deleteSelectedAlerts()">批量删除</button>
+            <button class="nb-action-btn delete bulk" onclick="deleteAllAlerts()">全部删除</button>
+            <span class="bulk-selection-info">已选 <strong id="selectedAlertCount">0</strong> 条</span>
+            <select id="severityFilter" class="nb-select" onchange="filterAlerts()">
+                <option value="">所有级别</option>
+                <option value="critical">紧急</option>
+                <option value="important">重要</option>
+                <option value="normal">一般</option>
+            </select>
+            <select id="statusFilter" class="nb-select" onchange="filterAlerts()">
+                <option value="">所有状态</option>
+                <option value="active">待处理</option>
+                <option value="acknowledged">已处理</option>
+                <option value="ignored">已忽略</option>
+            </select>
+            <div class="nb-search-box">
+                <input type="text" id="searchInput" placeholder="搜索告警消息..." onkeyup="filterAlerts()">
+            </div>
+        </div>
+
+        <div id="alertMessage"></div>
+
+        {% if alerts %}
+            <div class="card">
+                <div class="card-body" style="padding: 0;">
+                    <table class="data-table" id="alertTable">
+                        <thead>
+                            <tr>
+                                <th class="select-column"><input type="checkbox" id="selectAllAlerts" onchange="toggleSelectAllAlerts(this)"></th>
+                                <th>级别</th>
+                                <th>类型</th>
+                                <th>消息</th>
+                                <th>设备</th>
+                                <th>时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in alerts %}
+                                <tr data-severity="{{ alert.severity }}" data-status="{{ alert.status }}" data-message="{{ alert.message }}" data-alert-id="{{ alert.id }}">
+                                    <td class="select-column"><input type="checkbox" class="row-checkbox" value="{{ alert.id }}" onchange="updateSelectedAlertCount()"></td>
+                                    <td>
+                                        <span class="severity-{{ alert.severity }}">
+                                            {{ alert.get_severity_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ alert.get_alert_type_display }}</td>
+                                    <td><a href="{% url 'alerts:alert_detail' alert.pk %}" class="link-primary">{{ alert.message|truncatechars:50 }}</a></td>
+                                    <td>{{ alert.device.name|default:"-" }}</td>
+                                    <td>{{ alert.created_at }}</td>
+                                    <td class="status-{{ alert.status }}">{{ alert.get_status_display }}</td>
+                                    <td>
+                                        {% if alert.status == 'active' %}
+                                            <button class="nb-action-btn ack" onclick="acknowledgeAlert({{ alert.id }})">确认</button>
+                                            <button class="nb-action-btn ignore" onclick="ignoreAlert({{ alert.id }})">忽略</button>
+                                        {% else %}
+                                            <span style="color: var(--gray-500); font-size: 0.75rem;">已处理</span>
+                                        {% endif %}
+                                        <button class="nb-action-btn delete" onclick="deleteAlert({{ alert.id }})">删除</button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="empty-state">
+                    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <h3 class="empty-state-title">暂无告警</h3>
+                    <p>系统目前没有告警信息。</p>
+                </div>
+            </div>
+        {% endif %}
+    </main>
+</div>
+
+<script>
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showMessage(message, type = 'success') {
+        const container = document.getElementById('alertMessage');
+        container.innerHTML = `<div class="alert alert-${type}" style="padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1rem;">${message}</div>`;
+        setTimeout(() => container.innerHTML = '', 5000);
+    }
+
+    async function parseApiResponse(response) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            return response.json();
+        }
+
+        const text = await response.text();
+        return {
+            error: text && text.trim() ? text.trim().slice(0, 200) : '服务器返回了无效响应'
+        };
+    }
+
+    async function acknowledgeAlert(id) {
+        try {
+            const response = await fetch(`/alerts/api/${id}/acknowledge/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+            });
+            const data = await parseApiResponse(response);
+
+            if (response.ok) {
+                showMessage('告警已确认！');
+                updateSidebarAlertDot();
+                updateAlertRow(id, 'acknowledged', '已处理');
+            } else {
+                showMessage(data.error || '操作失败', 'error');
+            }
+        } catch (error) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    async function acknowledgeAllAlerts() {
+        if (!confirm('确定要一键确认所有待处理告警吗？')) return;
+
+        try {
+            const response = await fetch('/alerts/api/acknowledge-all/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+            });
+            const data = await parseApiResponse(response);
+
+            if (response.ok) {
+                showMessage(data.message || `已确认 ${data.handled_count || 0} 条活动告警！`);
+                if ((data.handled_count || 0) > 0) {
+                    setTimeout(() => location.reload(), 300);
+                }
+                updateSidebarAlertDot();
+            } else {
+                showMessage(data.error || '操作失败', 'error');
+            }
+        } catch (error) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    async function ignoreAlert(id) {
+        try {
+            const response = await fetch(`/alerts/api/${id}/ignore/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+            });
+            const data = await parseApiResponse(response);
+
+            if (response.ok) {
+                showMessage('告警已忽略！');
+                updateSidebarAlertDot();
+                updateAlertRow(id, 'ignored', '已忽略');
+            } else {
+                showMessage(data.error || '操作失败', 'error');
+            }
+        } catch (error) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    async function deleteAlert(id) {
+        if (!confirm('确定要删除这条告警吗？此操作不可恢复。')) return;
+
+        try {
+            const response = await fetch(`/alerts/api/${id}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': csrftoken },
+            });
+            const data = response.status === 204 ? {} : await parseApiResponse(response);
+
+            if (response.ok || response.status === 204) {
+                showMessage('告警已删除！');
+                updateSidebarAlertDot();
+                setTimeout(() => location.reload(), 300);
+            } else {
+                showMessage(data.error || '删除失败', 'error');
+            }
+        } catch (error) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    async function deleteSelectedAlerts() {
+        const selectedIds = getSelectedAlertIds();
+        if (!selectedIds.length) {
+            showMessage('请先选择要删除的告警', 'error');
+            return;
+        }
+
+        if (!confirm(`确定要批量删除 ${selectedIds.length} 条告警吗？此操作不可恢复。`)) return;
+
+        try {
+            const response = await fetch('/alerts/api/bulk-delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({ alert_ids: selectedIds })
+            });
+            const data = await parseApiResponse(response);
+
+            if (response.ok) {
+                showMessage(data.message || `已删除 ${data.deleted_count || 0} 条告警！`);
+                updateSidebarAlertDot();
+                setTimeout(() => location.reload(), 300);
+            } else {
+                showMessage(data.error || '删除失败', 'error');
+            }
+        } catch (error) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    async function deleteAllAlerts() {
+        if (!confirm('确定要全部删除系统中的所有告警吗？此操作不可恢复。')) return;
+
+        try {
+            const response = await fetch('/alerts/api/delete-all/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                },
+            });
+            const data = await parseApiResponse(response);
+
+            if (response.ok) {
+                showMessage(data.message || `已删除全部告警，共 ${data.deleted_count || 0} 条！`);
+                updateSidebarAlertDot();
+                setTimeout(() => location.reload(), 300);
+            } else {
+                showMessage(data.error || '全部删除失败', 'error');
+            }
+        } catch (error) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    async function updateSidebarAlertDot() {
+        try {
+            const resp = await fetch('/alerts/api/counts/');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const dot = document.getElementById('sidebarAlertDot');
+            if (dot) {
+                if (data.active_count > 0) {
+                    dot.classList.add('has-alerts');
+                } else {
+                    dot.classList.remove('has-alerts');
+                }
+            }
+        } catch (e) {
+            // silently ignore
+        }
+    }
+
+    function updateAlertRow(id, newStatus, newStatusLabel) {
+        const row = document.querySelector(`tr[data-alert-id="${id}"]`);
+        if (!row) return;
+        // 更新行内状态
+        row.dataset.status = newStatus;
+        const statusCell = row.querySelector('td:nth-child(7)');
+        if (statusCell) {
+            statusCell.className = `status-${newStatus}`;
+            statusCell.textContent = newStatusLabel;
+        }
+        // 隐藏操作按钮
+        const actionsCell = row.querySelector('td:last-child');
+        if (actionsCell) {
+            actionsCell.innerHTML = `<span style="color: var(--gray-500); font-size: 0.75rem;">${newStatusLabel}</span>`;
+        }
+    }
+
+    function getSelectedAlertIds() {
+        return Array.from(document.querySelectorAll('.row-checkbox:checked')).map(checkbox => checkbox.value);
+    }
+
+    function updateSelectedAlertCount() {
+        const selectedIds = getSelectedAlertIds();
+        document.getElementById('selectedAlertCount').textContent = selectedIds.length;
+
+        const allVisibleCheckboxes = Array.from(document.querySelectorAll('#alertTable tbody tr')).filter(row => row.style.display !== 'none').map(row => row.querySelector('.row-checkbox')).filter(Boolean);
+        const selectAll = document.getElementById('selectAllAlerts');
+        if (selectAll) {
+            selectAll.checked = allVisibleCheckboxes.length > 0 && allVisibleCheckboxes.every(checkbox => checkbox.checked);
+            selectAll.indeterminate = selectedIds.length > 0 && !selectAll.checked;
+        }
+    }
+
+    function toggleSelectAllAlerts(checkbox) {
+        document.querySelectorAll('#alertTable tbody tr').forEach(row => {
+            if (row.style.display === 'none') {
+                return;
+            }
+            const rowCheckbox = row.querySelector('.row-checkbox');
+            if (rowCheckbox) {
+                rowCheckbox.checked = checkbox.checked;
+            }
+        });
+        updateSelectedAlertCount();
+    }
+
+    function removeAlertRows(ids) {
+        ids.forEach(id => {
+            const row = document.querySelector(`tr[data-alert-id="${id}"]`);
+            if (row) {
+                row.remove();
+            }
+        });
+        updateSelectedAlertCount();
+    }
+
+    function filterAlerts() {
+        const severity = document.getElementById('severityFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const search = document.getElementById('searchInput').value.toLowerCase();
+
+        const rows = document.querySelectorAll('#alertTable tbody tr');
+
+        rows.forEach(row => {
+            const rowSeverity = row.dataset.severity;
+            const rowStatus = row.dataset.status;
+            const rowMessage = row.dataset.message.toLowerCase();
+
+            const severityMatch = !severity || rowSeverity === severity;
+            const statusMatch = !status || rowStatus === status;
+            const searchMatch = !search || rowMessage.includes(search);
+
+            if (severityMatch && statusMatch && searchMatch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        updateSelectedAlertCount();
+    }
+
+    // 侧边栏告警红点：初始更新 + 每 10 秒轮询
+    updateSidebarAlertDot();
+    setInterval(updateSidebarAlertDot, 10000);
+    updateSelectedAlertCount();
+</script>
+</body>
+</html>

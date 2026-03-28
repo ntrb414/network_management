@@ -1,0 +1,81 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}管理后台{% endblock %}
+
+{% block content %}
+
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">管理后台</div>
+        <div class="nb-page-subtitle">系统管理与数据模型配置</div>
+    </div>
+</div>
+
+{% if app_list %}
+    {% for app in app_list %}
+    <div class="admin-content module-group">
+        <h2 class="module-group-title">
+            {{ app.name }}
+        </h2>
+        <table class="module-table">
+            <thead>
+                <tr>
+                    <th>模型</th>
+                    <th>数量</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model in app.models %}
+                <tr>
+                    <td>
+                        {% if model.admin_url %}
+                        <a href="{{ model.admin_url }}" class="module-name">{{ model.name }}</a>
+                        {% else %}
+                        <span class="module-name">{{ model.name }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="module-count">
+                        {% if model.object_count %}
+                        {{ model.object_count }} 条记录
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="object-tools">
+                            {% if model.add_url %}
+                            <a href="{{ model.add_url }}" class="addlink">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                添加
+                            </a>
+                            {% endif %}
+                            {% if model.admin_url %}
+                            <a href="{{ model.admin_url }}" class="historylink">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                查看
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="admin-content">
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p>暂无可管理的模型</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block title %}历史记录 - {{ object }}{% endblock %}
+
+{% block content %}
+
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">历史记录</div>
+        <div class="nb-page-subtitle">{{ opts.verbose_name }}: {{ object }}</div>
+    </div>
+    <div class="object-tools">
+        <a href="{% url opts|admin_urlname:'change' object.pk|admin_urlquote %}" class="historylink">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            返回编辑
+        </a>
+    </div>
+</div>
+
+<div class="admin-content">
+    {% if action_list %}
+    <table class="result-table">
+        <thead>
+            <tr>
+                <th>操作时间</th>
+                <th>操作用户</th>
+                <th>操作类型</th>
+                <th>变更详情</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in action_list %}
+            <tr>
+                <td>{{ action.action_time|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ action.user.get_username }}</td>
+                <td>
+                    {% if action.is_addition %}
+                    <span style="color: #16a34a;">添加</span>
+                    {% elif action.is_change %}
+                    <span style="color: #1971c2;">修改</span>
+                    {% elif action.is_deletion %}
+                    <span style="color: #dc2626;">删除</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if action.change_message %}
+                    {{ action.change_message }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <p>暂无历史记录</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定时任务 - 网络管理系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        body { background: #f8f9fa; display: flex; flex-direction: column; min-height: 100vh; }
+        .nb-topbar { background: #1a2332; height: 48px; display: flex; align-items: center; padding: 0 1.25rem; gap: 1rem; position: sticky; top: 0; z-index: 200; border-bottom: 1px solid #0d1520; }
+        .nb-topbar-brand { font-size: 1rem; font-weight: 700; color: #fff; text-decoration: none; letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-brand svg { color: #4dabf7; }
+        .nb-topbar-spacer { flex: 1; }
+        .nb-topbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-btn { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.3125rem 0.75rem; font-size: 0.8125rem; font-weight: 500; border-radius: 4px; border: 1px solid transparent; cursor: pointer; text-decoration: none; transition: background 0.15s; color: #adb5bd; background: transparent; }
+        .nb-topbar-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nb-topbar-user { display: flex; align-items: center; gap: 0.5rem; color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem; }
+        .nb-topbar-avatar { width: 26px; height: 26px; border-radius: 50%; background: #2c3e50; border: 1px solid #3d5166; color: #74c0fc; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.6875rem; }
+        .nb-logout-btn { background: none; border: none; cursor: pointer; color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: background 0.15s; }
+        .nb-logout-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nb-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
+        .nb-sidebar {
+            width: 220px;
+            min-width: 220px;
+            background: #1e2d3d;
+            border-right: 1px solid #162030;
+            padding: 1rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: fixed;
+            top: 48px;
+            left: 0;
+            height: calc(100vh - 48px);
+            overflow-y: auto; }
+        .nb-sidebar-section { padding: 0.5rem 0.75rem 0.25rem; font-size: 0.6875rem; font-weight: 700; color: #4a6080; text-transform: uppercase; letter-spacing: 0.08em; }
+        .nb-sidebar-item { display: flex; align-items: center; gap: 0.625rem; padding: 0.4375rem 1rem; color: #8ba3bc; text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: background 0.12s, color 0.12s; border-left: 3px solid transparent; }
+        .nb-sidebar-item:hover { background: rgba(255,255,255,0.05); color: #c9d8e8; border-left-color: #4dabf7; }
+        .nb-sidebar-item.active { background: rgba(77,171,247,0.1); color: #74c0fc; border-left-color: #4dabf7; }
+        .nb-sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+        .nb-sidebar-divider { height: 1px; background: #162030; margin: 0.5rem 0; }
+        .nb-main { flex: 1; padding: 1.5rem; overflow-x: hidden; margin-left: 220px; }
+        .breadcrumb { display: flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; color: #6c757d; margin-bottom: 1rem; }
+        .breadcrumb a { color: #6c757d; text-decoration: none; }
+        .breadcrumb a:hover { color: #1a2332; }
+        .breadcrumb-sep { color: #adb5bd; }
+        .nb-page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .nb-page-title { font-size: 1.375rem; font-weight: 700; color: #1a2332; letter-spacing: -0.02em; }
+        .nb-page-subtitle { font-size: 0.875rem; color: #6c757d; margin-top: 0.125rem; }
+
+
+        /* Tabs */
+        .tabs { display: flex; gap: 0; margin-bottom: 1rem; border-bottom: 1px solid #dee2e6; }
+        .tab { padding: 0.75rem 1.25rem; font-size: 0.875rem; font-weight: 500; color: #6c757d; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; cursor: pointer; display: inline-flex; align-items: center; gap: 0.375rem; }
+        .tab:hover { color: #1a2332; }
+        .tab.active { color: #1971c2; border-bottom-color: #1971c2; }
+        .tab .count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 0.375rem; background: #e9ecef; border-radius: 10px; font-size: 0.75rem; }
+        .tab.active .count { background: #e7f3ff; color: #1971c2; }
+
+        /* Table */
+        .table-container { background: #fff; border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; }
+        .table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .table th { padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #6c757d; text-transform: uppercase; letter-spacing: 0.05em; background: #f8f9fa; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
+        .table td { padding: 0.875rem 1rem; border-bottom: 1px solid #f1f3f5; vertical-align: middle; }
+        .table tr:last-child td { border-bottom: none; }
+        .table tr:hover td { background: #f8f9fa; }
+
+        /* Task info */
+        .task-info { display: flex; flex-direction: column; gap: 0.25rem; }
+        .task-name { font-weight: 600; color: #1a2332; }
+        .task-description { font-size: 0.8125rem; color: #6c757d; }
+        .task-func { font-size: 0.75rem; color: #adb5bd; font-family: monospace; margin-top: 0.25rem; }
+
+        /* Status badges */
+        .badge { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; border-radius: 4px; }
+        .badge-success { background: #ebfbee; color: #2f9e44; }
+        .badge-danger { background: #fff5f5; color: #c92a2a; }
+        .badge-gray { background: #f1f3f5; color: #6c757d; }
+
+        /* Schedule badge */
+        .schedule-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; background: #e7f3ff; color: #1971c2; border-radius: 4px; font-size: 0.75rem; }
+        .schedule-badge.interval { background: #f3f0ff; color: #6741d9; }
+        .schedule-badge.crontab { background: #fff4e6; color: #d9480f; }
+
+        /* Run count */
+        .run-count { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; background: #f1f3f5; color: #495057; border-radius: 4px; font-size: 0.75rem; }
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 500; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s; border: none; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        .btn-success { background: #2f9e44; color: #fff; }
+        .btn-success:hover { background: #27903f; }
+        .btn-danger { background: #c92a2a; color: #fff; }
+        .btn-danger:hover { background: #a62626; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 3rem 1.5rem; color: #6c757d; }
+        .empty-state svg { width: 48px; height: 48px; opacity: 0.4; margin-bottom: 1rem; }
+
+        @media (max-width: 900px) {
+            .nb-sidebar { display: none; }
+            .nb-main { margin-left: 0; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="nb-topbar">
+    <a href="{% url 'homepage:homepage' %}" class="nb-topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        网络管理系统
+    </a>
+    <div class="nb-topbar-spacer"></div>
+    <div class="nb-topbar-actions">
+        <a href="{% url 'admin:index' %}" class="nb-topbar-btn">Django管理后台</a>
+        <div class="nb-topbar-user">
+            <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
+            <span>{{ user.username }}</span>
+        </div>
+        <form method="post" action="{% url 'homepage:logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="nb-logout-btn">退出</button>
+        </form>
+    </div>
+</nav>
+
+<div class="nb-layout">
+    <aside class="nb-sidebar">
+        <div class="nb-sidebar-section">导航</div>
+        <a href="{% url 'homepage:homepage' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            仪表盘
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">功能模块</div>
+        <a href="{% url 'devices:device_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            设备管理
+        </a>
+        {% include 'includes/device_config_sidebar_item.html' %}
+        <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            性能监控
+        </a>
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            IP管理
+        </a>
+        <a href="{% url 'alerts:alert_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            告警管理
+        </a>
+        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            系统日志
+        </a>
+        <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            账户管理
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">系统</div>
+        <a href="{% url 'admin_panel:scheduled_tasks' %}" class="nb-sidebar-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            定时任务
+        </a>
+        <a href="{% url 'admin_panel:dashboard' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            管理后台
+        </a>
+    </aside>
+
+    <main class="nb-main">
+        <nav class="breadcrumb">
+            <a href="{% url 'homepage:homepage' %}">首页</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>定时任务</span>
+        </nav>
+
+        <div class="nb-page-header">
+            <div>
+                <div class="nb-page-title">定时任务</div>
+                <div class="nb-page-subtitle">Celery 定期任务配置与执行状态</div>
+            </div>
+            <span style="font-size: 0.8125rem; color: #6c757d;">仅展示定时任务信息</span>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <a href="{% url 'admin_panel:scheduled_tasks' %}" class="tab {% if not filter %}active{% endif %}">
+                全部任务
+                <span class="count">{{ total_count }}</span>
+            </a>
+            <a href="{% url 'admin_panel:scheduled_tasks' %}?filter=enabled" class="tab {% if filter == 'enabled' %}active{% endif %}">
+                已启用
+                <span class="count">{{ enabled_count }}</span>
+            </a>
+            <a href="{% url 'admin_panel:scheduled_tasks' %}?filter=disabled" class="tab {% if filter == 'disabled' %}active{% endif %}">
+                已禁用
+                <span class="count">{{ disabled_count }}</span>
+            </a>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container">
+            {% if periodic_tasks %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>任务信息</th>
+                        <th>状态</th>
+                        <th>调度类型</th>
+                        <th>调度规则</th>
+                        <th>最近执行</th>
+                        <th>执行次数</th>
+                        <th>最后修改</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in periodic_tasks %}
+                    <tr>
+                        <td>
+                            <div class="task-info">
+                                <span class="task-name">{{ task.task_name }}</span>
+                                {% if task.task_description %}
+                                <span class="task-description">{{ task.task_description }}</span>
+                                {% endif %}
+                                <span class="task-func">{{ task.task_queue_label }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if task.enabled %}
+                            <span class="badge badge-success">已启用</span>
+                            {% else %}
+                            <span class="badge badge-danger">已禁用</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if task.schedule_type == 'interval' %}
+                            <span class="schedule-badge interval">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                间隔
+                            </span>
+                            {% elif task.schedule_type == 'crontab' %}
+                            <span class="schedule-badge crontab">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                Cron
+                            </span>
+                            {% else %}
+                            <span class="schedule-badge">
+                                {{ task.schedule_type }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span title="{{ task.schedule_desc }}">{{ task.schedule_human|default:"无" }}</span>
+                        </td>
+                        <td>
+                            {% if task.last_run_time %}
+                            <span style="font-size: 0.8125rem; color: #495057;">{{ task.last_run_time|date:"Y-m-d H:i:s" }}</span>
+                            {% else %}
+                            <span style="color: #adb5bd;">未执行</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="run-count">{{ task.total_run_count }} 次</span>
+                        </td>
+                        <td>
+                            {% if task.date_changed %}
+                            <span style="color: #6c757d; font-size: 0.8125rem;">{{ task.date_changed|date:"Y-m-d H:i" }}</span>
+                            {% else %}
+                            <span style="color: #adb5bd;">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" action="{% url 'admin_panel:toggle_periodic_task' task.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                {% if task.enabled %}
+                                <button type="submit" class="btn btn-sm btn-danger">禁用</button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-success">启用</button>
+                                {% endif %}
+                            </form>
+                            <button
+                                type="button"
+                                class="btn btn-sm"
+                                style="margin-left: 0.375rem; background: #f1f3f5; color: #343a40;"
+                                onclick="showTaskResult('{{ task.task_name|escapejs }}', '{{ task.last_run_status|default:"unknown"|escapejs }}', '{{ task.last_run_result|default:"暂无结果"|escapejs }}', '{{ task.last_run_detail|default:"暂无详情"|escapejs }}', '{% if task.last_run_time %}{{ task.last_run_time|date:"Y-m-d H:i:s" }}{% else %}未执行{% endif %}')"
+                            >查看结果</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <p>暂无定时任务</p>
+                <p style="font-size: 0.8125rem; margin-top: 0.5rem;">
+                    请在 Django Admin 中配置 Periodic Tasks
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+
+<div id="taskResultModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; align-items:center; justify-content:center;">
+    <div style="width:min(680px, 92vw); background:#fff; border-radius:8px; border:1px solid #dee2e6; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1rem; border-bottom:1px solid #e9ecef;">
+            <div style="font-size:1rem; font-weight:600; color:#1a2332;">任务执行结果</div>
+            <button type="button" onclick="closeTaskResult()" style="border:none; background:transparent; cursor:pointer; font-size:1.125rem; color:#6c757d;">×</button>
+        </div>
+        <div style="padding:1rem;">
+            <div style="margin-bottom:0.5rem;"><strong>任务：</strong><span id="resultTaskName"></span></div>
+            <div style="margin-bottom:0.5rem;"><strong>状态：</strong><span id="resultTaskStatus"></span></div>
+            <div style="margin-bottom:0.5rem;"><strong>最近执行：</strong><span id="resultTaskTime"></span></div>
+            <div style="margin-bottom:0.5rem;"><strong>结果摘要：</strong></div>
+            <pre id="resultTaskSummary" style="white-space:pre-wrap; background:#f8f9fa; border:1px solid #e9ecef; border-radius:6px; padding:0.75rem; font-size:0.8125rem;"></pre>
+            <div style="margin-bottom:0.5rem;"><strong>详细信息：</strong></div>
+            <pre id="resultTaskDetail" style="white-space:pre-wrap; background:#f8f9fa; border:1px solid #e9ecef; border-radius:6px; padding:0.75rem; font-size:0.8125rem; max-height:220px; overflow:auto;"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+function showTaskResult(taskName, status, summary, detail, runTime) {
+    const statusMap = {
+        success: '成功',
+        failed: '失败',
+        unknown: '未知',
+    };
+    document.getElementById('resultTaskName').textContent = taskName || '-';
+    document.getElementById('resultTaskStatus').textContent = statusMap[status] || status || '未知';
+    document.getElementById('resultTaskTime').textContent = runTime || '未执行';
+    document.getElementById('resultTaskSummary').textContent = summary || '暂无结果';
+    document.getElementById('resultTaskDetail').textContent = detail || '暂无详情';
+    document.getElementById('taskResultModal').style.display = 'flex';
+}
+
+function closeTaskResult() {
+    document.getElementById('taskResultModal').style.display = 'none';
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限不足 - 网络管理系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        .error-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+        }
+
+        .error-container {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 3rem;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .error-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        .error-code {
+            font-size: 5rem;
+            font-weight: 800;
+            color: #dc2626;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        h1 {
+            color: var(--gray-900);
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: var(--gray-600);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .permission-box {
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .permission-box h3 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .permission-box code {
+            background: var(--gray-200);
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal h2 {
+            color: var(--gray-900);
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal p {
+            margin-bottom: 1.5rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-page">
+        <div class="error-container">
+            <div class="error-icon">🔒</div>
+            <div class="error-code">403</div>
+            <h1>访问被拒绝</h1>
+            <p>您没有权限访问此页面。请联系系统管理员申请访问权限。</p>
+            
+            <div class="permission-box">
+                <h3>请求的权限</h3>
+                <code>{{ permission|default:"查看" }}</code>
+            </div>
+            
+            <div class="btn-group">
+                <a href="{% url 'homepage:homepage' %}" class="btn btn-primary">
+                    🏠 返回首页
+                </a>
+                <button onclick="showModal()" class="btn btn-secondary">
+                    📩 申请权限
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="permissionModal">
+        <div class="modal">
+            <h2>申请权限</h2>
+            <p>如需访问此页面，请联系系统管理员申请 <strong>{{ permission|default:"查看" }}</strong> 权限。</p>
+            <a href="{% url 'homepage:homepage' %}" class="btn btn-primary">
+                🏠 返回首页
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        function showModal() {
+            document.getElementById('permissionModal').classList.add('show');
+        }
+        
+        document.getElementById('permissionModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('show');
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.getElementById('permissionModal').classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>

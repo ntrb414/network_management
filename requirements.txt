@@ -1,0 +1,42 @@
+# Django core
+Django>=4.2,<5.0
+djangorestframework>=3.14
+
+# Database
+psycopg2-binary>=2.9
+
+# Cache & Message Broker
+django-redis>=5.4
+redis>=5.0
+
+# Task Queue
+celery[redis]>=5.3
+django-celery-beat>=2.5
+
+# Network protocols
+netmiko>=4.2
+pysnmp>=4.4
+scapy>=2.5
+
+# Template engine
+Jinja2>=3.1
+
+# Git operations
+GitPython>=3.1
+
+# Excel export
+openpyxl>=3.1
+
+# Image processing
+Pillow>=10.0
+
+# Testing
+pytest>=7.4
+pytest-django>=4.5
+hypothesis>=6.82
+
+# Performance testing
+locust>=2.16
+
+# Utilities
+python-dotenv>=1.0

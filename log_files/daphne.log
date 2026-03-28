@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/opt/network_management/venv/bin/daphne", line 8, in <module>
+    sys.exit(CommandLineInterface.entrypoint())
+  File "/opt/network_management/venv/lib/python3.10/site-packages/daphne/cli.py", line 171, in entrypoint
+    cls().run(sys.argv[1:])
+  File "/opt/network_management/venv/lib/python3.10/site-packages/daphne/cli.py", line 239, in run
+    application = self.load_asgi_app(args.application)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/daphne/cli.py", line 208, in load_asgi_app
+    return import_by_path(asgi_app_path)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/daphne/utils.py", line 17, in import_by_path
+    target = importlib.import_module(module_path)
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 992, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1004, in _find_and_load_unlocked
+ModuleNotFoundError: No module named '/opt/network_management/network_management'

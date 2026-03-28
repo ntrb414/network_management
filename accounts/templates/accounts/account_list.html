@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账户管理 - 网络管理系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        /* ── NetBox-style layout ── */
+        body { background: #f8f9fa; display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* Top navbar */
+        .nb-topbar {
+            background: #1a2332;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid #0d1520;
+        }
+        .nb-topbar-brand {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nb-topbar-brand svg { color: #4dabf7; }
+        .nb-topbar-spacer { flex: 1; }
+        .nb-topbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.3125rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+            color: #adb5bd;
+            background: transparent;
+        }
+        .nb-topbar-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nb-topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #adb5bd;
+            font-size: 0.8125rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .nb-topbar-avatar {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: #2c3e50;
+            border: 1px solid #3d5166;
+            color: #74c0fc;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.6875rem;
+        }
+        .nb-logout-btn {
+            background: none; border: none; cursor: pointer;
+            color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem;
+            border-radius: 4px; transition: background 0.15s;
+        }
+        .nb-logout-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+        /* ── Main layout: sidebar + content ── */
+        .nb-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
+
+        /* Sidebar */
+        .nb-sidebar {
+
+            width: 220px;
+
+            min-width: 220px;
+
+            background: #1e2d3d;
+
+            border-right: 1px solid #162030;
+
+            padding: 1rem 0;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 0;
+
+            position: fixed;
+
+            top: 48px;
+
+            left: 0;
+
+            height: calc(100vh - 48px);
+
+            overflow-y: auto;
+
+        }
+        .nb-sidebar-section {
+            padding: 0.5rem 0.75rem 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #4a6080;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .nb-sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.4375rem 1rem;
+            color: #8ba3bc;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.12s, color 0.12s;
+            border-left: 3px solid transparent;
+        }
+        .nb-sidebar-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: #c9d8e8;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item.active {
+            background: rgba(77,171,247,0.1);
+            color: #74c0fc;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+        .nb-sidebar-divider { height: 1px; background: #162030; margin: 0.5rem 0; }
+
+        /* Main content */
+        .nb-main { flex: 1; padding: 1.5rem; overflow-x: hidden; margin-left: 220px; }
+
+        /* Page header */
+        .nb-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .nb-page-title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #1a2332;
+            letter-spacing: -0.02em;
+        }
+        .nb-page-subtitle { font-size: 0.875rem; color: #6c757d; margin-top: 0.125rem; }
+
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
+        .data-table th { background: var(--gray-50); padding: 1rem; text-align: left; border-bottom: 2px solid var(--gray-200); font-weight: 600; color: var(--gray-700); }
+        .data-table td { padding: 1rem; border-bottom: 1px solid var(--gray-100); }
+        .data-table tbody tr:hover { background: var(--gray-50); }
+        .link-primary { color: var(--primary-color); text-decoration: none; }
+
+        .action-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.5rem;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+        }
+
+        .action-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            margin-right: 0.25rem;
+        }
+
+        .btn-edit { background: var(--primary-100); color: var(--primary-color); }
+        .btn-delete { background: var(--danger-light); color: var(--danger); }
+
+        .role-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .role-admin { background: #fee2e2; color: #991b1b; }
+        .role-user { background: #dbeafe; color: #2563eb; }
+        .role-readonly { background: #f3f4f6; color: #6b7280; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .modal-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray-500);
+            cursor: pointer;
+        }
+
+        .modal-body { padding: 1.5rem; }
+
+        .form-group { margin-bottom: 1rem; }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group label.required::after { content: ' *'; color: var(--danger); }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+            background: var(--gray-50);
+        }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    </style>
+</head>
+<body>
+
+<!-- Top navbar -->
+<nav class="nb-topbar">
+    <a href="{% url 'homepage:homepage' %}" class="nb-topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        网络管理系统
+    </a>
+    <div class="nb-topbar-spacer"></div>
+    <div class="nb-topbar-actions">
+        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
+        <div class="nb-topbar-user">
+            <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
+            <span>{{ user.username }}</span>
+            {% if user.is_superuser %}<span style="color:#4dabf7;font-size:0.75rem;">(管理员)</span>{% endif %}
+        </div>
+        <form method="post" action="{% url 'homepage:logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="nb-logout-btn">退出</button>
+        </form>
+    </div>
+</nav>
+
+<div class="nb-layout">
+    <!-- Sidebar -->
+    <aside class="nb-sidebar">
+        <div class="nb-sidebar-section">导航</div>
+        <a href="{% url 'homepage:homepage' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            仪表盘
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">功能模块</div>
+        <a href="{% url 'devices:device_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            设备管理
+        </a>
+        {% include 'includes/device_config_sidebar_item.html' %}
+        <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            性能监控
+        </a>
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            IP管理
+        </a>
+        <a href="{% url 'alerts:alert_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            告警管理
+        </a>
+        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            设备日志
+        </a>
+        <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            账户管理
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">系统</div>
+        <a href="/admin/" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            管理后台
+        </a>
+    </aside>
+
+    <!-- Main content -->
+    <main class="nb-main">
+        <!-- Page header -->
+        <div class="nb-page-header">
+            <div>
+                <div class="nb-page-title">账户管理</div>
+                <div class="nb-page-subtitle">管理系统用户账户</div>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="openAddModal()">添加用户</button>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索用户名、邮箱..." onkeyup="searchUsers()">
+                <button class="btn btn-secondary" onclick="searchUsers()">搜索</button>
+            </div>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        {% if accounts %}
+            <div class="card">
+                <div class="card-body" style="padding: 0;">
+                    <table class="data-table" id="userTable">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>邮箱</th>
+                                <th>角色</th>
+                                <th>创建时间</th>
+                                <th>最后登录</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for account in accounts %}
+                                <tr data-username="{{ account.user.username }}">
+                                    <td><a href="{% url 'accounts:account_detail' account.user.pk %}" class="link-primary">{{ account.user.username }}</a></td>
+                                    <td>{{ account.user.email|default:"-" }}</td>
+                                    <td><span class="role-badge role-{{ account.role }}">{{ account.get_role_display }}</span></td>
+                                    <td>{{ account.user.date_joined|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ account.user.last_login|date:"Y-m-d H:i"|default:"从未" }}</td>
+                                    <td>
+                                        <button class="action-btn btn-edit" onclick="openEditModal({{ account.user.pk }}, '{{ account.user.username }}', '{{ account.user.email|default:'' }}', '{{ account.role }}')">编辑</button>
+                                        {% if account.user.username != 'admin' %}
+                                        <button class="action-btn btn-delete" onclick="deleteUser({{ account.user.pk }}, '{{ account.user.username }}')">删除</button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="empty-state">
+                    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <h3 class="empty-state-title">暂无用户</h3>
+                    <p>系统中还没有用户账户，请添加用户。</p>
+                    <button class="btn btn-primary" onclick="openAddModal()" style="margin-top: 1rem;">添加用户</button>
+                </div>
+            </div>
+        {% endif %}
+    </main>
+</div>
+
+<div class="modal-overlay" id="userModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="modalTitle">添加用户</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="userForm" onsubmit="submitForm(event)">
+            <div class="modal-body">
+                <input type="hidden" id="userId" name="userId">
+
+                <div class="form-group">
+                    <label for="username" class="required">用户名</label>
+                    <input type="text" id="username" name="username" required placeholder="请输入用户名">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" name="email" placeholder="user@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="required">密码</label>
+                    <input type="password" id="password" name="password" placeholder="请输入密码" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="role" class="required">角色</label>
+                    <select id="role" name="role" required>
+                        <option value="admin">管理员</option>
+                        <option value="user" selected>普通用户</option>
+                        <option value="readonly">只读用户</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = '添加用户';
+        document.getElementById('userId').value = '';
+        document.getElementById('userForm').reset();
+        document.getElementById('password').required = true;
+        document.getElementById('userModal').classList.add('active');
+    }
+
+    function openEditModal(id, username, email, role) {
+        document.getElementById('modalTitle').textContent = '编辑用户';
+        document.getElementById('userId').value = id;
+        document.getElementById('username').value = username;
+        document.getElementById('email').value = email || '';
+        document.getElementById('role').value = role;
+        document.getElementById('password').required = false;
+        document.getElementById('userModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('userModal').classList.remove('active');
+    }
+
+    function showAlert(message, type = 'success') {
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.style.cssText = 'position:fixed;top:1.25rem;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:0.5rem;pointer-events:none;min-width:280px;';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        const bg = type === 'success' ? '#d1fae5' : '#fee2e2';
+        const color = type === 'success' ? '#065f46' : '#991b1b';
+        const border = type === 'success' ? '#a7f3d0' : '#fecaca';
+        toast.style.cssText = `background:${bg};color:${color};border:1px solid ${border};padding:0.75rem 1.25rem;border-radius:0.5rem;font-size:0.875rem;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;text-align:center;`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+    }
+
+    async function submitForm(event) {
+        event.preventDefault();
+
+        const userId = document.getElementById('userId').value;
+        const isEdit = userId !== '';
+
+        const formData = {
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            role: document.getElementById('role').value,
+        };
+
+        const password = document.getElementById('password').value;
+        if (password) {
+            formData.password = password;
+        }
+
+        try {
+            let url, method;
+            if (isEdit) {
+                url = `/accounts/api/users/${userId}/`;
+                method = 'PUT';
+            } else {
+                url = '/accounts/api/users/';
+                method = 'POST';
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showAlert(isEdit ? '用户更新成功！' : '用户创建成功！');
+                closeModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert(data.error || '操作失败，请重试。', 'error');
+            }
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        }
+    }
+
+    async function deleteUser(id, username) {
+        if (!confirm(`确定要删除用户 "${username}" 吗？此操作不可恢复。`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/accounts/api/users/${id}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': csrftoken },
+            });
+
+            if (response.ok || response.status === 204) {
+                showAlert('用户删除成功！');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert('删除失败，请重试。', 'error');
+            }
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        }
+    }
+
+    function searchUsers() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#userTable tbody tr');
+
+        rows.forEach(row => {
+            const username = row.dataset.username.toLowerCase();
+            if (username.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    document.getElementById('userModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block title %}删除 {{ object }}{% endblock %}
+
+{% block content %}
+
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">删除确认</div>
+        <div class="nb-page-subtitle">{{ opts.verbose_name_plural|title }}</div>
+    </div>
+</div>
+
+<div class="admin-content">
+    <div class="delete-confirmation">
+        <h2>确定要删除 "{{ object }}" 吗？</h2>
+        
+        <p>以下 {{ opts.verbose_name }} 将被删除：</p>
+        
+        <ul>
+            <li><strong>{{ object }}</strong></li>
+        </ul>
+
+        {% if perms_lacking %}
+        <p style="color: #d97706;">删除此对象需要以下权限：</p>
+        <ul>
+            {% for perm in perms_lacking %}
+            <li>{{ perm }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if protected %}
+        <p style="color: #dc2626;">无法删除此对象，因为以下对象依赖于它：</p>
+        <ul>
+            {% for obj in protected %}
+            <li>{{ obj }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if not perms_lacking and not protected %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="post" value="yes">
+            <input type="submit" value="确认删除">
+            <a href="{% url opts|admin_urlname:'changelist' %}">取消</a>
+        </form>
+        {% else %}
+        <a href="{% url opts|admin_urlname:'changelist' %}" class="btn btn-secondary">返回列表</a>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

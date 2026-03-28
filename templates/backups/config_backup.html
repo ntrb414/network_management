@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置备份 - 网络管理系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        body { background: #f8f9fa; display: flex; flex-direction: column; min-height: 100vh; }
+
+        .nb-topbar {
+            background: #1a2332; height: 48px; display: flex; align-items: center;
+            padding: 0 1.25rem; gap: 1rem; position: sticky; top: 0; z-index: 200;
+            border-bottom: 1px solid #0d1520;
+        }
+        .nb-topbar-brand {
+            font-size: 1rem; font-weight: 700; color: #fff; text-decoration: none;
+            letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .nb-topbar-brand svg { color: #4dabf7; }
+        .nb-topbar-spacer { flex: 1; }
+        .nb-topbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-btn {
+            display: inline-flex; align-items: center; gap: 0.375rem;
+            padding: 0.3125rem 0.75rem; font-size: 0.8125rem; font-weight: 500;
+            border-radius: 4px; border: 1px solid transparent; cursor: pointer;
+            text-decoration: none; transition: background 0.15s; color: #adb5bd; background: transparent;
+        }
+        .nb-topbar-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nb-topbar-user { display: flex; align-items: center; gap: 0.5rem; color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem; }
+        .nb-topbar-avatar {
+            width: 26px; height: 26px; border-radius: 50%; background: #2c3e50;
+            border: 1px solid #3d5166; color: #74c0fc; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.6875rem;
+        }
+        .nb-logout-btn { background: none; border: none; cursor: pointer; color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: background 0.15s; }
+        .nb-logout-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+        .nb-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
+
+        .nb-sidebar {
+
+
+            width: 220px;
+
+
+            min-width: 220px;
+
+
+            background: #1e2d3d;
+
+
+            border-right: 1px solid #162030;
+
+
+            padding: 1rem 0;
+
+
+            display: flex;
+
+
+            flex-direction: column;
+
+
+            gap: 0;
+
+
+            position: fixed;
+
+
+            top: 48px;
+
+
+            left: 0;
+
+
+            height: calc(100vh - 48px);
+
+
+            overflow-y: auto;
+
+
+        }
+        .nb-sidebar-section { padding: 0.5rem 0.75rem 0.25rem; font-size: 0.6875rem; font-weight: 700; color: #4a6080; text-transform: uppercase; letter-spacing: 0.08em; }
+        .nb-sidebar-item { display: flex; align-items: center; gap: 0.625rem; padding: 0.4375rem 1rem; color: #8ba3bc; text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: background 0.12s, color 0.12s; border-left: 3px solid transparent; }
+        .nb-sidebar-item:hover { background: rgba(255,255,255,0.05); color: #c9d8e8; border-left-color: #4dabf7; }
+        .nb-sidebar-item.active { background: rgba(77,171,247,0.1); color: #74c0fc; border-left-color: #4dabf7; }
+        .nb-sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+        .nb-sidebar-divider { height: 1px; background: #162030; margin: 0.5rem 0; }
+
+        .nb-main { flex: 1; padding: 1.5rem; overflow-x: hidden; margin-left: 220px; }
+
+        .nb-page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .nb-page-title { font-size: 1.375rem; font-weight: 700; color: #1a2332; letter-spacing: -0.02em; }
+        .nb-page-subtitle { font-size: 0.875rem; color: #6c757d; margin-top: 0.125rem; }
+
+        .breadcrumb { display: flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; color: #6c757d; margin-bottom: 1rem; }
+        .breadcrumb a { color: #6c757d; text-decoration: none; }
+        .breadcrumb a:hover { color: #1a2332; }
+        .breadcrumb-sep { color: #adb5bd; }
+
+        .card { background: #fff; border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; margin-bottom: 1.5rem; }
+        .card-header { padding: 0.875rem 1.25rem; border-bottom: 1px solid #f1f3f5; background: #f8f9fa; display: flex; align-items: center; gap: 0.75rem; }
+        .card-title { font-size: 0.9375rem; font-weight: 600; color: #1a2332; }
+        .card-body { padding: 1.5rem; }
+
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label { display: block; font-size: 0.875rem; font-weight: 500; color: #495057; margin-bottom: 0.375rem; }
+        .form-label span { color: #c92a2a; margin-left: 2px; }
+        .form-select, .form-input, .form-textarea {
+            width: 100%; padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #1a2332;
+            background: #fff; border: 1px solid #ced4da; border-radius: 4px;
+            transition: border-color 0.15s, box-shadow 0.15s; box-sizing: border-box;
+        }
+        .form-select:focus, .form-input:focus, .form-textarea:focus {
+            outline: none; border-color: #4dabf7; box-shadow: 0 0 0 3px rgba(77,171,247,0.15);
+        }
+        .form-textarea { resize: vertical; min-height: 100px; font-family: 'SFMono-Regular', Consolas, monospace; }
+        .form-hint { font-size: 0.75rem; color: #868e96; margin-top: 0.25rem; }
+
+        .btn { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; border-radius: 4px; border: 1px solid transparent; cursor: pointer; text-decoration: none; transition: background 0.15s; }
+        .btn-primary { background: #1971c2; color: #fff; }
+        .btn-primary:hover { background: #1864ab; }
+        .btn-primary:disabled { background: #a5d8ff; cursor: not-allowed; }
+        .btn-secondary { background: #fff; color: #495057; border-color: #ced4da; }
+        .btn-secondary:hover { background: #f1f3f5; }
+        .btn-danger { background: #c92a2a; color: #fff; }
+        .btn-danger:hover { background: #b02a2a; }
+
+        .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+        .device-card {
+            border: 1px solid #dee2e6; border-radius: 6px; padding: 0.75rem 1rem;
+            cursor: pointer; transition: border-color 0.15s, background 0.15s;
+            display: flex; align-items: center; gap: 0.625rem;
+        }
+        .device-card:hover { border-color: #4dabf7; background: #f0f7ff; }
+        .device-card.selected { border-color: #1971c2; background: #e7f3ff; }
+        .device-card input[type="radio"] { display: none; }
+        .device-radio { width: 16px; height: 16px; border: 2px solid #ced4da; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .device-card.selected .device-radio { border-color: #1971c2; background: #1971c2; }
+        .device-card.selected .device-radio::after { content: ''; width: 6px; height: 6px; background: #fff; border-radius: 50%; }
+        .device-info { flex: 1; min-width: 0; }
+        .device-name { font-size: 0.875rem; font-weight: 600; color: #1a2332; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .device-meta { font-size: 0.75rem; color: #868e96; margin-top: 0.125rem; }
+
+        .result-box { border-radius: 6px; padding: 1rem 1.25rem; margin-top: 1rem; display: none; }
+        .result-box.show { display: block; }
+        .result-box.success { background: #ebfbee; border: 1px solid #8ce99a; }
+        .result-box.error { background: #fff5f5; border: 1px solid #ffc9c9; }
+        .result-box .result-title { font-weight: 600; font-size: 0.9375rem; margin-bottom: 0.375rem; }
+        .result-box.success .result-title { color: #2f9e44; }
+        .result-box.error .result-title { color: #c92a2a; }
+        .result-box .result-body { font-size: 0.8125rem; color: #495057; }
+
+        .status-badge { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.625rem; font-size: 0.75rem; font-weight: 500; border-radius: 4px; }
+        .status-badge.idle { background: #e3fafc; color: #0c8599; }
+        .status-badge.running { background: #fff9db; color: #e67700; }
+        .status-badge.success { background: #ebfbee; color: #2f9e44; }
+        .status-badge.error { background: #fff5f5; color: #c92a2a; }
+
+        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 999; align-items: center; justify-content: center; }
+        #loading-overlay.show { display: flex; }
+        .loading-spinner { width: 40px; height: 40px; border: 3px solid #dee2e6; border-top-color: #1971c2; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<nav class="nb-topbar">
+    <a href="{% url 'homepage:homepage' %}" class="nb-topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        网络管理系统
+    </a>
+    <div class="nb-topbar-spacer"></div>
+    <div class="nb-topbar-actions">
+        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
+        <div class="nb-topbar-user">
+            <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
+            <span>{{ user.username }}</span>
+        </div>
+        <form method="post" action="{% url 'homepage:logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="nb-logout-btn">退出</button>
+        </form>
+    </div>
+</nav>
+
+<div class="nb-layout">
+    <aside class="nb-sidebar">
+        <div class="nb-sidebar-section">导航</div>
+        <a href="{% url 'homepage:homepage' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            仪表盘
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">功能模块</div>
+        <a href="{% url 'devices:device_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            设备管理
+        </a>
+        {% include 'includes/device_config_sidebar_item.html' %}
+        <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            性能监控
+        </a>
+        <a href="{% url 'alerts:alert_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            告警管理
+        </a>
+        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            设备日志
+        </a>
+        <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            账户管理
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">系统</div>
+        <a href="/admin/" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            管理后台
+        </a>
+    </aside>
+
+    <main class="nb-main">
+        <nav class="breadcrumb">
+            <a href="/">首页</a>
+            <span class="breadcrumb-sep">›</span>
+            <a href="{% url 'configs:config_backup' %}">配置备份</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>立即备份</span>
+        </nav>
+
+        <div class="nb-page-header">
+            <div>
+                <div class="nb-page-title">立即备份</div>
+                <div class="nb-page-subtitle">选择设备并手动触发配置备份</div>
+            </div>
+            <a href="{% url 'configs:config_backup' %}" class="btn btn-secondary">
+                ← 返回列表
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">选择设备</h3>
+            </div>
+            <div class="card-body">
+                <form id="backup-form">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label class="form-label">目标设备 <span>*</span></label>
+                        <div id="device-list" class="device-grid" style="max-height: 400px; overflow-y: auto;">
+                            <div style="padding: 2rem; text-align: center; color: #868e96; grid-column: 1 / -1;">
+                                <div class="loading-spinner" style="margin: 0 auto 0.5rem; width: 28px; height: 28px; border-width: 2px;"></div>
+                                加载设备列表...
+                            </div>
+                        </div>
+                        <input type="hidden" id="selected-device-id" name="device_id" value="">
+                        <p class="form-hint" id="selection-hint" style="display: none;">已选择: <strong id="selected-device-name"></strong></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="commit-message">备份说明</label>
+                        <textarea id="commit-message" name="commit_message" class="form-textarea" placeholder="可选，描述本次备份的变更或用途，如：例行配置备份、变更前备份等"></textarea>
+                        <p class="form-hint">留空则使用默认说明文字</p>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="submit" id="submit-btn" class="btn btn-primary" disabled>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 7 12 3 4 7"/><polyline points="4 17 12 21 20 17"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                            发起备份
+                        </button>
+                        <span id="status-text" style="font-size: 0.8125rem; color: #868e96;"></span>
+                    </div>
+                </form>
+
+                <div id="result-success" class="result-box success">
+                    <div class="result-title">✓ 备份任务已提交</div>
+                    <div class="result-body" id="result-success-body"></div>
+                </div>
+                <div id="result-error" class="result-box error">
+                    <div class="result-title">✗ 备份失败</div>
+                    <div class="result-body" id="result-error-body"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="loading-overlay">
+    <div style="background: #fff; border-radius: 8px; padding: 2rem; text-align: center;">
+        <div class="loading-spinner" style="margin: 0 auto 1rem;"></div>
+        <div style="font-size: 0.875rem; color: #495057;">正在提交备份任务...</div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const deviceListEl = document.getElementById('device-list');
+    const selectedDeviceIdInput = document.getElementById('selected-device-id');
+    const selectedDeviceNameEl = document.getElementById('selected-device-name');
+    const selectionHint = document.getElementById('selection-hint');
+    const submitBtn = document.getElementById('submit-btn');
+    const statusText = document.getElementById('status-text');
+    const form = document.getElementById('backup-form');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const resultSuccess = document.getElementById('result-success');
+    const resultError = document.getElementById('result-error');
+
+    // Load device list from API
+    fetch('/devices/api/list/?page_size=200')
+        .then(r => r.json())
+        .then(data => {
+            const devices = data.results || [];
+            if (devices.length === 0) {
+                deviceListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: #868e96; grid-column: 1 / -1;">暂无可用设备，请先添加设备</div>';
+                return;
+            }
+
+            deviceListEl.innerHTML = devices.map(d => `
+                <label class="device-card" data-id="${d.id}" data-name="${d.name}">
+                    <div class="device-radio"></div>
+                    <div class="device-info">
+                        <div class="device-name">${d.name}</div>
+                        <div class="device-meta">${d.ip_address} · ${d.device_type_display || d.device_type}</div>
+                    </div>
+                </label>
+            `).join('');
+
+            // Click handler for device cards
+            deviceListEl.querySelectorAll('.device-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    deviceListEl.querySelectorAll('.device-card').forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    const id = this.dataset.id;
+                    const name = this.dataset.name;
+                    selectedDeviceIdInput.value = id;
+                    selectedDeviceNameEl.textContent = `${name} (${id})`;
+                    selectionHint.style.display = 'block';
+                    submitBtn.disabled = false;
+                    statusText.textContent = '';
+                    resultSuccess.classList.remove('show');
+                    resultError.classList.remove('show');
+                });
+            });
+        })
+        .catch(err => {
+            deviceListEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: #c92a2a; grid-column: 1 / -1;">加载设备列表失败: ' + err.message + '</div>';
+        });
+
+    // Form submit
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const deviceId = selectedDeviceIdInput.value;
+        const commitMessage = document.getElementById('commit-message').value.trim();
+
+        if (!deviceId) {
+            statusText.textContent = '请先选择设备';
+            statusText.style.color = '#c92a2a';
+            return;
+        }
+
+        loadingOverlay.classList.add('show');
+        resultSuccess.classList.remove('show');
+        resultError.classList.remove('show');
+
+        fetch('/backups/api/trigger/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify({
+                device_id: parseInt(deviceId),
+                commit_message: commitMessage,
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            loadingOverlay.classList.remove('show');
+            if (data.success || data.task_id) {
+                resultSuccess.classList.add('show');
+                document.getElementById('result-success-body').innerHTML =
+                    `任务已提交，正在后台执行。<br>任务ID: <code style="font-size:0.8rem;">${data.task_id || data.backup_id || 'N/A'}</code><br>稍后刷新当前页面查看最新结果。`;
+                submitBtn.disabled = true;
+            } else {
+                resultError.classList.add('show');
+                document.getElementById('result-error-body').textContent = data.error || JSON.stringify(data);
+            }
+        })
+        .catch(err => {
+            loadingOverlay.classList.remove('show');
+            resultError.classList.add('show');
+            document.getElementById('result-error-body').textContent = '请求失败: ' + err.message;
+        });
+    });
+})();
+</script>
+</body>
+</html>

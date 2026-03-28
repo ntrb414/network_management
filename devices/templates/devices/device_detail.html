@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备详情 - {{ device.name }} - 网络管理系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        /* ── NetBox-style layout ── */
+        body { background: #f8f9fa; display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* Top navbar */
+        .nb-topbar {
+            background: #1a2332;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid #0d1520;
+        }
+        .nb-topbar-brand {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nb-topbar-brand svg { color: #4dabf7; }
+        .nb-topbar-spacer { flex: 1; }
+        .nb-topbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.3125rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+            color: #adb5bd;
+            background: transparent;
+        }
+        .nb-topbar-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nb-topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #adb5bd;
+            font-size: 0.8125rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .nb-topbar-avatar {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: #2c3e50;
+            border: 1px solid #3d5166;
+            color: #74c0fc;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.6875rem;
+        }
+        .nb-logout-btn {
+            background: none; border: none; cursor: pointer;
+            color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem;
+            border-radius: 4px; transition: background 0.15s;
+        }
+        .nb-logout-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+        /* ── Main layout: sidebar + content ── */
+        .nb-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
+
+        /* Sidebar */
+        .nb-sidebar {
+
+            width: 220px;
+
+            min-width: 220px;
+
+            background: #1e2d3d;
+
+            border-right: 1px solid #162030;
+
+            padding: 1rem 0;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 0;
+
+            position: fixed;
+
+            top: 48px;
+
+            left: 0;
+
+            height: calc(100vh - 48px);
+
+            overflow-y: auto;
+
+        }
+        .nb-sidebar-section {
+            padding: 0.5rem 0.75rem 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #4a6080;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .nb-sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.4375rem 1rem;
+            color: #8ba3bc;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.12s, color 0.12s;
+            border-left: 3px solid transparent;
+        }
+        .nb-sidebar-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: #c9d8e8;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item.active {
+            background: rgba(77,171,247,0.1);
+            color: #74c0fc;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+        .nb-sidebar-divider { height: 1px; background: #162030; margin: 0.5rem 0; }
+
+        /* Main content */
+        .nb-main { flex: 1; padding: 1.5rem; overflow-x: hidden; margin-left: 220px; }
+
+        /* Page header */
+        .nb-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .nb-page-title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #1a2332;
+            letter-spacing: -0.02em;
+        }
+        .nb-page-subtitle { font-size: 0.875rem; color: #6c757d; margin-top: 0.125rem; }
+
+        /* Device header card */
+        .device-header {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .device-header-left { display: flex; align-items: center; gap: 1rem; }
+        .device-avatar {
+            width: 3.5rem; height: 3.5rem;
+            background: var(--gray-100);
+            border-radius: var(--radius);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--gray-500);
+        }
+        .device-name { font-size: 1.25rem; font-weight: 700; color: var(--gray-900); }
+        .device-meta { font-size: 0.875rem; color: var(--gray-500); margin-top: 0.25rem; }
+        .device-header-right { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+
+        /* Detail grid */
+        .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .detail-item { 
+            background: white; 
+            padding: 1rem; 
+            border-radius: var(--radius); 
+            border: 1px solid var(--gray-200);
+        }
+        .detail-label { 
+            font-size: 0.75rem; 
+            color: var(--gray-500); 
+            text-transform: uppercase; 
+            margin-bottom: 0.375rem;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+        }
+        .detail-value { 
+            font-size: 0.9375rem; 
+            font-weight: 500; 
+            color: var(--gray-900); 
+        }
+        .detail-value code {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.8125rem;
+            background: var(--gray-100);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+        }
+
+        /* Tabs */
+        .nb-tabs { display: flex; border-bottom: 1px solid var(--gray-200); margin-bottom: 1.25rem; gap: 0; }
+        .nb-tab {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-500);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            margin-bottom: -1px;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .nb-tab:hover { color: var(--gray-700); }
+        .nb-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .nb-tab-content { display: none; }
+        .nb-tab-content.active { display: block; }
+
+        /* Ports table */
+        .ports-table { width: 100%; border-collapse: collapse; }
+        .ports-table th {
+            background: var(--gray-50);
+            padding: 0.625rem 0.875rem;
+            text-align: left;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .ports-table td {
+            padding: 0.75rem 0.875rem;
+            border-bottom: 1px solid var(--gray-100);
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+        .ports-table tbody tr:last-child td { border-bottom: none; }
+        .ports-table tbody tr:hover { background: var(--gray-50); }
+        .port-status { display: inline-flex; align-items: center; gap: 0.375rem; }
+        .port-status-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .port-status-dot.up { background: var(--success); }
+        .port-status-dot.down { background: var(--danger); }
+        .port-status-dot.unknown { background: var(--gray-400); }
+
+        /* Action buttons */
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-radius: var(--radius);
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .action-btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        .action-btn-primary:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+        .action-btn-secondary {
+            background: white;
+            color: var(--gray-700);
+            border-color: var(--gray-200);
+        }
+        .action-btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-300);
+        }
+        .action-btn-ghost {
+            background: transparent;
+            color: var(--gray-500);
+            border-color: transparent;
+        }
+        .action-btn-ghost:hover {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        /* Quick actions panel */
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .quick-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.625rem 0.875rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .quick-action-btn:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-300);
+            color: var(--gray-900);
+        }
+        .quick-action-btn svg { color: var(--gray-400); }
+        .quick-action-btn:hover svg { color: var(--gray-600); }
+
+        /* SSH info warning */
+        .ssh-warning {
+            background: var(--warning-bg);
+            border: 1px solid var(--warning-border);
+            border-radius: var(--radius);
+            padding: 0.75rem 1rem;
+            font-size: 0.8125rem;
+            color: var(--warning);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .nb-sidebar { display: none; }
+            .device-header { flex-direction: column; align-items: flex-start; }
+            .device-header-right { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top navbar -->
+<nav class="nb-topbar">
+    <a href="{% url 'homepage:homepage' %}" class="nb-topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        网络管理系统
+    </a>
+    <div class="nb-topbar-spacer"></div>
+    <div class="nb-topbar-actions">
+        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
+        <div class="nb-topbar-user">
+            <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
+            <span>{{ user.username }}</span>
+            {% if user.is_superuser %}<span style="color:#4dabf7;font-size:0.75rem;">(管理员)</span>{% endif %}
+        </div>
+        <form method="post" action="{% url 'homepage:logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="nb-logout-btn">退出</button>
+        </form>
+    </div>
+</nav>
+
+<div class="nb-layout">
+    <!-- Sidebar -->
+    <aside class="nb-sidebar">
+        <div class="nb-sidebar-section">导航</div>
+        <a href="{% url 'homepage:homepage' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            仪表盘
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">功能模块</div>
+        <a href="{% url 'devices:device_list' %}" class="nb-sidebar-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            设备管理
+        </a>
+        {% include 'includes/device_config_sidebar_item.html' %}
+        <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            性能监控
+        </a>
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            IP管理
+        </a>
+        <a href="{% url 'alerts:alert_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            告警管理
+        </a>
+        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            设备日志
+        </a>
+        <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            账户管理
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">系统</div>
+        <a href="/admin/" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            管理后台
+        </a>
+    </aside>
+
+    <!-- Main content -->
+    <main class="nb-main">
+        <!-- Page header -->
+        <div class="nb-page-header">
+            <div>
+                <div class="nb-page-title">设备详情</div>
+                <div class="nb-page-subtitle">{{ device.name }} · {{ device.ip_address }}</div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="{% url 'devices:device_list' %}" class="action-btn action-btn-secondary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    返回列表
+                </a>
+            </div>
+        </div>
+
+        <!-- Device header card -->
+        <div class="device-header">
+            <div class="device-header-left">
+                <div class="device-avatar">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                        <path d="M8 21h8M12 17v4"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="device-name">{{ device.name }}</div>
+                    <div class="device-meta">
+                        {{ device.ip_address }} · {{ device.get_device_type_display }} 
+                        {% if device.model %}· {{ device.model }}{% endif %}
+                        {% if device.layer %}· {{ device.get_layer_display }}{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="device-header-right">
+                <span class="status-badge status-{{ device.status }}">{{ device.get_status_display }}</span>
+                <button class="action-btn action-btn-secondary" onclick="pingDevice()" id="pingBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                    </svg>
+                    Ping 测试
+                </button>
+                <a href="{% url 'devices:device_config' device.pk %}" class="action-btn action-btn-primary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    配置查看
+                </a>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start;">
+            <!-- Left column: Device info tabs -->
+            <div>
+                <!-- Tabs -->
+                <div class="nb-tabs">
+                    <button class="nb-tab active" onclick="switchTab('info', this)">基本信息</button>
+                    <button class="nb-tab" onclick="switchTab('ports', this)">端口信息</button>
+                    <button class="nb-tab" onclick="switchTab('ssh', this)">连接配置</button>
+                </div>
+
+                <!-- Tab: Basic Info -->
+                <div id="tab-info" class="nb-tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">设备信息</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">设备名称</div>
+                                    <div class="detail-value">{{ device.name }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">IP 地址</div>
+                                    <div class="detail-value"><code>{{ device.ip_address }}</code></div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">设备类型</div>
+                                    <div class="detail-value">{{ device.get_device_type_display }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">设备型号</div>
+                                    <div class="detail-value">{{ device.model|default:"—" }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">网络层级</div>
+                                    <div class="detail-value">{{ device.get_layer_display|default:"—" }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">位置</div>
+                                    <div class="detail-value">{{ device.location|default:"—" }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">当前状态</div>
+                                    <div class="detail-value">
+                                        <span class="status-badge status-{{ device.status }}">{{ device.get_status_display }}</span>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">延迟</div>
+                                    <div class="detail-value">
+                                        {% if device.latency %}{{ device.latency|floatformat:2 }} ms{% else %}—{% endif %}
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">创建时间</div>
+                                    <div class="detail-value">{{ device.created_at|date:"Y-m-d H:i" }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">最后在线</div>
+                                    <div class="detail-value">
+                                        {% if device.last_seen %}{{ device.last_seen|date:"Y-m-d H:i" }}{% else %}—{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Ports -->
+                <div id="tab-ports" class="nb-tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">端口列表</h3>
+                            <span class="badge badge-gray">{{ ports|length }} 个端口</span>
+                        </div>
+                        <div class="card-body" style="padding: 0;">
+                            {% if ports %}
+                            <table class="ports-table">
+                                <thead>
+                                    <tr>
+                                        <th>端口名称</th>
+                                        <th>类型</th>
+                                        <th>状态</th>
+                                        <th>速率</th>
+                                        <th>MAC 地址</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for port in ports %}
+                                    <tr>
+                                        <td style="font-weight: 500;">{{ port.name }}</td>
+                                        <td>{{ port.port_type|default:"—" }}</td>
+                                        <td>
+                                            <span class="port-status">
+                                                <span class="port-status-dot {% if port.status == 'up' %}up{% elif port.status == 'down' %}down{% else %}unknown{% endif %}"></span>
+                                                {{ port.status|default:"—"|upper }}
+                                            </span>
+                                        </td>
+                                        <td>{{ port.speed|default:"—" }}</td>
+                                        <td><code style="font-size: 0.75rem;">{{ port.mac_address|default:"—" }}</code></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <div class="nw-empty-state">
+                                <svg class="nw-empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="2" y="3" width="20" height="14" rx="2"/>
+                                    <path d="M8 21h8M12 17v4"/>
+                                </svg>
+                                <div class="nw-empty-state-title">暂无端口信息</div>
+                                <p style="font-size: 0.875rem; color: var(--gray-400);">该设备尚未采集端口数据</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: SSH Config -->
+                <div id="tab-ssh" class="nb-tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">SSH 连接配置</h3>
+                        </div>
+                        <div class="card-body">
+                            {% if device.ssh_username %}
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">SSH 端口</div>
+                                    <div class="detail-value"><code>{{ device.ssh_port }}</code></div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">SSH 用户名</div>
+                                    <div class="detail-value">{{ device.ssh_username }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">SSH 密码</div>
+                                    <div class="detail-value">
+                                        {% if device.ssh_password %}
+                                            <span style="font-family: monospace; letter-spacing: 2px;">••••••••</span>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">SNMP 团体名</div>
+                                    <div class="detail-value">{{ device.snmp_community|default:"—" }}</div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="ssh-warning">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                                </svg>
+                                该设备尚未配置 SSH 连接信息，无法进行远程配置管理
+                            </div>
+                            <p style="color: var(--gray-500); font-size: 0.875rem; text-align: center; padding: 2rem 0;">
+                                请在管理后台配置 SSH 连接信息
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column: Quick actions -->
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">快捷操作</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <a href="{% url 'devices:device_config' device.pk %}" class="quick-action-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                查看配置
+                            </a>
+                            <a href="{% url 'monitoring:device_detail' device.pk %}" class="quick-action-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                                </svg>
+                                性能监控
+                            </a>
+                            <button class="quick-action-btn" onclick="pingDevice()" id="quickPingBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                                Ping 测试
+                            </button>
+                            <a href="{% url 'logs:log_list' %}?device={{ device.pk }}" class="quick-action-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                查看日志
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 1rem;">
+                    <div class="card-header">
+                        <h3 class="card-title">相关信息</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <a href="{% url 'alerts:alert_list' %}?device={{ device.pk }}" class="action-btn action-btn-ghost" style="justify-content: space-between;">
+                                <span>告警记录</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                            </a>
+                            <a href="{% url 'configs:config_backup' %}?device={{ device.pk }}" class="action-btn action-btn-ghost" style="justify-content: space-between;">
+                                <span>配置备份</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    function switchTab(tabName, btn) {
+        // Remove active from all tabs
+        document.querySelectorAll('.nb-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nb-tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active to clicked tab
+        btn.classList.add('active');
+        document.getElementById('tab-' + tabName).classList.add('active');
+    }
+
+    function getCsrfToken() {
+        const name = 'csrftoken';
+        const value = document.cookie.split(';').map(c => c.trim())
+            .find(c => c.startsWith(name + '='));
+        return value ? value.split('=')[1] : '';
+    }
+
+    function pingDevice() {
+        const btn = document.getElementById('pingBtn');
+        const quickBtn = document.getElementById('quickPingBtn');
+        
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="ping-loading"></span>测试中...';
+        }
+        if (quickBtn) {
+            quickBtn.disabled = true;
+            quickBtn.innerHTML = '<span class="ping-loading"></span>测试中...';
+        }
+
+        fetch('{% url "devices:device_ping_api" device.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast(data.message || 'Ping 测试失败', 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Ping 测试失败: ' + error, 'error');
+        })
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Ping 测试';
+            }
+            if (quickBtn) {
+                quickBtn.disabled = false;
+                quickBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Ping 测试';
+            }
+        });
+    }
+
+    function showToast(message, type = 'info') {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        setTimeout(() => toast.remove(), 3000);
+    }
+</script>
+
+</body>
+</html>

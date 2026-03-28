@@ -1,0 +1,173 @@
+{% load i18n static %}<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 网络管理系统</title>
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a2332 0%, #2c3e50 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        .login-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-header .logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            background: #1a2332;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+        .login-header .logo svg {
+            color: #4dabf7;
+        }
+        .login-header h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a2332;
+            margin: 0 0 0.25rem 0;
+        }
+        .login-header p {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin: 0;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+        .form-group label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #495057;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="password"] {
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.9375rem;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .form-group input:focus {
+            border-color: #1971c2;
+            box-shadow: 0 0 0 3px rgba(25,113,194,0.15);
+        }
+        .login-button {
+            padding: 0.75rem 1rem;
+            background: #1971c2;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+            margin-top: 0.5rem;
+        }
+        .login-button:hover {
+            background: #1864ab;
+        }
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+        .error-message ul {
+            margin: 0;
+            padding-left: 1.25rem;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e4e4e7;
+        }
+        .back-link a {
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .back-link a:hover {
+            color: #1971c2;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/>
+                    <path d="M8 21h8"/>
+                    <path d="M12 17v4"/>
+                </svg>
+            </div>
+            <h1>网络管理系统</h1>
+            <p>管理后台登录</p>
+        </div>
+
+        {% if form.errors %}
+        <div class="error-message">
+            <ul>
+                {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+                {% for field in form %}
+                    {% for error in field.errors %}
+                    <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="post" class="login-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">用户名</label>
+                <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" autofocus required>
+            </div>
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">密码</label>
+                <input type="password" name="{{ form.password.name }}" id="{{ form.password.id_for_label }}" required>
+            </div>
+            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="login-button">登录</button>
+        </form>
+
+        <div class="back-link">
+            <a href="{% url 'homepage:homepage' %}">← 返回首页</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,122 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block title %}{% if add %}添加{% else %}编辑{% endif %} {{ opts.verbose_name }}{% endblock %}
+
+{% block content %}
+
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">{% if add %}添加 {{ opts.verbose_name }}{% else %}编辑 {{ opts.verbose_name }}{% endif %}</div>
+        <div class="nb-page-subtitle">{{ opts.verbose_name_plural|title }}</div>
+    </div>
+    <div class="object-tools">
+        {% if not add %}
+        <a href="{% url opts|admin_urlname:'history' original.pk|admin_urlquote %}" class="historylink">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            历史记录
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="admin-content">
+    <form method="post" enctype="multipart/form-data" class="admin-form">
+        {% csrf_token %}
+        
+        {% if adminform.form.non_field_errors %}
+        <div class="messagelist">
+            <div class="error">{{ adminform.form.non_field_errors }}</div>
+        </div>
+        {% endif %}
+
+        {% block field_sets %}
+        {% for fieldset in adminform %}
+        <fieldset class="aligned">
+            <h2>{{ fieldset.name }}</h2>
+            {% for line in fieldset %}
+            <div class="form-row">
+                {% for field in line %}
+                <label for="{{ field.field.id_for_label }}" class="{% if field.field.required %}required{% endif %}">
+                    {{ field.label }}
+                </label>
+                <div>
+                    {% if field.is_checkbox %}
+                    <div class="checkbox-row">
+                        {{ field.field }}
+                        <span>{{ field.help_text }}</span>
+                    </div>
+                    {% else %}
+                    {{ field.field }}
+                    {% if field.help_text %}
+                    <p class="help">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    {% endif %}
+                    {% if field.errors %}
+                    <ul class="errors">
+                        {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </fieldset>
+        {% endfor %}
+        {% endblock %}
+
+        {% block inline_field_sets %}
+        {% for inline_admin_formset in inline_admin_formsets %}
+        <div class="inline-group">
+            <h2>{{ inline_admin_formset.opts.verbose_name_plural|title }}</h2>
+            {{ inline_admin_formset.formset.management_form }}
+            {% for inline_admin_form in inline_admin_formset %}
+            <div class="inline-related">
+                <h3>{{ inline_admin_formset.opts.verbose_name|default:opts.verbose_name }} #{{ forloop.counter }}</h3>
+                <div class="inline-form">
+                    {% for fieldset in inline_admin_form %}
+                    {% for line in fieldset %}
+                    {% for field in line %}
+                    <div class="form-row" style="display: flex; gap: 0.75rem; margin-bottom: 0.5rem; align-items: center;">
+                        <label style="min-width: 100px; font-size: 0.8125rem;">{{ field.label }}</label>
+                        {{ field.field }}
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            {% if inline_admin_formset.has_add_permission %}
+            <div style="padding: 0.5rem; text-align: center; border: 1px dashed #ced4da; border-radius: 4px; margin-top: 0.5rem;">
+                <a href="#" style="color: #1971c2; text-decoration: none; font-size: 0.875rem;">+ 添加另一个 {{ inline_admin_formset.opts.verbose_name }}</a>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endblock %}
+
+        {% block submit_buttons %}
+        <div class="submit-row">
+            <input type="submit" name="_save" value="保存">
+            {% if not add %}
+            <input type="submit" name="_continue" value="保存并继续编辑">
+            {% endif %}
+            {% if has_add_permission %}
+            <input type="submit" name="_addanother" value="保存并添加另一个">
+            {% endif %}
+            {% if not add and has_delete_permission %}
+            <a href="{% url opts|admin_urlname:'delete' original.pk|admin_urlquote %}" class="deletelink">删除</a>
+            {% endif %}
+        </div>
+        {% endblock %}
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extrajs %}
+{{ media.js }}
+{% endblock %}

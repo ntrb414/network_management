@@ -1,0 +1,466 @@
+{% extends 'ipmanagement/base_ipmanagement.html' %}
+
+{% block title %}{{ subnet.cidr }}{% endblock %}
+{% block ipmanagement_active %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .usage-bar {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    .usage-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #51cf66, #2f9e44);
+        transition: width 0.3s ease;
+    }
+    .usage-stats {
+        display: flex;
+        gap: 2rem;
+        margin-top: 0.5rem;
+    }
+    .usage-stat {
+        font-size: 0.875rem;
+    }
+    .usage-stat span {
+        font-weight: 600;
+    }
+    .status-available { color: #2f9e44; }
+    .status-allocated { color: #1971c2; }
+    .status-reserved { color: #e67700; }
+
+    .ip-table { width: 100%; border-collapse: collapse; }
+    .ip-table th {
+        background: var(--gray-50);
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 2px solid var(--gray-200);
+        font-weight: 600;
+        color: var(--gray-700);
+        position: sticky;
+        top: 0;
+    }
+    .ip-table td {
+        padding: 0.625rem 0.75rem;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    .ip-table tr:hover td { background: var(--gray-50); }
+    .ip-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+    .ip-status-dot.available { background: #2f9e44; }
+    .ip-status-dot.allocated { background: #1971c2; }
+    .ip-status-dot.reserved { background: #e67700; }
+    .ip-link {
+        color: #1971c2;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .ip-link:hover { text-decoration: underline; }
+    .filter-bar {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    .filter-btn {
+        padding: 0.375rem 0.75rem;
+        border-radius: 4px;
+        border: 1px solid var(--gray-300);
+        background: white;
+        font-size: 0.8125rem;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .filter-btn:hover { border-color: var(--primary-color); }
+    .filter-btn.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .search-box {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .search-box input {
+        flex: 1;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .ip-actions {
+        display: flex;
+        gap: 0.25rem;
+    }
+    .ip-action-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+    }
+    .ip-action-btn.allocate { background: #dbeafe; color: #1971c2; }
+    .ip-action-btn.release { background: #ffe3e3; color: #c92a2a; }
+    .ip-action-btn.reserve { background: #fff9db; color: #e67700; }
+
+    .pagination {
+        display: flex;
+        gap: 0.25rem;
+        margin-top: 1rem;
+        justify-content: center;
+    }
+    .pagination a, .pagination span {
+        padding: 0.375rem 0.75rem;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        font-size: 0.875rem;
+        text-decoration: none;
+        color: var(--gray-700);
+    }
+    .pagination a:hover { background: var(--gray-100); }
+    .pagination .current { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+        background: white;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    .modal-header h2 { font-size: 1.125rem; font-weight: 600; margin: 0; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; color: var(--gray-500); cursor: pointer; }
+    .modal-body { padding: 1.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.375rem; }
+    .form-group input, .form-group select, .form-group textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    .form-group textarea { min-height: 80px; }
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--gray-200);
+        background: var(--gray-50);
+    }
+
+    .empty-state { text-align: center; padding: 3rem; color: var(--gray-500); }
+    .empty-state svg { width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<!-- Page header -->
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">{{ subnet.name|default:subnet.cidr }}</div>
+        <div class="nb-page-subtitle">{{ subnet.cidr }}{% if subnet.vlan_id %} · VLAN {{ subnet.vlan_id }}{% endif %}</div>
+    </div>
+    <div class="nb-header-actions">
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="btn btn-secondary btn-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            返回列表
+        </a>
+        <a href="{% url 'ipmanagement:ip_scan' %}" class="btn btn-primary btn-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            扫描网段
+        </a>
+    </div>
+</div>
+
+<!-- Subnet Info Card -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">使用统计</h3>
+                <div class="usage-stats">
+                    <div class="usage-stat">总IP: <span>{{ subnet.total_ips }}</span></div>
+                    <div class="usage-stat">已用: <span class="status-allocated">{{ subnet.used_ips }}</span></div>
+                    <div class="usage-stat">可用: <span class="status-available">{{ subnet.available_ips }}</span></div>
+                    <div class="usage-stat">使用率: <span>{{ subnet.usage_rate }}%</span></div>
+                </div>
+                <div class="usage-bar" style="margin-top: 0.75rem; width: 300px;">
+                    <div class="usage-fill" style="width: {{ subnet.usage_rate }}%"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <span class="badge" style="background: #d3f9d8; color: #2b8a3e;">{{ status_stats.available|default:0 }} 可用</span>
+                <span class="badge" style="background: #dbeafe; color: #1971c2;">{{ status_stats.allocated|default:0 }} 已分配</span>
+                <span class="badge" style="background: #fff9db; color: #e67700;">{{ status_stats.reserved|default:0 }} 预留</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- IP List -->
+<div class="card">
+    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+        <strong>IP地址列表</strong>
+        <span style="font-size: 0.875rem; color: var(--gray-500);">共 {{ total_count }} 个IP</span>
+    </div>
+    <div class="card-body">
+        <!-- Filter and Search -->
+        <div class="filter-bar">
+            <a href="?status=all{% if search %}&search={{ search }}{% endif %}" class="filter-btn {% if status_filter == 'all' %}active{% endif %}">全部</a>
+            <a href="?status=available{% if search %}&search={{ search }}{% endif %}" class="filter-btn {% if status_filter == 'available' %}active{% endif %}">可用</a>
+            <a href="?status=allocated{% if search %}&search={{ search }}{% endif %}" class="filter-btn {% if status_filter == 'allocated' %}active{% endif %}">已分配</a>
+            <a href="?status=reserved{% if search %}&search={{ search }}{% endif %}" class="filter-btn {% if status_filter == 'reserved' %}active{% endif %}">预留</a>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="搜索IP、主机名、描述..." value="{{ search }}">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="doSearch()">搜索</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="alert('JavaScript正常工作!')">测试</button>
+            {% if search %}
+            <a href="?status={{ status_filter }}" class="btn btn-outline-secondary btn-sm">清除</a>
+            {% endif %}
+        </div>
+
+        <!-- IP Table -->
+        {% if ip_list %}
+        <div style="max-height: 500px; overflow-y: auto; border: 1px solid var(--gray-200); border-radius: 6px;">
+            <table class="ip-table">
+                <thead>
+                    <tr>
+                        <th>IP地址</th>
+                        <th>状态</th>
+                        <th>关联设备</th>
+                        <th>描述</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ip in ip_list %}
+                    <tr>
+                        <td>
+                            <a href="javascript:void(0);" class="ip-link" data-ip="{{ ip.ip_address }}" data-status="{{ ip.status }}">{{ ip.ip_address }}</a>
+                        </td>
+                        <td>
+                            <span class="ip-status-dot {{ ip.status }}"></span>
+                            {{ ip.get_status_display }}
+                        </td>
+                        <td>
+                            {% if ip.device %}
+                            <a href="{% url 'devices:device_detail' ip.device.id %}">{{ ip.device.name }}</a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>{{ ip.description|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if ip_list.has_other_pages %}
+        <div class="pagination">
+            {% if ip_list.has_previous %}
+            <a href="?page={{ ip_list.previous_page_number }}&status={{ status_filter }}{% if search %}&search={{ search }}{% endif %}">&laquo;</a>
+            {% endif %}
+            <span class="current">{{ ip_list.number }} / {{ ip_list.paginator.num_pages }}</span>
+            {% if ip_list.has_next %}
+            <a href="?page={{ ip_list.next_page_number }}&status={{ status_filter }}{% if search %}&search={{ search }}{% endif %}">&raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <p>该网段暂无IP地址记录</p>
+            <p style="font-size: 0.875rem; margin-top: 0.5rem; opacity: 0.7;">点击"扫描网段"发现活跃IP</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="statusModal" class="modal-overlay">
+    <div class="modal" style="max-width: 420px;">
+        <div class="modal-header">
+            <h2>修改IP状态</h2>
+            <button type="button" class="modal-close" onclick="closeStatusModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>IP地址</label>
+                <input type="text" id="statusModalIp" readonly>
+            </div>
+            <div class="form-group">
+                <label for="statusModalSelect">状态</label>
+                <select id="statusModalSelect">
+                    <option value="available">可用</option>
+                    <option value="allocated">已分配</option>
+                    <option value="reserved">预留</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeStatusModal()">取消</button>
+            <button type="button" class="btn btn-primary btn-sm" id="statusModalConfirmBtn" onclick="submitStatusChange()">确定</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+let currentEditingIp = null;
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function doSearch() {
+    try {
+        console.log('开始搜索...');
+        const searchInput = document.getElementById('searchInput');
+        if (!searchInput) {
+            console.error('搜索输入框未找到');
+            return;
+        }
+
+        const search = searchInput.value;
+        const status = '{{ status_filter }}';
+        const url = `?status=${status}&search=${encodeURIComponent(search)}`;
+
+        console.log('搜索URL:', url);
+        console.log('搜索关键词:', search);
+        console.log('状态过滤:', status);
+
+        window.location.href = url;
+    } catch (error) {
+        console.error('搜索功能出错:', error);
+        alert('搜索功能出现错误，请刷新页面后重试');
+    }
+}
+
+function openStatusModal(ipAddress, status) {
+    currentEditingIp = ipAddress;
+    document.getElementById('statusModalIp').value = ipAddress;
+    document.getElementById('statusModalSelect').value = status;
+    document.getElementById('statusModal').classList.add('active');
+}
+
+function closeStatusModal() {
+    currentEditingIp = null;
+    document.getElementById('statusModal').classList.remove('active');
+}
+
+async function submitStatusChange() {
+    if (!currentEditingIp) {
+        return;
+    }
+
+    const confirmBtn = document.getElementById('statusModalConfirmBtn');
+    const status = document.getElementById('statusModalSelect').value;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '提交中...';
+
+    try {
+        const response = await fetch(`/ipmanagement/api/ips/${encodeURIComponent(currentEditingIp)}/status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ status })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            alert(data.error || '状态修改失败');
+            return;
+        }
+
+        closeStatusModal();
+        window.location.reload();
+    } catch (error) {
+        alert('状态修改请求失败，请稍后重试');
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '确定';
+    }
+}
+
+// 确保DOM加载完成后再添加事件监听器
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                doSearch();
+            }
+        });
+    }
+
+    // 点击空白处关闭设备下拉列表
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('deviceDropdown');
+        if (dropdown && !dropdown.contains(e.target)) {
+            document.getElementById('deviceDropdownList').classList.remove('show');
+        }
+
+        const modal = document.getElementById('statusModal');
+        if (modal && e.target === modal) {
+            closeStatusModal();
+        }
+    });
+
+    document.querySelectorAll('.ip-link').forEach(function(el) {
+        el.addEventListener('click', function() {
+            openStatusModal(this.dataset.ip, this.dataset.status);
+        });
+    });
+});
+{% endblock %}

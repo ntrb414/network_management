@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>监控仪表盘 - 网络管理系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        /* ── NetBox-style layout ── */
+        body { background: #f8f9fa; display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* Top navbar */
+        .nb-topbar {
+            background: #1a2332;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid #0d1520;
+        }
+        .nb-topbar-brand {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nb-topbar-brand svg { color: #4dabf7; }
+        .nb-topbar-spacer { flex: 1; }
+        .nb-topbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.3125rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+            color: #adb5bd;
+            background: transparent;
+        }
+        .nb-topbar-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nb-topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #adb5bd;
+            font-size: 0.8125rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .nb-topbar-avatar {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: #2c3e50;
+            border: 1px solid #3d5166;
+            color: #74c0fc;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.6875rem;
+        }
+        .nb-logout-btn {
+            background: none; border: none; cursor: pointer;
+            color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem;
+            border-radius: 4px; transition: background 0.15s;
+        }
+        .nb-logout-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+        /* ── Main layout: sidebar + content ── */
+        .nb-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
+
+        /* Sidebar */
+        .nb-sidebar {
+
+            width: 220px;
+
+            min-width: 220px;
+
+            background: #1e2d3d;
+
+            border-right: 1px solid #162030;
+
+            padding: 1rem 0;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 0;
+
+            position: fixed;
+
+            top: 48px;
+
+            left: 0;
+
+            height: calc(100vh - 48px);
+
+            overflow-y: auto;
+
+        }
+        .nb-sidebar-section {
+            padding: 0.5rem 0.75rem 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #4a6080;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .nb-sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.4375rem 1rem;
+            color: #8ba3bc;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.12s, color 0.12s;
+            border-left: 3px solid transparent;
+        }
+        .nb-sidebar-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: #c9d8e8;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item.active {
+            background: rgba(77,171,247,0.1);
+            color: #74c0fc;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+        .nb-sidebar-divider { height: 1px; background: #162030; margin: 0.5rem 0; }
+
+        /* Main content */
+        .nb-main { flex: 1; padding: 1.5rem; overflow-x: hidden; margin-left: 220px; }
+
+        /* Page header */
+        .nb-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .nb-page-title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #1a2332;
+            letter-spacing: -0.02em;
+        }
+        .nb-page-subtitle { font-size: 0.875rem; color: #6c757d; margin-top: 0.125rem; }
+
+        /* Stats grid */
+        .nb-stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .nb-stat-card {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: box-shadow 0.15s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .nb-stat-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-color: #4dabf7; }
+        .nb-stat-icon {
+            width: 40px; height: 40px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .nb-stat-icon svg { width: 20px; height: 20px; }
+        .nb-stat-icon.blue { background: #e7f3ff; color: #1971c2; }
+        .nb-stat-icon.green { background: #ebfbee; color: #2f9e44; }
+        .nb-stat-icon.orange { background: #fff4e6; color: #d9480f; }
+        .nb-stat-icon.red { background: #fff5f5; color: #c92a2a; }
+        .nb-stat-value { font-size: 1.625rem; font-weight: 700; color: #1a2332; line-height: 1.1; }
+        .nb-stat-label { font-size: 0.8125rem; color: #6c757d; margin-top: 0.125rem; }
+
+        /* Action bar */
+        .nb-action-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .nb-auto-refresh {
+            margin-left: auto;
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Device list - Vertical card layout */
+        .device-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .device-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow);
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .device-card:hover {
+            border-color: #4dabf7;
+            box-shadow: 0 4px 12px rgba(77, 171, 247, 0.15);
+            transform: translateY(-2px);
+        }
+        .device-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .device-card-main {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+        }
+        .device-card-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .device-card-status.online { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+        .device-card-status.offline { background: #6b7280; }
+        .device-card-status.fault { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
+        .device-card-status.preparing { background: #f59e0b; }
+        .device-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        .device-card-subtitle {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            margin-top: 0.125rem;
+        }
+        .device-card-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-weight: 500;
+        }
+        .device-card-badge-online { background: #f0fdf4; color: #16a34a; }
+        .device-card-badge-offline { background: #f9fafb; color: #6b7280; }
+        .device-card-badge-fault { background: #fef2f2; color: #dc2626; }
+        .device-card-badge-preparing { background: #fffbeb; color: #d97706; }
+        .device-card-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        .device-card-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+        .device-card-metric-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+        .device-card-metric-value {
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            font-weight: 500;
+        }
+        .device-card-metric-value.no-data {
+            color: var(--gray-400);
+            font-style: italic;
+        }
+        .metric-value-up {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.2rem 0.5rem;
+            background: #d1fae5;
+            color: #065f46;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .metric-value-full {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.2rem 0.5rem;
+            background: #d1fae5;
+            color: #065f46;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .device-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--gray-100);
+        }
+        @media (max-width: 768px) {
+            .device-card-metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top navbar -->
+<nav class="nb-topbar">
+    <a href="{% url 'homepage:homepage' %}" class="nb-topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        网络管理系统
+    </a>
+    <div class="nb-topbar-spacer"></div>
+    <div class="nb-topbar-actions">
+        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
+        <div class="nb-topbar-user">
+            <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
+            <span>{{ user.username }}</span>
+            {% if user.is_superuser %}<span style="color:#4dabf7;font-size:0.75rem;">(管理员)</span>{% endif %}
+        </div>
+        <form method="post" action="{% url 'homepage:logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="nb-logout-btn">退出</button>
+        </form>
+    </div>
+</nav>
+
+<div class="nb-layout">
+    <!-- Sidebar -->
+    <aside class="nb-sidebar">
+        <div class="nb-sidebar-section">导航</div>
+        <a href="{% url 'homepage:homepage' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            仪表盘
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">功能模块</div>
+        <a href="{% url 'devices:device_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            设备管理
+        </a>
+        {% include 'includes/device_config_sidebar_item.html' %}
+        <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            性能监控
+        </a>
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            IP管理
+        </a>
+        <a href="{% url 'alerts:alert_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            告警管理
+        </a>
+        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            设备日志
+        </a>
+        <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            账户管理
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">系统</div>
+        <a href="/admin/" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            管理后台
+        </a>
+    </aside>
+
+    <!-- Main content -->
+    <main class="nb-main">
+        <!-- Page header -->
+        <div class="nb-page-header">
+            <div>
+                <div class="nb-page-title">监控仪表盘</div>
+                <div class="nb-page-subtitle">监控设备列表 - 点击设备查看详细监控指标</div>
+            </div>
+        </div>
+
+        <!-- Stats overview -->
+        <div class="nb-stats-row">
+            <a href="{% url 'monitoring:monitoring_list' %}" class="nb-stat-card" style="text-decoration:none;">
+                <div class="nb-stat-icon blue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                </div>
+                <div>
+                    <div class="nb-stat-value">{{ total_metrics }}</div>
+                    <div class="nb-stat-label">当前监控指标</div>
+                </div>
+            </a>
+            <a href="{% url 'devices:device_list' %}" class="nb-stat-card" style="text-decoration:none;">
+                <div class="nb-stat-icon green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                </div>
+                <div>
+                    <div class="nb-stat-value">{{ monitored_devices_count|default:"0" }}</div>
+                    <div class="nb-stat-label">监控设备数</div>
+                </div>
+            </a>
+            <div class="nb-stat-card" style="text-decoration:none; cursor: default;">
+                <div class="nb-stat-icon orange">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                    <div class="nb-stat-value">{{ metric_types|length }}</div>
+                    <div class="nb-stat-label">监控项目</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action bar -->
+        <div class="nb-action-bar">
+            <button id="collectAllBtn" class="btn btn-primary btn-sm" onclick="collectAll()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                全部采集
+            </button>
+            <label class="nb-auto-refresh">
+                <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
+                自动刷新（30s）
+            </label>
+        </div>
+
+        <!-- Device list - Vertical Cards -->
+        <div class="device-list-container">
+            {% for item in device_list %}
+            <div class="device-card" onclick="window.location.href='{% url 'monitoring:device_detail' item.device.id %}'">
+                <div class="device-card-header">
+                    <div class="device-card-main">
+                        <span class="device-card-status {{ item.device.status }}"></span>
+                        <div>
+                            <div class="device-card-title">{{ item.device.name }}</div>
+                            <div class="device-card-subtitle">{{ item.device.ip_address }} · {{ item.device.get_device_type_display }}</div>
+                        </div>
+                    </div>
+                    <span class="device-card-badge device-card-badge-{{ item.device.status }}">{{ item.device.get_status_display }}</span>
+                </div>
+                <div class="device-card-metrics">
+                    <div class="device-card-metric">
+                        <span class="device-card-metric-label">接口状态</span>
+                        {% if item.summary.interface_status %}
+                            <span class="metric-value-up">{{ item.summary.interface_status }}</span>
+                        {% else %}
+                            <span class="device-card-metric-value no-data">暂无数据</span>
+                        {% endif %}
+                    </div>
+                    <div class="device-card-metric">
+                        <span class="device-card-metric-label">OSPF邻居</span>
+                        {% if item.summary.ospf %}
+                            <span class="metric-value-full">{{ item.summary.ospf }}</span>
+                        {% else %}
+                            <span class="device-card-metric-value no-data">暂无数据</span>
+                        {% endif %}
+                    </div>
+                    <div class="device-card-metric">
+                        <span class="device-card-metric-label">最后采集</span>
+                        {% if item.last_metric_time %}
+                            <span class="device-card-metric-value">{{ item.last_metric_time|date:"m-d H:i" }}</span>
+                        {% else %}
+                            <span class="device-card-metric-value no-data">尚未采集</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="device-card-actions" onclick="event.stopPropagation();">
+                    <a href="{% url 'monitoring:device_detail' item.device.id %}" class="action-btn action-btn-primary">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+                        查看详情
+                    </a>
+                    <button class="action-btn" onclick="collectDevice({{ item.device.id }}, this)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        采集数据
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 3rem; background: white; border-radius: var(--radius-lg); border: 1px solid var(--gray-200);">
+                <div style="color: var(--gray-500);">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 1rem; opacity: 0.5;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                    <p>暂无设备，请先在设备管理中添加设备</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+
+<script>
+    let autoRefreshTimer = null;
+
+    function getCsrfToken() {
+        return document.cookie.split(';').map(c => c.trim())
+            .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+    }
+
+    function collectDevice(deviceId, btn, callback) {
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> 采集中';
+
+        fetch(`/monitoring/api/devices/${deviceId}/collect/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                
+                if (callback) {
+                    callback(data);
+                } else if (data.success) {
+                    // 单个设备采集成功，刷新页面
+                    location.reload();
+                } else {
+                    alert('采集失败: ' + (data.error || '未知错误'));
+                }
+            }, 2000);
+        })
+        .catch(error => {
+            console.error('Collect error:', error);
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            if (callback) {
+                callback({ success: false });
+            } else {
+                alert('采集请求失败: ' + error.message);
+            }
+        });
+    }
+
+    function collectAll() {
+        const btn = document.getElementById('collectAllBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px; animation:spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>采集中...';
+
+        const collectBtns = document.querySelectorAll('.action-btn[onclick^="collectDevice"]');
+        const promises = [];
+        collectBtns.forEach(b => {
+            const match = b.getAttribute('onclick').match(/collectDevice\((\d+)/);
+            if (match) {
+                promises.push(new Promise((resolve) => {
+                    collectDevice(parseInt(match[1]), b, resolve);
+                }));
+            }
+        });
+
+        Promise.all(promises).then(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>全部采集';
+            
+            // 所有设备采集完成，刷新页面
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        });
+    }
+
+    function toggleAutoRefresh(enabled) {
+        if (enabled) {
+            autoRefreshTimer = setInterval(() => location.reload(), 30000);
+        } else {
+            clearInterval(autoRefreshTimer);
+        }
+    }
+</script>
+<style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</body>
+</html>

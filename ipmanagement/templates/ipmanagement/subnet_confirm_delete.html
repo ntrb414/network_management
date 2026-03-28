@@ -1,0 +1,42 @@
+{% extends 'ipmanagement/base_ipmanagement.html' %}
+
+{% block title %}确认删除网段{% endblock %}
+{% block ipmanagement_active %}active{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">确认删除</div>
+        <div class="nb-page-subtitle">删除后将无法恢复</div>
+    </div>
+</div>
+
+<!-- Confirm card -->
+<div class="card">
+    <div class="card-body" style="text-align: center; padding: 2rem;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fa5252" stroke-width="2" width="48" height="48" style="margin-bottom: 1rem;">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        
+        <h3 style="margin-bottom: 0.5rem; color: #1a2332;">确认删除网段?</h3>
+        <p style="color: #6c757d; margin-bottom: 1.5rem;">
+            即将删除网段 <code style="background: #f1f3f5; padding: 0.25rem 0.5rem; border-radius: 4px;">{{ object.cidr }}</code>
+            {% if object.name %}({{ object.name }}){% endif %}
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                <button type="submit" class="btn btn-danger">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    确认删除
+                </button>
+                <a href="{% url 'ipmanagement:subnet_list' %}" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

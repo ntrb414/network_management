@@ -1,0 +1,571 @@
+{% extends 'ipmanagement/base_ipmanagement.html' %}
+
+{% block title %}IP扫描{% endblock %}
+{% block ipmanagement_active %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .scan-container {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1.5rem;
+        min-height: 600px;
+        align-items: start;
+    }
+    .scan-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .scan-result {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        min-height: 400px;
+    }
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0.75rem 0;
+    }
+    .progress-fill {
+        height: 100%;
+        background: #4dabf7;
+        transition: width 0.3s ease;
+        width: 0%;
+    }
+    .ip-list {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        background: #fff;
+    }
+    .ip-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #f1f3f5;
+        transition: background-color 0.2s;
+    }
+    .ip-item:last-child {
+        border-bottom: none;
+    }
+    .ip-item:hover {
+        background: #f8f9fa;
+    }
+    .ip-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .ip-status {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #51cf66;
+        box-shadow: 0 0 0 3px rgba(81, 207, 102, 0.2);
+    }
+    .ip-details {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .ip-response-time {
+        font-size: 0.75rem;
+        color: #4dabf7;
+        background: rgba(77, 171, 247, 0.1);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+    .scan-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .stat-box {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1rem;
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a2332;
+    }
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .empty-scan {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        color: #6c757d;
+    }
+    .empty-scan svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    .scanning-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #4dabf7;
+        font-size: 0.875rem;
+    }
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #e9ecef;
+        border-top-color: #4dabf7;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    .scan-btn-container {
+        display: flex;
+        justify-content: flex-start;
+        margin-top: 0.5rem;
+    }
+    .scan-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">IP扫描</div>
+        <div class="nb-page-subtitle">扫描网段内的存活IP地址</div>
+    </div>
+    <div class="nb-header-actions">
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="btn btn-secondary btn-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            网段配置
+        </a>
+    </div>
+</div>
+
+<!-- Scan container -->
+<div class="scan-container">
+    <!-- Left: Controls -->
+    <div class="scan-controls">
+        <div class="card">
+            <div class="card-header">
+                <strong>扫描配置</strong>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label class="form-label">选择网段</label>
+                    <select id="subnetSelect" class="form-select">
+                        <option value="">-- 选择网段 --</option>
+                        {% for subnet in subnets %}
+                        <option value="{{ subnet.cidr }}" data-id="{{ subnet.id }}">{{ subnet.cidr }} {% if subnet.name %}({{ subnet.name }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text" style="color: #6c757d; margin-top: 0.25rem; display: block;">
+                        请先前往<a href="{% url 'ipmanagement:subnet_list' %}">网段配置</a>手动添加网段
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">或手动输入网段</label>
+                    <input type="text" id="manualCidr" class="form-input" placeholder="例如: 192.168.1.0/24">
+                    <small class="form-text" style="color: #6c757d; margin-top: 0.25rem; display: block;">支持CIDR格式，如 192.168.1.0/24</small>
+                </div>
+                
+                
+                <div class="scan-btn-container">
+                    <button id="startScanBtn" type="button" class="btn btn-primary scan-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        开始扫描
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scan status -->
+        <div class="card" id="scanStatusCard" style="display: none;">
+            <div class="card-header">
+                <strong>扫描进度</strong>
+            </div>
+            <div class="card-body">
+                <div class="scanning-indicator" id="scanningIndicator">
+                    <div class="spinner"></div>
+                    <span>正在扫描...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #6c757d;">
+                    <span id="progressText">0 / 0</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #dee2e6;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                        <span>存活IP:</span>
+                        <strong id="aliveCount" style="color: #51cf66;">0</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right: Results -->
+    <div class="scan-result">
+        <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <strong>活动IP扫描结果</strong>
+            <span id="resultStatus" style="font-size: 0.75rem; color: #6c757d;">等待开始</span>
+        </div>
+        <div class="card-body" id="resultBody">
+            <!-- Empty state -->
+            <div class="empty-scan" id="emptyState">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <p>点击左侧"开始扫描"按钮开始扫描</p>
+                <p style="font-size: 0.875rem; margin-top: 0.5rem; opacity: 0.7;">支持Ping扫描方式检测活动IP</p>
+            </div>
+            
+            <!-- Scanning state -->
+            <div id="scanningState" style="display: none; padding: 2rem; text-align: center;">
+                <div class="spinner" style="width: 32px; height: 32px; margin: 0 auto 1rem;"></div>
+                <p style="color: #6c757d;">正在扫描网段，请稍候...</p>
+            </div>
+            
+            <!-- Results state -->
+            <div id="resultsState" style="display: none;">
+                <div class="scan-stats">
+                    <div class="stat-box">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">总IP数</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="statAlive" style="color: #51cf66;">0</div>
+                        <div class="stat-label">存活IP</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="statTime">0s</div>
+                        <div class="stat-label">扫描耗时</div>
+                    </div>
+                </div>
+                
+                <div style="padding: 0 1rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong style="font-size: 0.875rem;">存活IP列表</strong>
+                        <span style="font-size: 0.75rem; color: #6c757d;" id="resultCount">共 0 个</span>
+                    </div>
+                    <div class="ip-list" id="ipList">
+                        <!-- IP items will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+let currentScanCidr = null;
+let scanStartTime = null;
+let scanTimer = null;
+
+// Start scan
+async function startScan() {
+    const subnetSelect = document.getElementById('subnetSelect');
+    const manualCidr = document.getElementById('manualCidr').value.trim();
+
+    let cidr = manualCidr || subnetSelect.value;
+
+    if (!cidr) {
+        alert('请选择网段或手动输入CIDR');
+        return;
+    }
+
+    // Validate CIDR format
+    if (!cidr.includes('/')) {
+        alert('请输入有效的CIDR格式，如 192.168.1.0/24');
+        return;
+    }
+
+    // /24 及更大网段走异步，避免同步请求超时（504）
+    const mask = parseInt(cidr.split('/')[1]);
+    if (mask <= 24) {
+        // 大网段或边界网段（/24）走异步任务
+        startAsyncScan(cidr);
+    } else {
+        // 小网段使用同步快速扫描
+        startQuickScan(cidr);
+    }
+}
+
+// Quick sync scan (for small subnets)
+async function startQuickScan(cidr) {
+    currentScanCidr = cidr;
+    scanStartTime = Date.now();
+    const subnetSelect = document.getElementById('subnetSelect');
+    const selectedOption = subnetSelect.options[subnetSelect.selectedIndex];
+    const subnetId = selectedOption ? selectedOption.dataset.id : '';
+
+    // UI updates
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultsState').style.display = 'none';
+    document.getElementById('scanningState').style.display = 'block';
+    document.getElementById('resultStatus').textContent = '扫描中...';
+
+    // Show status card
+    document.getElementById('scanStatusCard').style.display = 'block';
+    document.getElementById('scanningIndicator').style.display = 'flex';
+
+    try {
+        const response = await fetch('/ipmanagement/api/quick-scan/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ cidr: cidr, subnet_id: subnetId || null })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showResults(data);
+        } else {
+            alert(data.error || '扫描失败');
+            resetScanUI();
+        }
+    } catch (error) {
+        console.error('Scan error:', error);
+        let errorMessage = '扫描请求失败';
+        if (error.message) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+        alert(errorMessage);
+        resetScanUI();
+    }
+}
+
+// Async scan via RQ (for large subnets)
+async function startAsyncScan(cidr) {
+    currentScanCidr = cidr;
+
+    // UI updates
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultsState').style.display = 'none';
+    document.getElementById('scanningState').style.display = 'block';
+    document.getElementById('resultStatus').textContent = '已加入队列...';
+
+    // Show status card
+    document.getElementById('scanStatusCard').style.display = 'block';
+    document.getElementById('scanningIndicator').style.display = 'flex';
+
+    try {
+        const response = await fetch('/ipmanagement/api/scan/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ cidr: cidr })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            // Poll for status
+            pollScanStatus(data.task_id);
+        } else {
+            alert(data.error || '启动扫描失败');
+            resetScanUI();
+        }
+    } catch (error) {
+        console.error('Scan error:', error);
+        let errorMessage = '扫描请求失败';
+        if (error.message) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+        alert(errorMessage);
+        resetScanUI();
+    }
+}
+
+// Poll scan status
+async function pollScanStatus(taskId) {
+    const pollInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/ipmanagement/api/scan/${taskId}/`);
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                clearInterval(pollInterval);
+                alert('扫描状态接口返回了非JSON内容，请刷新页面后重试');
+                resetScanUI();
+                return;
+            }
+
+            const data = await response.json();
+
+            // Update progress
+            const progress = data.progress || 0;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent = `${data.scanned_ips || 0} / ${data.total_ips || 0}`;
+            document.getElementById('progressPercent').textContent = `${progress}%`;
+            document.getElementById('aliveCount').textContent = data.alive_ips || 0;
+            document.getElementById('resultStatus').textContent = data.status === 'running' ? '扫描中...' : '完成';
+
+            if (data.status === 'completed') {
+                clearInterval(pollInterval);
+                await showAsyncResults(taskId, data);
+            } else if (data.status === 'failed') {
+                clearInterval(pollInterval);
+                alert('扫描失败: ' + (data.message || '未知错误'));
+                resetScanUI();
+            }
+        } catch (error) {
+            console.error('Poll error:', error);
+        }
+    }, 2000);
+}
+
+// Show quick scan results
+function showResults(data) {
+    if (!data) {
+        alert('扫描返回数据为空');
+        resetScanUI();
+        return;
+    }
+
+    const scanTime = scanStartTime ? ((Date.now() - scanStartTime) / 1000).toFixed(1) : '0.0';
+
+    // UI updates
+    document.getElementById('scanningState').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultsState').style.display = 'block';
+    document.getElementById('resultStatus').textContent = '扫描完成';
+    document.getElementById('scanningIndicator').style.display = 'none';
+
+    // Update stats
+    document.getElementById('statTotal').textContent = data.total || 0;
+    document.getElementById('statAlive').textContent = data.alive_count || 0;
+    document.getElementById('statTime').textContent = scanTime + 's';
+    document.getElementById('resultCount').textContent = '共 ' + (data.alive_count || 0) + ' 个存活IP';
+
+    // Update progress
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('progressText').textContent = (data.total || 0) + ' / ' + (data.total || 0);
+    document.getElementById('progressPercent').textContent = '100%';
+    document.getElementById('aliveCount').textContent = data.alive_count || 0;
+
+    // Render IP list
+    const ipList = document.getElementById('ipList');
+    const aliveHosts = data.alive_hosts || [];
+
+    if (aliveHosts.length > 0) {
+        ipList.innerHTML = aliveHosts.map(host => `
+            <div class="ip-item">
+                <div class="ip-info">
+                    <div class="ip-status"></div>
+                    <div>
+                        <div style="font-weight: 600; color: #1a2332;">${host.ip || 'Unknown'}</div>
+                        ${host.hostname ? `<div class="ip-details">${host.hostname}</div>` : ''}
+                    </div>
+                </div>
+                ${host.response_time ? `<span class="ip-response-time">${parseFloat(host.response_time).toFixed(1)}ms</span>` : ''}
+            </div>
+        `).join('');
+    } else {
+        ipList.innerHTML = '<div class="empty-scan" style="padding: 2rem;"><p>未发现存活IP</p></div>';
+    }
+}
+
+// Show async scan results (simplified)
+async function showAsyncResults(taskId, statusData) {
+    document.getElementById('scanningState').style.display = 'none';
+    document.getElementById('resultsState').style.display = 'block';
+    document.getElementById('resultStatus').textContent = '扫描完成';
+    document.getElementById('scanningIndicator').style.display = 'none';
+
+    document.getElementById('statTotal').textContent = statusData.total_ips || 0;
+    document.getElementById('statAlive').textContent = statusData.alive_ips || 0;
+    document.getElementById('statTime').textContent = '-';
+    document.getElementById('resultCount').textContent = '共 ' + (statusData.alive_ips || 0) + ' 个存活IP';
+
+    // 异步扫描完成后，单独拉取结果详情
+    let aliveHosts = [];
+    try {
+        const resultResp = await fetch(`/ipmanagement/api/scan/${taskId}/result/`);
+        const contentType = resultResp.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const resultData = await resultResp.json();
+            aliveHosts = resultData.alive_hosts || [];
+        }
+    } catch (e) {
+        console.error('Fetch scan result failed:', e);
+    }
+
+    const ipList = document.getElementById('ipList');
+    if (aliveHosts.length > 0) {
+        ipList.innerHTML = aliveHosts.map(host => `
+            <div class="ip-item">
+                <div class="ip-info">
+                    <div class="ip-status"></div>
+                    <div>
+                        <div style="font-weight: 600; color: #1a2332;">${host.ip || 'Unknown'}</div>
+                        ${host.hostname ? `<div class="ip-details">${host.hostname}</div>` : ''}
+                    </div>
+                </div>
+                ${host.response_time ? `<span class="ip-response-time">${parseFloat(host.response_time).toFixed(1)}ms</span>` : ''}
+            </div>
+        `).join('');
+    } else {
+        ipList.innerHTML = '<div class="empty-scan" style="padding: 2rem;"><p>未发现存活IP</p></div>';
+    }
+}
+
+// Reset UI
+function resetScanUI() {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('resultsState').style.display = 'none';
+    document.getElementById('scanningState').style.display = 'none';
+    document.getElementById('resultStatus').textContent = '等待开始';
+    document.getElementById('scanStatusCard').style.display = 'none';
+}
+
+// Get CSRF token
+function getCsrfToken() {
+    var cookie = document.cookie.match(/csrftoken=([^;]+)/);
+    return cookie ? cookie[1] : '';
+}
+
+// Event listener - Ensure DOM is loaded before binding
+document.addEventListener('DOMContentLoaded', function() {
+    var startScanBtn = document.getElementById('startScanBtn');
+    if (startScanBtn) {
+        startScanBtn.addEventListener('click', startScan);
+    }
+});
+{% endblock %}

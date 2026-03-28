@@ -1,0 +1,101 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_list admin_urls %}
+
+{% block title %}{{ cl.model_opts.verbose_name_plural|title }}{% endblock %}
+
+{% block content %}
+
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">{{ cl.model_opts.verbose_name_plural|title }}</div>
+        <div class="nb-page-subtitle">{{ cl.model_opts.verbose_name }}</div>
+    </div>
+    <div class="object-tools">
+        {% if has_add_permission %}
+        <a href="{% url cl.opts|admin_urlname:'add' %}" class="addlink">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            添加 {{ cl.model_opts.verbose_name }}
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="admin-content">
+    <div class="changelist-shell{% if cl.has_filters %} has-filters{% endif %}">
+        <div class="changelist-main">
+            {% block search %}
+            {% if cl.search_fields or cl.has_filters %}
+            <form class="changelist-toolbar" method="get">
+                {% for key, value in cl.params.items %}
+                    {% if key != search_var and key != 'p' %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
+                {% endfor %}
+                <div class="changelist-search">
+                    <input type="text" name="{{ search_var }}" value="{{ cl.query }}" placeholder="搜索...">
+                    <input type="submit" value="搜索">
+                </div>
+            </form>
+            {% endif %}
+            {% endblock %}
+
+            {% if cl.date_hierarchy %}
+            <div class="date-hierarchy-wrap">
+                {% date_hierarchy cl %}
+            </div>
+            {% endif %}
+
+            <form method="post" id="changelist-form">
+                {% csrf_token %}
+
+                {% block actions %}
+                {% if action_form and cl.show_admin_actions %}
+                <div class="changelist-actions">
+                    {% admin_actions %}
+                </div>
+                {% endif %}
+                {% endblock %}
+
+                {% block result_list %}
+                {% if cl.result_count %}
+                {% result_list cl %}
+                {% else %}
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                        <polyline points="13 2 13 9 20 9"/>
+                    </svg>
+                    <p>暂无数据</p>
+                </div>
+                {% endif %}
+                {% endblock %}
+
+                {% block pagination %}
+                {% if cl.result_count and cl.show_full_result_count %}
+                {% pagination cl %}
+                {% endif %}
+                {% endblock %}
+            </form>
+        </div>
+
+        {% if cl.has_filters %}
+        <aside id="changelist-filter">
+            <div class="filter-panel-header">
+                <span>筛选条件</span>
+                {% if cl.has_active_filters %}
+                <a href="{{ cl.clear_all_filters_qs }}" class="clear-filters-link">清除</a>
+                {% endif %}
+            </div>
+            <div class="filter-panel-body">
+                {% for spec in cl.filter_specs %}
+                    {% admin_list_filter cl spec %}
+                {% endfor %}
+            </div>
+        </aside>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extrajs %}{% endblock %}

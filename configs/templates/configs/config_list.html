@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备配置 - 网络管理系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <style>
+        /* ── NetBox-style layout ── */
+        body { background: #f8f9fa; display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* Top navbar */
+        .nb-topbar {
+            background: #1a2332;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid #0d1520;
+        }
+        .nb-topbar-brand {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nb-topbar-brand svg { color: #4dabf7; }
+        .nb-topbar-spacer { flex: 1; }
+        .nb-topbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.3125rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+            color: #adb5bd;
+            background: transparent;
+        }
+        .nb-topbar-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nb-topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #adb5bd;
+            font-size: 0.8125rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .nb-topbar-avatar {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: #2c3e50;
+            border: 1px solid #3d5166;
+            color: #74c0fc;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.6875rem;
+        }
+        .nb-logout-btn {
+            background: none; border: none; cursor: pointer;
+            color: #adb5bd; font-size: 0.8125rem; padding: 0.25rem 0.5rem;
+            border-radius: 4px; transition: background 0.15s;
+        }
+        .nb-logout-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+        /* ── Main layout: sidebar + content ── */
+        .nb-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
+
+        /* Sidebar */
+        .nb-sidebar {
+
+            width: 220px;
+
+            min-width: 220px;
+
+            background: #1e2d3d;
+
+            border-right: 1px solid #162030;
+
+            padding: 1rem 0;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 0;
+
+            position: fixed;
+
+            top: 48px;
+
+            left: 0;
+
+            height: calc(100vh - 48px);
+
+            overflow-y: auto;
+
+        }
+        .nb-sidebar-section {
+            padding: 0.5rem 0.75rem 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #4a6080;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .nb-sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.4375rem 1rem;
+            color: #8ba3bc;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.12s, color 0.12s;
+            border-left: 3px solid transparent;
+        }
+        .nb-sidebar-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: #c9d8e8;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item.active {
+            background: rgba(77,171,247,0.1);
+            color: #74c0fc;
+            border-left-color: #4dabf7;
+        }
+        .nb-sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+        .nb-sidebar-divider { height: 1px; background: #162030; margin: 0.5rem 0; }
+        .nb-sidebar-drawer { margin: 0; }
+        .nb-sidebar-drawer summary { list-style: none; }
+        .nb-sidebar-drawer summary::-webkit-details-marker { display: none; }
+        .nb-sidebar-drawer-toggle { cursor: pointer; justify-content: space-between; }
+        .nb-sidebar-drawer-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.625rem;
+        }
+        .nb-sidebar-drawer-icon {
+            width: 14px;
+            height: 14px;
+            margin-left: auto;
+            opacity: 0.7;
+            transition: transform 0.15s ease;
+        }
+        .nb-sidebar-drawer[open] .nb-sidebar-drawer-icon { transform: rotate(180deg); }
+        .nb-sidebar-submenu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem 0.5rem 0;
+        }
+        .nb-sidebar-subitem {
+            display: block;
+            margin-left: 2.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            color: #8ba3bc;
+            text-decoration: none;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            line-height: 1.2;
+            transition: background 0.12s, color 0.12s;
+        }
+        .nb-sidebar-subitem:hover {
+            background: rgba(255,255,255,0.05);
+            color: #c9d8e8;
+        }
+        .nb-sidebar-subitem.active {
+            background: rgba(77,171,247,0.14);
+            color: #74c0fc;
+        }
+
+        /* Main content */
+        .nb-main { flex: 1; padding: 1.5rem; overflow-x: hidden; margin-left: 220px; }
+
+        /* Page header */
+        .nb-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .nb-page-title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #1a2332;
+            letter-spacing: -0.02em;
+        }
+        .nb-page-subtitle { font-size: 0.875rem; color: #6c757d; margin-top: 0.125rem; }
+
+        /* Section title */
+        .nb-section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin: 2rem 0 1rem;
+        }
+        .nb-section-title:first-of-type { margin-top: 0; }
+
+        /* Action bar */
+        .nb-action-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .nb-search-box {
+            display: flex;
+            gap: 0.5rem;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .nb-search-box input {
+            flex: 1;
+            padding: 0.4375rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+        }
+
+        /* Data table */
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
+        .data-table th { background: var(--gray-50); padding: 1rem; text-align: left; border-bottom: 2px solid var(--gray-200); font-weight: 600; color: var(--gray-700); }
+        .data-table td { padding: 1rem; border-bottom: 1px solid var(--gray-100); }
+        .data-table tbody tr:hover { background: var(--gray-50); }
+        .link-primary { color: var(--primary-color); text-decoration: none; }
+        .link-primary:hover { text-decoration: underline; }
+
+        /* Action buttons */
+        .nb-action-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            margin-right: 0.25rem;
+        }
+        .nb-action-btn.edit { background: var(--primary-100); color: var(--primary-color); }
+        .nb-action-btn.delete { background: var(--danger-light); color: var(--danger); }
+        .nb-action-btn.apply { background: var(--success-light); color: var(--success); }
+        .nb-action-btn.approve { background: #dbeafe; color: #2563eb; }
+
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #dbeafe; color: #2563eb; }
+        .status-executing { background: #d1fae5; color: #065f46; }
+        .status-completed { background: #d1fae5; color: #047857; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
+
+        /* Tab navigation */
+        .tab-navigation {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+            padding-bottom: 0.5rem;
+        }
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: var(--gray-100);
+            color: var(--gray-600);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { background: var(--gray-200); }
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .modal-header h2 { font-size: 1.25rem; font-weight: 600; color: var(--gray-800); margin: 0; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; color: var(--gray-500); cursor: pointer; }
+        .modal-body { padding: 1.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.5rem; }
+        .form-group label.required::after { content: ' *'; color: var(--danger); }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+        }
+        .form-group textarea { min-height: 150px; font-family: monospace; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+            background: var(--gray-50);
+        }
+
+        .alert { padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.875rem; }
+        .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .floating-alerts {
+            position: fixed;
+            top: 64px;
+            right: 16px;
+            z-index: 2200;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            width: min(360px, calc(100vw - 32px));
+        }
+        .floating-alerts .alert {
+            margin-bottom: 0;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+        }
+
+        /* Device list in modal */
+        .device-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 0.5rem;
+        }
+        .device-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--gray-100);
+            cursor: pointer;
+        }
+        .device-item:last-child { border-bottom: none; }
+        .device-item:hover { background: var(--gray-50); }
+        .device-item input[type="checkbox"] { margin-right: 0.75rem; }
+        .device-info { flex: 1; }
+        .device-name { font-weight: 500; color: var(--gray-800); }
+        .device-meta { font-size: 0.75rem; color: var(--gray-500); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; display: inline-block; }
+        .status-online { background: #22c55e; }
+        .status-offline { background: #6b7280; }
+        .status-fault { background: #ef4444; }
+        .select-all { padding: 0.5rem; background: var(--gray-50); border-bottom: 1px solid var(--gray-200); margin-bottom: 0.5rem; }
+        .selected-count { font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem; }
+        .variables-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-200); }
+        .schedule-name-btn {
+            border: none;
+            background: none;
+            padding: 0;
+            color: var(--primary-color);
+            font-size: 0.875rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .schedule-name-btn:hover { text-decoration: underline; }
+        .schedule-summary {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+        }
+        .schedule-result {
+            display: inline-flex;
+            gap: 0.5rem;
+            font-size: 0.8125rem;
+            color: var(--gray-700);
+            align-items: center;
+        }
+        .schedule-result strong { color: var(--gray-900); }
+        .device-selector-panel {
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 0.75rem;
+            background: var(--gray-50);
+        }
+        .selection-mode-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+        .radio-inline,
+        .checkbox-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+        .radio-inline input,
+        .checkbox-inline input {
+            width: auto;
+        }
+        .device-selector-panel.hidden { display: none; }
+        .log-run-card {
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background: white;
+        }
+        .log-run-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .log-run-meta {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+        }
+        .log-detail-list {
+            margin: 0.75rem 0 0;
+            padding: 0;
+            list-style: none;
+        }
+        .log-detail-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.5rem 0;
+            border-top: 1px dashed var(--gray-200);
+            font-size: 0.8125rem;
+        }
+        .log-detail-item:first-child { border-top: none; }
+        .text-danger { color: var(--danger); }
+        .text-success { color: var(--success); }
+    </style>
+</head>
+<body>
+
+<!-- Top navbar -->
+<nav class="nb-topbar">
+    <a href="{% url 'homepage:homepage' %}" class="nb-topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        网络管理系统
+    </a>
+    <div class="nb-topbar-spacer"></div>
+    <div class="nb-topbar-actions">
+        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
+        <div class="nb-topbar-user">
+            <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
+            <span>{{ user.username }}</span>
+            {% if user.is_superuser %}<span style="color:#4dabf7;font-size:0.75rem;">(管理员)</span>{% endif %}
+        </div>
+        <form method="post" action="{% url 'homepage:logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="nb-logout-btn">退出</button>
+        </form>
+    </div>
+</nav>
+
+<div class="nb-layout">
+    <!-- Sidebar -->
+    <aside class="nb-sidebar">
+        <div class="nb-sidebar-section">导航</div>
+        <a href="{% url 'homepage:homepage' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            仪表盘
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">功能模块</div>
+        <a href="{% url 'devices:device_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            设备管理
+        </a>
+        {% include 'includes/device_config_sidebar_item.html' %}
+        <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            性能监控
+        </a>
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            IP管理
+        </a>
+        <a href="{% url 'alerts:alert_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            告警管理
+        </a>
+        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            设备日志
+        </a>
+        <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            账户管理
+        </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">系统</div>
+        <a href="/admin/" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            管理后台
+        </a>
+    </aside>
+
+    <!-- Main content -->
+    <main class="nb-main">
+        <!-- Page header -->
+        <div class="nb-page-header">
+            <div>
+                <div class="nb-page-title">设备配置</div>
+                <div class="nb-page-subtitle">统一管理配置模板、批量下发任务与定时任务</div>
+            </div>
+        </div>
+
+        <!-- Tab navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab('templates', this)">模板列表</button>
+            <button class="tab-btn" onclick="switchTab('tasks', this)">任务列表</button>
+            <button class="tab-btn" onclick="switchTab('schedules', this)">定时任务</button>
+        </div>
+
+        <div id="tab-templates">
+        <h2 class="nb-section-title">配置模板与批量下发</h2>
+
+        <div class="nb-action-bar">
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">创建模板</button>
+            <a href="{% url 'configs:config_backup' %}" class="btn btn-secondary btn-sm">配置备份管理</a>
+            <div class="nb-search-box">
+                <input type="text" id="searchInput" placeholder="搜索模板名称..." onkeyup="searchTemplates()">
+                <button class="btn btn-secondary btn-sm" onclick="searchTemplates()">搜索</button>
+            </div>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        {% if configs %}
+            <div class="card">
+                <div class="card-body" style="padding: 0;">
+                    <table class="data-table" id="templateTable">
+                        <thead>
+                            <tr>
+                                <th>模板名称</th>
+                                <th>描述</th>
+                                <th>设备类型</th>
+                                <th>创建者</th>
+                                <th>更新时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for config in configs %}
+                                <tr data-name="{{ config.name }}">
+                                    <td><a href="{% url 'configs:config_detail' config.pk %}" class="link-primary">{{ config.name }}</a></td>
+                                    <td>{{ config.description|default:"-" }}</td>
+                                    <td>{{ config.device_types|join:", "|default:"-" }}</td>
+                                    <td>{{ config.created_by|default:"-" }}</td>
+                                    <td>{{ config.updated_at|default:"-" }}</td>
+                                    <td>
+                                        <button class="nb-action-btn edit" onclick="openEditModal({{ config.id }})">编辑</button>
+                                        <button class="nb-action-btn delete" onclick="deleteTemplate({{ config.id }}, '{{ config.name|escapejs }}')">删除</button>
+                                        <button class="nb-action-btn apply" onclick="openApplyModal({{ config.id }}, '{{ config.name|escapejs }}')">应用</button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="empty-state">
+                    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                    <h3 class="empty-state-title">暂无配置模板</h3>
+                    <p>系统中还没有配置模板，请创建模板。</p>
+                    <button class="btn btn-primary btn-sm" onclick="openAddModal()" style="margin-top: 1rem;">创建模板</button>
+                </div>
+            </div>
+        {% endif %}
+        </div>
+
+        <div id="tab-tasks" style="display: none;">
+        <h2 class="nb-section-title">配置任务</h2>
+        {% if tasks %}
+            <div class="card">
+                <div class="card-body" style="padding: 0;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>任务名称</th>
+                                <th>模板</th>
+                                <th>状态</th>
+                                <th>设备数</th>
+                                <th>创建者</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in tasks %}
+                                <tr>
+                                    <td>{{ task.name }}</td>
+                                    <td>{{ task.template.name|default:"-" }}</td>
+                                    <td><span class="status-badge status-{{ task.status }}">{{ task.get_status_display }}</span></td>
+                                    <td>{{ task.devices.count }}</td>
+                                    <td>{{ task.created_by|default:"-" }}</td>
+                                    <td>{{ task.created_at }}</td>
+                                    <td>
+                                        {% if task.status == 'pending' %}
+                                            <button class="nb-action-btn apply" onclick="executeTask({{ task.id }})">执行</button>
+                                        {% endif %}
+                                        <button class="nb-action-btn approve" onclick="openTaskResultModal({{ task.id }}, '{{ task.name|escapejs }}')">执行结果</button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="empty-state">
+                    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <h3 class="empty-state-title">暂无配置任务</h3>
+                    <p>选择模板并点击"应用"按钮创建配置任务。</p>
+                </div>
+            </div>
+        {% endif %}
+        </div>
+
+        <div id="tab-schedules" style="display: none;">
+            <h2 class="nb-section-title">定时任务</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="nb-action-bar" style="margin-bottom: 1rem;">
+                        <button class="btn btn-primary btn-sm" onclick="openScheduleModal()">新增定时备份</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadSchedules()">刷新列表</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>任务名称</th>
+                                <th>执行计划</th>
+                                <th>备份设备</th>
+                                <th>上次执行结果</th>
+                                <th>总执行次数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--gray-500);">正在加载定时任务...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="floatingAlertContainer" class="floating-alerts"></div>
+
+<!-- Device selection modal -->
+<div class="modal-overlay" id="deviceModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>选择目标设备</h2>
+            <button class="modal-close" onclick="closeDeviceModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom: 1rem;">请选择要应用配置 <strong id="applyTemplateName"></strong> 的目标设备：</p>
+            <div class="form-group">
+                <label>设备列表</label>
+                <div class="device-list" id="deviceList">
+                    <div class="loading">正在加载设备...</div>
+                </div>
+                <div class="selected-count">已选择 <span id="selectedCount">0</span> 台设备</div>
+            </div>
+            <div class="variables-section">
+                <h4 style="margin-bottom: 0.5rem;">模板变量</h4>
+                <div id="variablesContainer">
+                    <p style="color: var(--gray-500); font-size: 0.875rem;">此模板无需变量</p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDeviceModal()">取消</button>
+            <button type="button" class="btn btn-primary" id="confirmApplyBtn" onclick="confirmApply()">确认应用</button>
+        </div>
+    </div>
+</div>
+
+<!-- Template form modal -->
+<div class="modal-overlay" id="templateModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="modalTitle">创建模板</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="templateForm" onsubmit="submitForm(event)">
+            <div class="modal-body">
+                <input type="hidden" id="templateId" name="templateId">
+                <div class="form-group">
+                    <label for="name" class="required">模板名称</label>
+                    <input type="text" id="name" name="name" required placeholder="例如：基础配置模板">
+                </div>
+                <div class="form-group">
+                    <label for="description">描述</label>
+                    <input type="text" id="description" name="description" placeholder="模板描述信息">
+                </div>
+                <div class="form-group">
+                    <label for="device_type">适用设备类型</label>
+                    <select id="device_type" name="device_type">
+                        <option value="">-- 请选择 --</option>
+                        <option value="router">路由器</option>
+                        <option value="switch">交换机</option>
+                        <option value="ap">AP</option>
+                        <option value="ac">AC</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="template_content" class="required">模板内容 (Jinja2)</label>
+                    <textarea id="template_content" name="template_content" required placeholder="interface {{ interface_name }}
+ ip address {{ ip_address }} {{ subnet_mask }}
+ no shutdown"></textarea>
+                    <small style="color: var(--gray-500);">使用 Jinja2 语法，如 {{ variable_name }}</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="scheduleModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="scheduleModalTitle">新增定时备份</h2>
+            <button class="modal-close" onclick="closeScheduleModal()">&times;</button>
+        </div>
+        <form id="scheduleForm" onsubmit="submitScheduleForm(event)">
+            <div class="modal-body">
+                <input type="hidden" id="scheduleId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="scheduleName" class="required">任务名称</label>
+                        <input type="text" id="scheduleName" required placeholder="例如：核心设备每日备份">
+                    </div>
+                    <div class="form-group">
+                        <label for="scheduleEnabled">任务状态</label>
+                        <select id="scheduleEnabled">
+                            <option value="true">启用</option>
+                            <option value="false">停用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="scheduleExecMode" class="required">执行方式</label>
+                        <select id="scheduleExecMode" onchange="toggleScheduleMode()">
+                            <option value="interval">按时间间隔</option>
+                            <option value="cron">按固定时间</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="intervalGroup">
+                        <label for="scheduleInterval">执行间隔</label>
+                        <select id="scheduleInterval">
+                            <option value="300">每5分钟</option>
+                            <option value="600">每10分钟</option>
+                            <option value="1800">每30分钟</option>
+                            <option value="3600">每1小时</option>
+                            <option value="21600">每6小时</option>
+                            <option value="43200">每12小时</option>
+                            <option value="86400">每24小时</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="cronTimeGroup" style="display: none;">
+                        <label for="scheduleExecTime">执行时间</label>
+                        <input type="time" id="scheduleExecTime" value="02:00">
+                    </div>
+                </div>
+                <div class="form-row" id="cronDaysRow" style="display: none;">
+                    <div class="form-group">
+                        <label for="scheduleExecDays">执行日期</label>
+                        <select id="scheduleExecDays">
+                            <option value="*">每天</option>
+                            <option value="1-5">工作日</option>
+                            <option value="0,6">周末</option>
+                            <option value="1">每周一</option>
+                            <option value="2">每周二</option>
+                            <option value="3">每周三</option>
+                            <option value="4">每周四</option>
+                            <option value="5">每周五</option>
+                            <option value="6">每周六</option>
+                            <option value="0">每周日</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="scheduleOnlyOnline">设备范围</label>
+                        <select id="scheduleOnlyOnline">
+                            <option value="true">仅在线设备</option>
+                            <option value="false">包含离线设备</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>备份设备</label>
+                    <div class="selection-mode-row" style="margin-bottom: 0.75rem;">
+                        <label class="radio-inline"><input type="radio" name="targetScope" value="all" checked onchange="toggleTargetScope()"> 全部设备</label>
+                        <label class="radio-inline"><input type="radio" name="targetScope" value="custom" onchange="toggleTargetScope()"> 指定设备</label>
+                    </div>
+                    <div class="device-selector-panel hidden" id="scheduleDevicePanel">
+                        <div class="selection-mode-row">
+                            <label class="radio-inline"><input type="radio" name="deviceSelectionMode" value="multiple" checked onchange="changeDeviceSelectionMode('multiple')"> 多选模式</label>
+                            <label class="radio-inline"><input type="radio" name="deviceSelectionMode" value="single" onchange="changeDeviceSelectionMode('single')"> 单选模式</label>
+                        </div>
+                        <div class="device-list" id="scheduleDeviceList">
+                            <div class="loading">正在加载设备...</div>
+                        </div>
+                        <div class="selected-count">已选择 <span id="scheduleSelectedCount">0</span> 台设备</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeScheduleModal()">取消</button>
+                <button type="submit" class="btn btn-primary" id="scheduleSubmitBtn">保存任务</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="scheduleLogModal">
+    <div class="modal" style="max-width: 820px;">
+        <div class="modal-header">
+            <h2 id="scheduleLogTitle">执行结果</h2>
+            <button class="modal-close" onclick="closeScheduleLogModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="scheduleLogSummary" class="schedule-summary" style="margin-bottom: 1rem;"></div>
+            <div id="scheduleLogList">
+                <div style="text-align: center; color: var(--gray-500);">正在加载执行结果...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="taskResultModal">
+    <div class="modal" style="max-width: 820px;">
+        <div class="modal-header">
+            <h2 id="taskResultTitle">任务执行结果</h2>
+            <button class="modal-close" onclick="closeTaskResultModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="taskResultSummary" class="schedule-summary" style="margin-bottom: 1rem;"></div>
+            <div id="taskResultList">
+                <div style="text-align: center; color: var(--gray-500);">正在加载执行结果...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+    let schedulesLoaded = false;
+    let scheduleDevices = [];
+    let selectedScheduleDeviceIds = [];
+    let currentScheduleSelectionMode = 'multiple';
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = '创建模板';
+        document.getElementById('templateId').value = '';
+        document.getElementById('templateForm').reset();
+        document.getElementById('templateModal').classList.add('active');
+    }
+
+    function openEditModal(id) {
+        // 从API获取完整的模板数据
+        fetch(`/configs/api/templates/${id}/`)
+            .then(response => Promise.all([Promise.resolve(response), parseApiResponse(response)]))
+            .then(([response, data]) => {
+                if (!response.ok) {
+                    throw new Error(data.error || '获取模板数据失败');
+                }
+                document.getElementById('modalTitle').textContent = '编辑模板';
+                document.getElementById('templateId').value = data.id;
+                document.getElementById('name').value = data.name;
+                document.getElementById('description').value = data.description || '';
+                document.getElementById('device_type').value = data.device_types[0] || '';
+                document.getElementById('template_content').value = data.template_content || '';
+                document.getElementById('templateModal').classList.add('active');
+            })
+            .catch(error => {
+                showAlert(error.message || '获取模板数据失败', 'error');
+            });
+    }
+
+    function closeModal() {
+        document.getElementById('templateModal').classList.remove('active');
+    }
+
+    function switchTab(tabName, buttonEl = null) {
+        // Hide all tabs
+        document.getElementById('tab-templates').style.display = 'none';
+        document.getElementById('tab-tasks').style.display = 'none';
+        document.getElementById('tab-schedules').style.display = 'none';
+
+        // Remove active class from all buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+        // Show selected tab and activate button
+        document.getElementById('tab-' + tabName).style.display = 'block';
+        if (buttonEl) {
+            buttonEl.classList.add('active');
+        }
+
+        if (tabName === 'schedules' && !schedulesLoaded) {
+            loadSchedules();
+        }
+    }
+
+    function showAlert(message, type = 'success') {
+        const container = document.getElementById('floatingAlertContainer') || document.getElementById('alertContainer');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        container.appendChild(alert);
+        setTimeout(() => alert.remove(), 5000);
+    }
+
+    async function parseApiResponse(response) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            return response.json();
+        }
+
+        const text = await response.text();
+        return {
+            error: text && text.trim() ? text.trim().slice(0, 200) : '服务器返回了无效响应'
+        };
+    }
+
+    async function submitForm(event) {
+        event.preventDefault();
+        const templateId = document.getElementById('templateId').value;
+        const isEdit = templateId !== '';
+        const deviceType = document.getElementById('device_type').value;
+        
+        const formData = {
+            name: document.getElementById('name').value,
+            description: document.getElementById('description').value,
+            template_type: 'jinja2',  // 修复：使用template_type字段
+            device_types: deviceType ? [deviceType] : [],  // 修复：转换为数组格式
+            template_content: document.getElementById('template_content').value,
+            variables_schema: {},
+        };
+        const url = isEdit ? `/configs/api/templates/${templateId}/` : '/configs/api/templates/';
+        const method = isEdit ? 'PUT' : 'POST';
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify(formData),
+            });
+            const data = await parseApiResponse(response);
+            if (response.ok) {
+                showAlert(isEdit ? '模板更新成功！' : '模板创建成功！');
+                closeModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert(data.error || '操作失败，请重试。', 'error');
+            }
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        }
+    }
+
+    async function deleteTemplate(id, name) {
+        if (!confirm(`确定要删除模板 "${name}" 吗？此操作不可恢复。`)) return;
+        try {
+            const response = await fetch(`/configs/api/templates/${id}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': csrftoken },
+            });
+            if (response.ok || response.status === 204) {
+                showAlert('模板删除成功！');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert('删除失败，请重试。', 'error');
+            }
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        }
+    }
+
+    let selectedDeviceIds = [];
+    let currentTemplateId = null;
+
+    function openApplyModal(id, name) {
+        currentTemplateId = id;
+        selectedDeviceIds = [];
+        document.getElementById('applyTemplateName').textContent = name;
+        document.getElementById('selectedCount').textContent = '0';
+        document.getElementById('deviceModal').classList.add('active');
+        loadDevices();
+    }
+
+    function closeDeviceModal() {
+        document.getElementById('deviceModal').classList.remove('active');
+    }
+
+    async function loadDevices() {
+        const deviceList = document.getElementById('deviceList');
+        deviceList.innerHTML = '<div class="loading">正在加载设备...</div>';
+        try {
+            const response = await fetch('/devices/api/list/', {
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            if (response.ok) {
+                const data = await parseApiResponse(response);
+                const devices = data.results || [];
+                if (devices.length === 0) {
+                    deviceList.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray-500);">暂无设备</div>';
+                    return;
+                }
+                deviceList.innerHTML = `
+                    <div class="select-all">
+                        <label><input type="checkbox" id="selectAllDevices" onchange="toggleSelectAll(this)"> 全选 / 取消全选</label>
+                    </div>
+                    ${devices.map(device => `
+                        <div class="device-item" onclick="toggleDevice(${device.id}, event)">
+                            <input type="checkbox" class="device-checkbox" data-id="${device.id}" onchange="updateSelectedCount()">
+                            <div class="device-info">
+                                <div class="device-name"><span class="status-dot status-${device.status}"></span>${escapeHtml(device.name)}</div>
+                                <div class="device-meta">${escapeHtml(device.ip_address)} | ${escapeHtml(device.device_type_display || device.device_type)}</div>
+                            </div>
+                        </div>
+                    `).join('')}`;
+            } else {
+                deviceList.innerHTML = '<div style="padding: 1rem; color: var(--danger);">加载设备失败</div>';
+            }
+        } catch (error) {
+            deviceList.innerHTML = '<div style="padding: 1rem; color: var(--danger);">网络错误</div>';
+        }
+    }
+
+    function toggleDevice(deviceId, event) {
+        if (event.target.type === 'checkbox') return;
+        const checkbox = document.querySelector(`.device-checkbox[data-id="${deviceId}"]`);
+        checkbox.checked = !checkbox.checked;
+        updateSelectedCount();
+    }
+
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.device-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.device-checkbox:checked');
+        selectedDeviceIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id));
+        document.getElementById('selectedCount').textContent = selectedDeviceIds.length;
+    }
+
+    async function confirmApply() {
+        if (selectedDeviceIds.length === 0) {
+            showAlert('请至少选择一台设备', 'error');
+            return;
+        }
+        const btn = document.getElementById('confirmApplyBtn');
+        btn.disabled = true;
+        btn.textContent = '正在创建任务...';
+        try {
+            const response = await fetch('/configs/api/tasks/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify({
+                    template_id: currentTemplateId,
+                    device_ids: selectedDeviceIds,
+                    name: `配置任务_${new Date().toISOString().slice(0, 10)}`
+                })
+            });
+            const data = await parseApiResponse(response);
+            if (response.ok) {
+                showAlert('配置任务创建成功！');
+                closeDeviceModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert(data.error || '创建任务失败', 'error');
+            }
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '确认应用';
+        }
+    }
+
+    async function executeTask(id) {
+        try {
+            const response = await fetch(`/configs/api/tasks/${id}/execute/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+            });
+            const data = await parseApiResponse(response);
+            if (response.ok) {
+                showAlert('任务已开始执行！');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert(data.error || '执行失败', 'error');
+            }
+        } catch (error) {
+            showAlert('网络错误', 'error');
+        }
+    }
+
+    async function openTaskResultModal(id, name = '') {
+        document.getElementById('taskResultModal').classList.add('active');
+        document.getElementById('taskResultTitle').textContent = name ? `${name} - 执行结果` : '任务执行结果';
+        document.getElementById('taskResultSummary').textContent = '正在加载任务执行结果...';
+        document.getElementById('taskResultList').innerHTML = '<div style="text-align: center; color: var(--gray-500);">正在加载执行结果...</div>';
+
+        try {
+            const response = await fetch(`/configs/api/tasks/${id}/`, {
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            const data = await parseApiResponse(response);
+
+            if (!response.ok) {
+                showAlert(data.error || '加载任务执行结果失败', 'error');
+                document.getElementById('taskResultList').innerHTML = '<div style="text-align: center; color: var(--danger);">加载执行结果失败</div>';
+                return;
+            }
+
+            document.getElementById('taskResultTitle').textContent = `${data.name} - 执行结果`;
+            renderTaskResults(data);
+        } catch (error) {
+            document.getElementById('taskResultSummary').textContent = '加载失败';
+            document.getElementById('taskResultList').innerHTML = '<div style="text-align: center; color: var(--danger);">加载执行结果失败</div>';
+        }
+    }
+
+    function closeTaskResultModal() {
+        document.getElementById('taskResultModal').classList.remove('active');
+    }
+
+    function renderTaskResults(task) {
+        const results = Array.isArray(task.results) ? task.results : [];
+        const successCount = results.filter(result => result.success).length;
+        const failedCount = results.filter(result => !result.success).length;
+        const deviceCount = Array.isArray(task.devices) ? task.devices.length : results.length;
+        const executedAt = task.executed_at ? new Date(task.executed_at).toLocaleString('zh-CN') : '未执行';
+
+        document.getElementById('taskResultSummary').textContent = `状态：${task.status_display || '-'}；模板：${task.template?.name || '-'}；设备数：${deviceCount}；执行时间：${executedAt}`;
+
+        if (!results.length) {
+            const emptyMessage = task.status === 'pending'
+                ? '任务尚未执行，暂无执行结果。'
+                : task.status === 'executing'
+                    ? '任务正在执行中，请稍后刷新查看结果。'
+                    : '暂无执行结果。';
+            document.getElementById('taskResultList').innerHTML = `<div style="text-align: center; color: var(--gray-500);">${emptyMessage}</div>`;
+            return;
+        }
+
+        const taskLevelError = results.find(result => !result.success && result.error_message)?.error_message || '';
+        const headerStatus = failedCount === 0 ? 'completed' : (successCount === 0 ? 'failed' : 'pending');
+        const headerStatusText = failedCount === 0 ? '执行成功' : (successCount === 0 ? '执行失败' : '部分成功');
+
+        document.getElementById('taskResultList').innerHTML = `
+            <div class="log-run-card">
+                <div class="log-run-header">
+                    <div>
+                        <span class="status-badge status-${headerStatus}">${headerStatusText}</span>
+                    </div>
+                    <div class="schedule-result">
+                        <span>总 <strong>${results.length}</strong></span>
+                        <span class="text-success">成功 <strong>${successCount}</strong></span>
+                        <span class="text-danger">失败 <strong>${failedCount}</strong></span>
+                    </div>
+                </div>
+                ${taskLevelError ? `<div class="log-run-meta text-danger" style="margin-bottom: 0.5rem;">主要报错：${escapeHtml(taskLevelError)}</div>` : ''}
+                <ul class="log-detail-list">
+                    ${results.map(result => `
+                        <li class="log-detail-item">
+                            <div>
+                                <div>${escapeHtml(result.device_name || ('设备 ' + result.device_id))}</div>
+                                <div class="log-run-meta">执行时间：${result.executed_at ? new Date(result.executed_at).toLocaleString('zh-CN') : '-'}</div>
+                            </div>
+                            <div style="text-align: right; max-width: 360px;">
+                                <div class="${result.success ? 'text-success' : 'text-danger'}">${result.success ? '成功' : '失败'}</div>
+                                ${!result.success && result.error_message ? `<div class="log-run-meta text-danger">${escapeHtml(result.error_message)}</div>` : ''}
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    async function loadSchedules() {
+        const tableBody = document.getElementById('scheduleTableBody');
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--gray-500);">正在加载定时任务...</td></tr>';
+        try {
+            const response = await fetch('/configs/api/schedules/?task_type=backup', {
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            const data = await parseApiResponse(response);
+            if (!response.ok) {
+                throw new Error(data.error || '加载定时任务失败');
+            }
+            const schedules = data.schedules || [];
+            schedulesLoaded = true;
+
+            if (schedules.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--gray-500);">暂无定时备份任务</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = schedules.map(schedule => {
+                const result = schedule.latest_result;
+                const resultHtml = result
+                    ? `<div class="schedule-result"><span>总 <strong>${result.total_devices}</strong></span><span class="text-success">成功 <strong>${result.success_count}</strong></span><span class="text-danger">失败 <strong>${result.failed_count}</strong></span></div>`
+                    : '<span style="color: var(--gray-500);">暂无执行记录</span>';
+                const lastRun = schedule.last_run_time ? new Date(schedule.last_run_time).toLocaleString('zh-CN') : '未执行';
+                return `
+                    <tr>
+                        <td>
+                            <button class="schedule-name-btn" data-schedule-name="${escapeHtml(schedule.name)}" onclick="openScheduleLogModal(${schedule.id}, getDatasetValue(this, 'scheduleName'))">${escapeHtml(schedule.name)}</button>
+                            <div class="schedule-summary">${schedule.enabled ? '已启用' : '已停用'} · 上次执行 ${lastRun}</div>
+                        </td>
+                        <td>${escapeHtml(schedule.exec_plan || '-')}</td>
+                        <td>${escapeHtml(schedule.target_scope || '-')}</td>
+                        <td>${resultHtml}</td>
+                        <td>${schedule.total_run_count || 0}</td>
+                        <td>
+                            <button class="nb-action-btn apply" onclick="runSchedule(${schedule.id})">立即执行</button>
+                            <button class="nb-action-btn edit" onclick="openScheduleModal(${schedule.id})">编辑</button>
+                            <button class="nb-action-btn delete" data-schedule-name="${escapeHtml(schedule.name)}" onclick="deleteSchedule(${schedule.id}, getDatasetValue(this, 'scheduleName'))">删除</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (error) {
+            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">${escapeHtml(error.message || '加载定时任务失败')}</td></tr>`;
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getDatasetValue(element, key) {
+        if (!element || !element.dataset) {
+            return '';
+        }
+        return element.dataset[key] || '';
+    }
+
+    async function openScheduleModal(id = null) {
+        document.getElementById('scheduleForm').reset();
+        document.getElementById('scheduleId').value = '';
+        document.getElementById('scheduleModalTitle').textContent = id ? '编辑定时备份' : '新增定时备份';
+        document.getElementById('scheduleEnabled').value = 'true';
+        document.getElementById('scheduleExecMode').value = 'interval';
+        document.getElementById('scheduleInterval').value = '1800';
+        document.getElementById('scheduleExecTime').value = '02:00';
+        document.getElementById('scheduleExecDays').value = '*';
+        document.getElementById('scheduleOnlyOnline').value = 'true';
+        document.querySelector('input[name="targetScope"][value="all"]').checked = true;
+        document.querySelector('input[name="deviceSelectionMode"][value="multiple"]').checked = true;
+        selectedScheduleDeviceIds = [];
+        currentScheduleSelectionMode = 'multiple';
+        toggleScheduleMode();
+        toggleTargetScope();
+        document.getElementById('scheduleName').value = '定时备份任务';
+        document.getElementById('scheduleModal').classList.add('active');
+        await loadScheduleDevices();
+
+        if (!id) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/configs/api/schedules/${id}/`, {
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            const data = await parseApiResponse(response);
+            if (!response.ok) {
+                showAlert(data.error || '获取定时任务失败', 'error');
+                return;
+            }
+
+            document.getElementById('scheduleId').value = data.id;
+            document.getElementById('scheduleName').value = data.name;
+            document.getElementById('scheduleEnabled').value = String(data.enabled);
+            document.getElementById('scheduleExecMode').value = data.exec_mode;
+            document.getElementById('scheduleInterval').value = String(data.interval_seconds || '1800');
+            document.getElementById('scheduleExecTime').value = data.exec_time || '02:00';
+            document.getElementById('scheduleExecDays').value = data.exec_days || '*';
+            document.getElementById('scheduleOnlyOnline').value = String(data.only_online_devices);
+            document.querySelector(`input[name="targetScope"][value="${data.target_all_devices ? 'all' : 'custom'}"]`).checked = true;
+            document.querySelector(`input[name="deviceSelectionMode"][value="${data.device_selection_mode || 'multiple'}"]`).checked = true;
+            currentScheduleSelectionMode = data.device_selection_mode || 'multiple';
+            selectedScheduleDeviceIds = Array.isArray(data.target_devices) ? data.target_devices : [];
+            toggleScheduleMode();
+            toggleTargetScope();
+            renderScheduleDeviceList();
+        } catch (error) {
+            showAlert('获取定时任务失败', 'error');
+        }
+    }
+
+    function closeScheduleModal() {
+        document.getElementById('scheduleModal').classList.remove('active');
+    }
+
+    function toggleScheduleMode() {
+        const isInterval = document.getElementById('scheduleExecMode').value === 'interval';
+        document.getElementById('intervalGroup').style.display = isInterval ? 'block' : 'none';
+        document.getElementById('cronTimeGroup').style.display = isInterval ? 'none' : 'block';
+        document.getElementById('cronDaysRow').style.display = isInterval ? 'none' : 'grid';
+    }
+
+    function toggleTargetScope() {
+        const targetScope = document.querySelector('input[name="targetScope"]:checked').value;
+        document.getElementById('scheduleDevicePanel').classList.toggle('hidden', targetScope !== 'custom');
+        if (targetScope !== 'custom') {
+            selectedScheduleDeviceIds = [];
+            updateScheduleSelectedCount();
+            renderScheduleDeviceList();
+        }
+    }
+
+    function changeDeviceSelectionMode(mode) {
+        currentScheduleSelectionMode = mode;
+        if (mode === 'single' && selectedScheduleDeviceIds.length > 1) {
+            selectedScheduleDeviceIds = [selectedScheduleDeviceIds[0]];
+        }
+        renderScheduleDeviceList();
+    }
+
+    async function loadScheduleDevices() {
+        const deviceList = document.getElementById('scheduleDeviceList');
+        deviceList.innerHTML = '<div class="loading">正在加载设备...</div>';
+        try {
+            const response = await fetch('/devices/api/list/', {
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            const data = await parseApiResponse(response);
+            if (!response.ok) {
+                throw new Error(data.error || '加载设备失败');
+            }
+            scheduleDevices = data.results || [];
+            renderScheduleDeviceList();
+        } catch (error) {
+            deviceList.innerHTML = '<div style="padding: 1rem; color: var(--danger);">加载设备失败</div>';
+        }
+    }
+
+    function renderScheduleDeviceList() {
+        const deviceList = document.getElementById('scheduleDeviceList');
+        if (!scheduleDevices.length) {
+            deviceList.innerHTML = '<div style="padding: 1rem; color: var(--gray-500); text-align: center;">暂无设备</div>';
+            updateScheduleSelectedCount();
+            return;
+        }
+
+        const inputType = currentScheduleSelectionMode === 'single' ? 'radio' : 'checkbox';
+        const selectAllHtml = currentScheduleSelectionMode === 'multiple'
+            ? `<div class="select-all"><label><input type="checkbox" id="scheduleSelectAll" onchange="toggleAllScheduleDevices(this.checked)"> 全选 / 取消全选</label></div>`
+            : '';
+
+        deviceList.innerHTML = `${selectAllHtml}${scheduleDevices.map(device => {
+            const checked = selectedScheduleDeviceIds.includes(device.id) ? 'checked' : '';
+            return `
+                <div class="device-item" onclick="toggleScheduleDevice(${device.id}, event)">
+                    <input type="${inputType}" name="schedule-device" class="schedule-device-checkbox" data-id="${device.id}" ${checked} onchange="syncScheduleDeviceSelection()">
+                    <div class="device-info">
+                        <div class="device-name"><span class="status-dot status-${device.status}"></span>${escapeHtml(device.name)}</div>
+                        <div class="device-meta">${escapeHtml(device.ip_address)} | ${escapeHtml(device.device_type_display || device.device_type)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('')}`;
+
+        updateScheduleSelectedCount();
+    }
+
+    function toggleAllScheduleDevices(checked) {
+        if (currentScheduleSelectionMode === 'single') {
+            return;
+        }
+        document.querySelectorAll('.schedule-device-checkbox').forEach(input => {
+            input.checked = checked;
+        });
+        syncScheduleDeviceSelection();
+    }
+
+    function toggleScheduleDevice(deviceId, event) {
+        if (event.target.tagName === 'INPUT') {
+            return;
+        }
+
+        const input = document.querySelector(`.schedule-device-checkbox[data-id="${deviceId}"]`);
+        if (!input) {
+            return;
+        }
+
+        if (currentScheduleSelectionMode === 'single') {
+            document.querySelectorAll('.schedule-device-checkbox').forEach(checkbox => {
+                checkbox.checked = checkbox === input;
+            });
+        } else {
+            input.checked = !input.checked;
+        }
+
+        syncScheduleDeviceSelection();
+    }
+
+    function syncScheduleDeviceSelection() {
+        const checkedInputs = Array.from(document.querySelectorAll('.schedule-device-checkbox:checked'));
+        selectedScheduleDeviceIds = checkedInputs.map(input => Number(input.dataset.id));
+        if (currentScheduleSelectionMode === 'single' && selectedScheduleDeviceIds.length > 1) {
+            selectedScheduleDeviceIds = [selectedScheduleDeviceIds[0]];
+        }
+        updateScheduleSelectedCount();
+    }
+
+    function updateScheduleSelectedCount() {
+        document.getElementById('scheduleSelectedCount').textContent = selectedScheduleDeviceIds.length;
+    }
+
+    async function submitScheduleForm(event) {
+        event.preventDefault();
+        const scheduleId = document.getElementById('scheduleId').value;
+        const targetScope = document.querySelector('input[name="targetScope"]:checked').value;
+        if (targetScope === 'custom' && selectedScheduleDeviceIds.length === 0) {
+            showAlert('请选择至少一台备份设备', 'error');
+            return;
+        }
+
+        const payload = {
+            name: document.getElementById('scheduleName').value,
+            task_type: 'backup',
+            enabled: document.getElementById('scheduleEnabled').value === 'true',
+            exec_mode: document.getElementById('scheduleExecMode').value,
+            interval_seconds: Number(document.getElementById('scheduleInterval').value),
+            exec_time: document.getElementById('scheduleExecTime').value,
+            exec_days: document.getElementById('scheduleExecDays').value,
+            target_all_devices: targetScope === 'all',
+            device_selection_mode: currentScheduleSelectionMode,
+            target_devices: targetScope === 'all' ? [] : selectedScheduleDeviceIds,
+            only_online_devices: document.getElementById('scheduleOnlyOnline').value === 'true'
+        };
+
+        const submitBtn = document.getElementById('scheduleSubmitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '保存中...';
+
+        try {
+            const response = await fetch(scheduleId ? `/configs/api/schedules/${scheduleId}/` : '/configs/api/schedules/', {
+                method: scheduleId ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await parseApiResponse(response);
+            if (!response.ok) {
+                showAlert(data.error || '保存定时任务失败', 'error');
+                return;
+            }
+
+            showAlert(scheduleId ? '定时备份已更新' : '定时备份已创建');
+            closeScheduleModal();
+            loadSchedules();
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '保存任务';
+        }
+    }
+
+    async function runSchedule(id) {
+        try {
+            const response = await fetch(`/configs/api/schedules/${id}/run/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            const data = await parseApiResponse(response);
+            if (!response.ok) {
+                showAlert(data.error || '触发执行失败', 'error');
+                return;
+            }
+            showAlert('定时备份任务已触发执行');
+            setTimeout(() => {
+                loadSchedules();
+                openScheduleLogModal(id);
+            }, 1200);
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        }
+    }
+
+    async function deleteSchedule(id, name) {
+        if (!confirm(`确定要删除定时任务“${name}”吗？`)) {
+            return;
+        }
+        try {
+            const response = await fetch(`/configs/api/schedules/${id}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            if (!response.ok && response.status !== 204) {
+                showAlert('删除失败，请重试。', 'error');
+                return;
+            }
+            showAlert('定时任务已删除');
+            loadSchedules();
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        }
+    }
+
+    async function openScheduleLogModal(id, name = '') {
+        document.getElementById('scheduleLogModal').classList.add('active');
+        document.getElementById('scheduleLogTitle').textContent = name ? `${name} - 执行结果` : '执行结果';
+        document.getElementById('scheduleLogSummary').textContent = '正在加载执行结果...';
+        document.getElementById('scheduleLogList').innerHTML = '<div style="text-align: center; color: var(--gray-500);">正在加载执行结果...</div>';
+
+        try {
+            const [scheduleResponse, logsResponse] = await Promise.all([
+                fetch(`/configs/api/schedules/${id}/`, { headers: { 'X-CSRFToken': csrftoken } }),
+                fetch(`/configs/api/schedules/${id}/logs/`, { headers: { 'X-CSRFToken': csrftoken } })
+            ]);
+            const [scheduleData, logsData] = await Promise.all([
+                parseApiResponse(scheduleResponse),
+                parseApiResponse(logsResponse),
+            ]);
+
+            if (!scheduleResponse.ok || !logsResponse.ok) {
+                showAlert(scheduleData.error || logsData.error || '加载执行结果失败', 'error');
+                return;
+            }
+
+            document.getElementById('scheduleLogTitle').textContent = `${scheduleData.name} - 执行结果`;
+            document.getElementById('scheduleLogSummary').textContent = `执行计划：${scheduleData.exec_plan || '-'}；备份范围：${scheduleData.target_scope || '-'}`;
+            renderScheduleLogs(logsData.logs || []);
+        } catch (error) {
+            document.getElementById('scheduleLogList').innerHTML = '<div style="text-align: center; color: var(--danger);">加载执行结果失败</div>';
+        }
+    }
+
+    function closeScheduleLogModal() {
+        document.getElementById('scheduleLogModal').classList.remove('active');
+    }
+
+    function renderScheduleLogs(logs) {
+        const container = document.getElementById('scheduleLogList');
+        if (!logs.length) {
+            container.innerHTML = '<div style="text-align: center; color: var(--gray-500);">暂无执行结果</div>';
+            return;
+        }
+
+        container.innerHTML = logs.map(log => {
+            const details = Array.isArray(log.result_detail?.results) ? log.result_detail.results : [];
+            const detailHtml = details.length
+                ? `<ul class="log-detail-list">${details.map(item => `
+                    <li class="log-detail-item">
+                        <span>${escapeHtml(item.device_name || ('设备 ' + item.device_id))}</span>
+                        <span class="${item.success ? 'text-success' : 'text-danger'}">${item.success ? '成功' : (escapeHtml(item.error || item.error_message || '失败'))}</span>
+                    </li>
+                `).join('')}</ul>`
+                : '';
+            return `
+                <div class="log-run-card">
+                    <div class="log-run-header">
+                        <div>
+                            <span class="status-badge status-${log.status === 'success' ? 'completed' : log.status === 'failed' ? 'failed' : log.status === 'partial' ? 'pending' : 'executing'}">${formatLogStatus(log.status)}</span>
+                        </div>
+                        <div class="schedule-result">
+                            <span>总 <strong>${log.total_devices}</strong></span>
+                            <span class="text-success">成功 <strong>${log.success_count}</strong></span>
+                            <span class="text-danger">失败 <strong>${log.failed_count}</strong></span>
+                        </div>
+                    </div>
+                    <div class="log-run-meta">开始：${log.start_time ? new Date(log.start_time).toLocaleString('zh-CN') : '-'}${log.end_time ? `；结束：${new Date(log.end_time).toLocaleString('zh-CN')}` : ''}</div>
+                    ${log.error_message ? `<div class="log-run-meta text-danger" style="margin-top: 0.5rem;">错误：${escapeHtml(log.error_message)}</div>` : ''}
+                    ${detailHtml}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function formatLogStatus(status) {
+        if (status === 'success') return '执行成功';
+        if (status === 'failed') return '执行失败';
+        if (status === 'partial') return '部分成功';
+        return '执行中';
+    }
+
+    function searchTemplates() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#templateTable tbody tr');
+        rows.forEach(row => {
+            const name = row.dataset.name.toLowerCase();
+            row.style.display = name.includes(searchTerm) ? '' : 'none';
+        });
+    }
+
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+    document.getElementById('templateModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+    document.getElementById('scheduleModal').addEventListener('click', function(e) { if (e.target === this) closeScheduleModal(); });
+    document.getElementById('scheduleLogModal').addEventListener('click', function(e) { if (e.target === this) closeScheduleLogModal(); });
+    document.getElementById('taskResultModal').addEventListener('click', function(e) { if (e.target === this) closeTaskResultModal(); });
+</script>
+</body>
+</html>

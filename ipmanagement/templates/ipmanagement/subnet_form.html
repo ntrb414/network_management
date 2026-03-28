@@ -1,0 +1,68 @@
+{% extends 'ipmanagement/base_ipmanagement.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block ipmanagement_active %}active{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">{{ title }}</div>
+        <div class="nb-page-subtitle">{% if title == '添加网段' %}配置新的扫描网段{% else %}修改网段配置{% endif %}</div>
+    </div>
+    <div class="nb-header-actions">
+        <a href="{% url 'ipmanagement:subnet_list' %}" class="btn btn-secondary btn-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            返回列表
+        </a>
+    </div>
+</div>
+
+<!-- Form card -->
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label" for="id_cidr">网段 (CIDR格式)</label>
+                <input type="text" name="cidr" id="id_cidr" class="form-input" 
+                       value="{{ form.cidr.value|default:'' }}" 
+                       placeholder="例如: 192.168.1.0/24" required>
+                <small style="color: #6c757d; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+                    支持格式：192.168.1.0/24（IPv4）或 2001:db8::/64（IPv6）
+                </small>
+                {% if form.cidr.errors %}
+                <span style="color: #fa5252; font-size: 0.875rem;">{{ form.cidr.errors.0 }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="id_name">名称 (可选)</label>
+                <input type="text" name="name" id="id_name" class="form-input" 
+                       value="{{ form.name.value|default:'' }}" 
+                       placeholder="例如：办公区网络">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="is_active" id="id_is_active" class="form-check-input" 
+                           {% if form.is_active.value or form.is_active.value is None %}checked{% endif %}>
+                    <span>启用扫描</span>
+                </label>
+                <small style="color: #6c757d; font-size: 0.75rem; margin-top: 0.25rem; display: block; margin-left: 1.5rem;">
+                    禁用的网段将不会参与定时自动扫描
+                </small>
+            </div>
+            
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+                    保存
+                </button>
+                <a href="{% url 'ipmanagement:subnet_list' %}" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
