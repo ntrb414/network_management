@@ -1,1 +1,5 @@
 *.pyc
+*.env
+CLAUDE.md
+*.md
+*.sh

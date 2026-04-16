@@ -319,21 +319,39 @@ class IPScanService:
             return []
 
     def get_scan_result(self, task_id: int) -> Dict:
-        """获取扫描任务结果"""
+        """获取扫描任务结果（优先从 Redis 读取）"""
         from .models import IPScanTask
+        from django_redis import get_redis_connection
 
         try:
             task = IPScanTask.objects.get(id=task_id)
         except IPScanTask.DoesNotExist:
             return {'success': False, 'error': '扫描任务不存在'}
 
-        alive_hosts = []
-        if task.message:
+        redis_conn = get_redis_connection("default")
+        redis_key = f"ipscan:task:{task_id}"
+        raw = redis_conn.get(redis_key)
+
+        if raw:
             try:
-                alive_hosts = json.loads(task.message)
+                result_data = json.loads(raw)
+                return {
+                    'success': True,
+                    'task_id': task.id,
+                    'cidr': task.cidr,
+                    'status': task.status,
+                    'total_ips': task.total_ips,
+                    'scanned_ips': task.scanned_ips,
+                    'alive_count': result_data.get('alive_count', 0),
+                    'alive_hosts': result_data.get('alive_hosts', []),
+                    'all_results': result_data.get('all_results', []),
+                    'created_at': task.created_at,
+                    'completed_at': task.completed_at,
+                }
             except json.JSONDecodeError:
                 pass
 
+        # Redis 已过期或解析失败，返回任务元数据
         return {
             'success': True,
             'task_id': task.id,
@@ -342,7 +360,9 @@ class IPScanService:
             'total_ips': task.total_ips,
             'scanned_ips': task.scanned_ips,
             'alive_count': task.alive_ips,
-            'alive_hosts': alive_hosts,
+            'alive_hosts': [],
+            'expired': True,
+            'note': '扫描结果已过期，请重新扫描',
             'created_at': task.created_at,
             'completed_at': task.completed_at,
         }

@@ -9,7 +9,12 @@ from django.db import models
 
 
 class MetricData(models.Model):
-    """监控指标数据模型"""
+    """
+    监控指标数据模型
+
+    已弃用直接写入：新的监控数据已迁移至 Redis（TTL 10 分钟）。
+    此模型仅保留用于兼容历史数据与 Admin 管理。
+    """
 
     METRIC_TYPES = [
         ('traffic', '端口流量'),

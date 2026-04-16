@@ -14930,3 +14930,164 @@ Device settings: huawei 22.22.22.2:22
 [2026-03-28 23:00:59,861] DEBUG monitoring.services services SSH连接数采集失败 [router4]: timed out
 [2026-03-28 23:00:59,862] INFO monitoring.services services [采集完成] router4: 接口=0, OSPF邻居=0
 [2026-03-28 23:00:59,892] INFO monitoring.services services 设备 scan-test 未配置SNMP团体名，跳过SNMP采集
+[2026-04-11 20:35:12,193] INFO monitoring.services services [采集] 开始SNMP采集: router1 (192.168.50.100), 团体名: public
+[2026-04-11 20:35:12,196] DEBUG monitoring.services services [接口采集] 开始采集 192.168.50.100 的接口信息
+[2026-04-11 20:35:12,649] DEBUG monitoring.services services [接口采集] 获取到 12 个接口索引
+[2026-04-11 20:35:14,226] INFO monitoring.services services [采集] 开始SNMP采集: router1 (192.168.50.100), 团体名: public
+[2026-04-11 20:35:14,227] DEBUG monitoring.services services [接口采集] 开始采集 192.168.50.100 的接口信息
+[2026-04-11 20:35:16,094] DEBUG monitoring.services services [接口采集] 获取到 12 个接口索引
+[2026-04-11 20:35:23,937] INFO monitoring.services services [采集完成] router1: 接口=12, OSPF邻居=0
+[2026-04-11 20:35:24,321] INFO monitoring.services services [采集完成] router1: 接口=12, OSPF邻居=0
+[2026-04-11 20:37:14,631] INFO configs.services services 从缓存读取设备 192.168.50.100 运行配置
+[2026-04-11 20:37:14,633] INFO configs.services services 从缓存读取设备 192.168.50.100 启动配置
+[2026-04-12 21:23:15,682] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:23:15,712] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:23:15,738] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:23:15,766] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:23:24,265] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:23:24,296] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:23:24,321] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:23:24,354] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:47,063] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:47,117] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:47,152] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:47,188] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:47,224] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:47,260] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:47,364] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:54,054] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:29:54,082] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:36:01,031] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:36:01,064] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:36:01,097] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:36:01,131] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:36:01,162] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:36:13,956] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:36:13,989] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:36:14,020] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:42:58,379] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:42:58,426] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:42:58,459] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:43:13,763] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:43:13,805] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:43:13,841] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:43:13,885] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:43:13,946] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:00,756] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:00,799] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:19,942] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:19,971] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:20,003] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:20,033] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:20,062] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:20,093] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:52:20,121] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:58:26,207] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:58:26,237] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:58:37,488] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:58:37,521] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:58:37,557] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:58:37,586] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:58:37,617] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 21:58:37,646] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:04:58,834] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:04:58,863] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:05:01,473] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:05:01,503] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:05:01,527] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:05:01,554] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:05:01,581] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:05:39,825] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:12:56,870] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:12:56,901] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:12:56,933] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:12:56,965] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:12:56,995] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:12:57,028] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:12:57,058] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:13:39,963] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:14:39,979] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:21:08,721] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:21:08,754] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:21:08,788] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:21:08,820] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:21:08,855] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:21:08,885] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:21:38,061] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:22:39,477] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:29:28,315] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:29:28,336] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:29:28,344] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:29:28,367] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:29:28,372] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:29:28,395] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:29:39,471] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:30:39,482] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:37:48,421] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:37:48,455] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:37:48,487] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:37:48,518] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:37:48,551] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:37:48,581] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:37:48,614] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:38:39,486] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:39:39,482] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:46:08,580] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:46:08,606] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:46:08,615] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:46:08,635] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:46:08,642] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:46:08,667] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:46:39,491] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:47:39,516] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:54:28,310] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:54:28,341] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:54:28,342] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:54:28,374] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:54:28,375] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:54:28,402] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:54:39,507] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 22:55:39,515] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:02:48,572] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:02:48,606] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:02:48,642] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:02:48,665] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:02:48,704] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:02:48,741] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:02:48,777] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:03:39,520] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:04:39,515] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:11:08,570] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:11:08,599] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:11:08,630] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:11:08,661] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:11:08,689] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:11:08,718] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:11:39,522] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:12:39,519] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:19:28,490] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:19:28,519] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:19:28,537] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:19:28,551] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:19:28,569] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:19:28,590] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:19:39,549] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-12 23:20:39,554] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-14 21:16:43,630] INFO alerts.services services 告警通知已发送: 紧急 - 设备 router1 (192.168.50.100) 已离线
+[2026-04-14 21:16:43,855] INFO alerts.services services 告警通知已发送: 紧急 - 设备 router1 (192.168.50.100) 已离线
+[2026-04-14 21:16:43,872] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-14 21:16:43,924] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-14 21:42:17,364] INFO monitoring.services services 设备 router1 未配置SNMP团体名，跳过SNMP采集
+[2026-04-14 21:42:17,371] INFO monitoring.services services 设备 scan-test 未配置SNMP团体名，跳过SNMP采集
+[2026-04-14 21:42:18,214] INFO monitoring.services services [采集] 开始SNMP采集: router4 (172.16.1.4), 团体名: public
+[2026-04-14 21:42:18,214] DEBUG monitoring.services services [接口采集] 开始采集 172.16.1.4 的接口信息
+[2026-04-14 21:42:18,215] INFO monitoring.services services [采集] 开始SNMP采集: router2 (10.20.2.2), 团体名: public
+[2026-04-14 21:42:18,216] DEBUG monitoring.services services [接口采集] 开始采集 10.20.2.2 的接口信息
+[2026-04-14 21:42:24,606] DEBUG monitoring.services services [接口采集] 获取到 0 个接口索引
+[2026-04-14 21:42:24,606] WARNING monitoring.services services [接口采集] 未能获取接口索引，可能原因: 1) SNMP不可达 2) 团体名错误 3) 设备不支持标准OID
+[2026-04-14 21:42:24,627] DEBUG monitoring.services services [接口采集] 获取到 0 个接口索引
+[2026-04-14 21:42:24,627] WARNING monitoring.services services [接口采集] 未能获取接口索引，可能原因: 1) SNMP不可达 2) 团体名错误 3) 设备不支持标准OID
+[2026-04-14 21:42:47,129] DEBUG monitoring.services services SSH连接数采集失败 [router4]: timed out
+[2026-04-14 21:42:47,130] INFO monitoring.services services [采集完成] router4: 接口=0, OSPF邻居=0
+[2026-04-14 21:42:47,276] DEBUG monitoring.services services SSH连接数采集失败 [router2]: timed out
+[2026-04-14 21:42:47,277] INFO monitoring.services services [采集完成] router2: 接口=0, OSPF邻居=0

@@ -6,6 +6,7 @@ import logging
 
 from celery import shared_task
 from django.utils import timezone
+from django_redis import get_redis_connection
 
 from .models import IPScanTask, Subnet
 from .services import IPScanService, IPAMService, NetworkDiscoveryService
@@ -35,7 +36,22 @@ def scan_subnet_task(self, task_id: int):
             service = IPAMService()
             service.sync_scan_results(task.subnet_id, all_results)
 
-        task.message = json.dumps(alive_hosts)
+        # 扫描结果写入 Redis，TTL 5 分钟
+        redis_conn = get_redis_connection("default")
+        redis_key = f"ipscan:task:{task.id}"
+        redis_conn.setex(
+            redis_key,
+            300,
+            json.dumps({
+                'cidr': task.cidr,
+                'alive_count': len(alive_hosts),
+                'alive_hosts': alive_hosts,
+                'all_results': all_results,
+                'completed_at': timezone.now().isoformat(),
+            })
+        )
+
+        task.message = ''
         task.status = 'completed'
         task.scanned_ips = task.total_ips
         task.alive_ips = len(alive_hosts)
@@ -153,13 +169,20 @@ def sync_scan_results_to_ipam(self, task_id: int):
     if not task.subnet:
         return {'success': False, 'error': 'Task not associated with subnet'}
 
-    if not task.message:
-        return {'success': False, 'error': 'No scan results found'}
+    redis_conn = get_redis_connection("default")
+    redis_key = f"ipscan:task:{task_id}"
+    raw = redis_conn.get(redis_key)
+    if not raw:
+        return {'success': False, 'error': 'No scan results found in cache'}
 
     try:
-        alive_hosts = json.loads(task.message)
+        scan_data = json.loads(raw)
     except json.JSONDecodeError:
-        return {'success': False, 'error': 'Invalid scan results format'}
+        return {'success': False, 'error': 'Invalid scan results format in cache'}
+
+    alive_hosts = scan_data.get('alive_hosts', [])
+    if not alive_hosts:
+        return {'success': False, 'error': 'No alive hosts in scan results'}
 
     service = IPAMService()
     result = service.sync_scan_results(task.subnet_id, alive_hosts)

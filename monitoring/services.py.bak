@@ -5,13 +5,9 @@
 需求引用：4.1, 4.2, 4.3, 4.6
 """
 
-import json
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-
-from django_redis import get_redis_connection
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -553,7 +549,7 @@ class MonitoringService:
 
     def store_metrics(self, device, metrics: Dict[str, Any]) -> int:
         """
-        存储监控数据到 Redis（TTL 10 分钟）
+        存储监控数据
 
         Args:
             device: 设备对象
@@ -564,46 +560,125 @@ class MonitoringService:
 
         Requirements: 4.1
         """
+        from .models import MetricData
+
         stored_count = 0
 
-        # 计算记录数（与旧逻辑保持一致，用于任务返回值）
+        # 存储流量（入/出分开存）
         for traffic in metrics.get('traffic', []):
-            if traffic.get('in_octets', 0) > 0:
+            iface = traffic.get('interface', 'unknown')
+            in_oct = traffic.get('in_octets', 0)
+            out_oct = traffic.get('out_octets', 0)
+            if in_oct > 0:
+                MetricData.objects.create(
+                    device=device,
+                    metric_type='traffic',
+                    metric_name=f'{iface}_in',
+                    value=in_oct,
+                    unit='bytes',
+                )
                 stored_count += 1
-            if traffic.get('out_octets', 0) > 0:
+            if out_oct > 0:
+                MetricData.objects.create(
+                    device=device,
+                    metric_type='traffic',
+                    metric_name=f'{iface}_out',
+                    value=out_oct,
+                    unit='bytes',
+                )
                 stored_count += 1
 
+        # 存储丢包率
         if metrics.get('packet_loss') is not None:
+            MetricData.objects.create(
+                device=device,
+                metric_type='packet_loss',
+                metric_name='packet_loss_rate',
+                value=metrics['packet_loss'],
+                unit='%',
+            )
             stored_count += 1
 
+        # 存储连接数
         if metrics.get('connections') is not None:
+            MetricData.objects.create(
+                device=device,
+                metric_type='connections',
+                metric_name='active_connections',
+                value=metrics['connections'],
+                unit='count',
+            )
             stored_count += 1
 
+        # 存储接口详细监控数据
         for interface in metrics.get('interfaces', []):
+            iface_name = interface.get('name', 'unknown')
+            
+            # 接口状态 (1=up, 2=down)
+            MetricData.objects.create(
+                device=device,
+                metric_type='interface_status',
+                metric_name=f'{iface_name}_status',
+                value=interface.get('status', 0),
+                unit='state',
+            )
             stored_count += 1
+            
+            # 入向流量 (Mbps)
             if interface.get('in_mbps') is not None:
+                MetricData.objects.create(
+                    device=device,
+                    metric_type='interface_in_traffic',
+                    metric_name=f'{iface_name}_in_mbps',
+                    value=interface['in_mbps'],
+                    unit='Mbps',
+                )
                 stored_count += 1
+            
+            # 出向流量 (Mbps)
             if interface.get('out_mbps') is not None:
+                MetricData.objects.create(
+                    device=device,
+                    metric_type='interface_out_traffic',
+                    metric_name=f'{iface_name}_out_mbps',
+                    value=interface['out_mbps'],
+                    unit='Mbps',
+                )
                 stored_count += 1
+            
+            # 入向丢包率 (个/分钟)
             if interface.get('in_drop_rate') is not None:
+                MetricData.objects.create(
+                    device=device,
+                    metric_type='interface_in_drops',
+                    metric_name=f'{iface_name}_in_drops',
+                    value=interface['in_drop_rate'],
+                    unit='pkts/min',
+                )
                 stored_count += 1
+            
+            # 出向丢包率 (个/分钟)
             if interface.get('out_drop_rate') is not None:
+                MetricData.objects.create(
+                    device=device,
+                    metric_type='interface_out_drops',
+                    metric_name=f'{iface_name}_out_drops',
+                    value=interface['out_drop_rate'],
+                    unit='pkts/min',
+                )
                 stored_count += 1
 
+        # 存储OSPF邻居状态
         for neighbor in metrics.get('ospf_neighbors', []):
+            neighbor_ip = neighbor.get('neighbor_ip', 'unknown')
+            MetricData.objects.create(
+                device=device,
+                metric_type='ospf_neighbor',
+                metric_name=f'ospf_nbr_{neighbor_ip}',
+                value=neighbor.get('state', 0),
+                unit='state',
+            )
             stored_count += 1
-
-        # 写入 Redis：每个设备一个 List，保留最近 100 条，TTL 600 秒
-        redis_conn = get_redis_connection("default")
-        key = f"metrics:device:{device.id}"
-        payload = json.dumps({
-            "timestamp": timezone.now().isoformat(),
-            "metrics": metrics,
-            "stored_count": stored_count,
-        }, default=str)
-        redis_conn.lpush(key, payload)
-        redis_conn.ltrim(key, 0, 99)
-        redis_conn.expire(key, 600)
 
         return stored_count
 
@@ -612,9 +687,9 @@ class MonitoringService:
         device,
         metric_name: str,
         duration: timedelta
-    ) -> List[Dict[str, Any]]:
+    ) -> List:
         """
-        获取历史监控数据（从 Redis 读取）
+        获取历史监控数据
 
         Args:
             device: 设备对象
@@ -622,84 +697,20 @@ class MonitoringService:
             duration: 时间范围
 
         Returns:
-            按时间排序的监控数据字典列表，每个字典包含 timestamp 和 value
+            监控数据查询集
 
         Requirements: 4.5
         """
+        from .models import MetricData
+        from django.utils import timezone
+
         start_time = timezone.now() - duration
-        redis_conn = get_redis_connection("default")
-        key = f"metrics:device:{device.id}"
-        raw_items = redis_conn.lrange(key, 0, -1)
 
-        results = []
-        for raw in raw_items:
-            try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
-                continue
-
-            ts_str = data.get("timestamp")
-            if not ts_str:
-                continue
-            try:
-                ts = datetime.fromisoformat(ts_str)
-            except ValueError:
-                continue
-            if ts < start_time:
-                continue
-
-            metrics = data.get("metrics", {})
-            value = None
-
-            # traffic
-            for traffic in metrics.get('traffic', []):
-                iface = traffic.get('interface', 'unknown')
-                if f"{iface}_in" == metric_name:
-                    value = traffic.get('in_octets', 0)
-                    break
-                if f"{iface}_out" == metric_name:
-                    value = traffic.get('out_octets', 0)
-                    break
-
-            # interfaces
-            if value is None:
-                for interface in metrics.get('interfaces', []):
-                    iface_name = interface.get('name', 'unknown')
-                    if f"{iface_name}_status" == metric_name:
-                        value = interface.get('status', 0)
-                        break
-                    if f"{iface_name}_in_mbps" == metric_name:
-                        value = interface.get('in_mbps')
-                        break
-                    if f"{iface_name}_out_mbps" == metric_name:
-                        value = interface.get('out_mbps')
-                        break
-                    if f"{iface_name}_in_drops" == metric_name:
-                        value = interface.get('in_drop_rate')
-                        break
-                    if f"{iface_name}_out_drops" == metric_name:
-                        value = interface.get('out_drop_rate')
-                        break
-
-            # simple metrics
-            if value is None:
-                if metric_name == 'packet_loss_rate' and metrics.get('packet_loss') is not None:
-                    value = metrics['packet_loss']
-                elif metric_name == 'active_connections' and metrics.get('connections') is not None:
-                    value = metrics['connections']
-
-            # ospf neighbors
-            if value is None:
-                for neighbor in metrics.get('ospf_neighbors', []):
-                    neighbor_ip = neighbor.get('neighbor_ip', 'unknown')
-                    if f"ospf_nbr_{neighbor_ip}" == metric_name:
-                        value = neighbor.get('state', 0)
-                        break
-
-            if value is not None:
-                results.append({"timestamp": ts, "value": value})
-
-        return sorted(results, key=lambda x: x["timestamp"])
+        return MetricData.objects.filter(
+            device=device,
+            metric_name=metric_name,
+            timestamp__gte=start_time
+        ).order_by('timestamp')
 
     def check_thresholds(self, device, metrics: Dict[str, Any]) -> List:
         """
@@ -874,15 +885,22 @@ class MonitoringService:
         """
         清理过期的监控数据
 
-        监控数据已迁移至 Redis 并使用 TTL 自动过期，此方法不再操作 PostgreSQL。
-
         Args:
-            retention_hours: 保留时间（小时），仅用于兼容旧接口
+            retention_hours: 保留时间（小时）
 
         Requirements: 4.6
         """
+        from .models import MetricData
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff_time = timezone.now() - timedelta(hours=retention_hours)
+
+        deleted_count, _ = MetricData.objects.filter(
+            timestamp__lt=cutoff_time
+        ).delete()
+
         return {
             'success': True,
-            'deleted_count': 0,
-            'note': '监控数据已存储在 Redis 并由 TTL 自动过期',
+            'deleted_count': deleted_count,
         }
