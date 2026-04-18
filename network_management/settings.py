@@ -283,6 +283,9 @@ DEVICE_DISCOVERY_INTERVAL = 7200  # 2小时
 # 监控数据保留时间（小时）
 MONITORING_DATA_RETENTION_HOURS = 24
 
+# 监控页面自动刷新间隔（秒）
+MONITORING_RELOAD_TIME = int(os.environ.get('MONITORING_RELOAD_TIME', 30))
+
 # 日志保留时间（天）
 LOG_RETENTION_DAYS = 7
 
@@ -300,4 +303,13 @@ CONFIG_BACKUP_REPO_PATH = os.environ.get(
     'CONFIG_BACKUP_REPO_PATH',
     str(BASE_DIR / 'config_backups')
 )
+
+# ============================================================
+# Nornir 配置下发参数
+# ============================================================
+CONFIG_DEPLOY_NORNIR_WORKERS = int(os.environ.get('CONFIG_DEPLOY_NORNIR_WORKERS', 20))
+CONFIG_DEPLOY_CONNECT_TIMEOUT = int(os.environ.get('CONFIG_DEPLOY_CONNECT_TIMEOUT', 10))
+CONFIG_DEPLOY_AUTH_TIMEOUT = int(os.environ.get('CONFIG_DEPLOY_AUTH_TIMEOUT', 10))
+CONFIG_DEPLOY_BANNER_TIMEOUT = int(os.environ.get('CONFIG_DEPLOY_BANNER_TIMEOUT', 10))
+CONFIG_DEPLOY_READ_TIMEOUT = int(os.environ.get('CONFIG_DEPLOY_READ_TIMEOUT', 20))
 

@@ -14,7 +14,6 @@ def cleanup_old_logs(self, days: int = 7):
 
     清理指定天数前的日志
 
-    Requirements: 7.6
     """
     from .services import LogService
 
@@ -54,7 +53,6 @@ def collect_device_logs(self, device_id: int):
     Args:
         device_id: 设备ID
 
-    Requirements: 7.1
     """
     from devices.models import Device
     from .services import LogService
@@ -80,7 +78,6 @@ def collect_all_online_devices_logs(self):
 
     遍历所有在线设备，通过SSH采集日志并存储到数据库
 
-    Requirements: 7.1
     """
     from devices.models import Device
     from .services import LogService

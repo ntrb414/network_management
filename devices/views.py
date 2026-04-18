@@ -2,7 +2,6 @@
 设备管理页面视图和API
 
 包含 DeviceListView（设备列表页面）、DeviceDetailView（设备详情页面）和设备API视图。
-需求引用：2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12
 """
 
 import logging
@@ -138,7 +137,6 @@ def device_list_api(request):
     GET: 返回设备列表，支持分页、筛选、搜索
     POST: 创建设备
 
-    Requirements: 2.1, 2.7, 2.8, 2.10
     """
     if request.method == 'GET':
         # 获取查询参数
@@ -230,7 +228,6 @@ def device_detail_api(request, pk):
     PUT: 更新设备信息
     DELETE: 删除设备
 
-    Requirements: 2.2
     """
     try:
         device = Device.objects.get(pk=pk)
@@ -290,7 +287,6 @@ def device_statistics_api(request):
 
     返回设备统计信息（数量、比例、百分比）
 
-    Requirements: 2.3, 2.4, 2.5, 2.6
     """
     from django.db.models import Count
 
@@ -347,7 +343,6 @@ def device_discover_api(request):
 
     触发设备发现扫描
 
-    Requirements: 1.6
     """
     start_ip = request.data.get('start_ip')
     end_ip = request.data.get('end_ip')
@@ -376,7 +371,6 @@ def device_export_api(request):
 
     导出设备清单为Excel或JSON格式
 
-    Requirements: 2.11, 2.12
     """
     export_format = request.GET.get('format', 'json')
 
@@ -469,7 +463,6 @@ def device_config_api(request, pk):
 
     GET: 获取设备的运行配置和启动配置
 
-    Requirements: 2.2
     """
     try:
         device = Device.objects.get(pk=pk)
@@ -516,7 +509,6 @@ def device_config_realtime_api(request, pk):
 
     POST: 通过SSH实时从设备获取最新配置（不使用缓存）
 
-    Requirements: 3.1 (重构规格)
     """
     try:
         device = Device.objects.get(pk=pk)
@@ -582,7 +574,6 @@ def device_ping_api(request, pk):
 
     POST: 对指定设备执行Ping测试，根据结果更新设备状态
 
-    Requirements: 2.9
     """
     try:
         device = Device.objects.get(pk=pk)
@@ -678,7 +669,6 @@ def device_ping_all_api(request):
 
     POST: 对所有设备执行Ping测试，根据结果更新设备状态
 
-    Requirements: 2.9
     """
     devices = Device.objects.all()
 

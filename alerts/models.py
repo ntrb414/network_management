@@ -2,7 +2,6 @@
 告警数据模型
 
 包含 Alert（告警）模型。
-需求引用：5.1, 5.5
 """
 
 from django.conf import settings

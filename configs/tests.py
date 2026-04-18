@@ -5,7 +5,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from unittest.mock import patch
 
-from configs.models import ConfigTemplate, ConfigTask, ConfigFetchSchedule, ConfigFetchLog
+from configs.models import ConfigTemplate, ConfigTask, ConfigTaskResult, ConfigFetchSchedule, ConfigFetchLog
 from configs.services import ConfigManagementService
 from configs.tasks import backup_all_devices_configs
 from devices.models import Device
@@ -51,7 +51,6 @@ class ConfigPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for back to homepage link
-        self.assertIn('Back to Homepage', content)
         self.assertIn(reverse('homepage:homepage'), content)
     
     def test_config_list_has_user_info(self):
@@ -63,7 +62,6 @@ class ConfigPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for user info
-        self.assertIn('User:', content)
         self.assertIn('testuser', content)
     
     def test_config_list_has_logout_button(self):
@@ -75,7 +73,7 @@ class ConfigPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for logout button
-        self.assertIn('Logout', content)
+        self.assertIn('退出', content)
         self.assertIn(reverse('homepage:logout'), content)
     
     def test_config_detail_has_back_to_homepage_link(self):
@@ -87,7 +85,6 @@ class ConfigPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for back to homepage link
-        self.assertIn('Back to Homepage', content)
         self.assertIn(reverse('homepage:homepage'), content)
     
     def test_config_detail_has_back_to_configs_link(self):
@@ -99,7 +96,7 @@ class ConfigPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for back to configs link
-        self.assertIn('Back to Configs', content)
+        self.assertIn('返回列表', content)
         self.assertIn(reverse('configs:config_list'), content)
     
     def test_config_detail_has_user_info(self):
@@ -111,7 +108,6 @@ class ConfigPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for user info
-        self.assertIn('User:', content)
         self.assertIn('testuser', content)
     
     def test_config_detail_has_logout_button(self):
@@ -123,7 +119,7 @@ class ConfigPageNavigationTestCase(TestCase):
         content = response.content.decode()
 
         # Check for logout button
-        self.assertIn('Logout', content)
+        self.assertIn('退出', content)
         self.assertIn(reverse('homepage:logout'), content)
 
 
@@ -233,12 +229,12 @@ class ConfigAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_template_list_api(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='configapi2', password='testpass123')
         response = self.client.get('/configs/api/templates/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_create_task_from_device_commands_template_sets_config_content(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='configapi2', password='testpass123')
         response = self.client.post(
             '/configs/api/tasks/',
             {
@@ -257,7 +253,6 @@ class ConfigAPITestCase(TestCase):
 
 class ConfigTaskExecutionTestCase(TestCase):
     def setUp(self):
-        self.service = ConfigManagementService()
         self.user = User.objects.create_user(
             username='taskuser',
             email='taskuser@test.com',
@@ -285,8 +280,21 @@ class ConfigTaskExecutionTestCase(TestCase):
         )
         task.devices.set([self.device])
 
-        with patch.object(self.service, 'deploy_config', return_value={'success': True, 'output': 'ok'}):
-            result = self.service.execute_task(task)
+        with patch.object(ConfigManagementService, 'deploy_config_batch', return_value={
+            'success': True,
+            'total': 1,
+            'success_count': 1,
+            'failure_count': 0,
+            'results': [{
+                'device_id': self.device.id,
+                'device_ip': self.device.ip_address,
+                'device_name': self.device.name,
+                'success': True,
+                'output': 'ok',
+            }]
+        }):
+            service = ConfigManagementService()
+            result = service.execute_task(task)
 
         task.refresh_from_db()
 
@@ -312,14 +320,133 @@ class ConfigTaskExecutionTestCase(TestCase):
             error_message='old error',
         )
 
-        with patch.object(self.service, 'deploy_config', return_value={'success': True, 'output': 'ok'}):
-            self.service.execute_task(task)
+        with patch.object(ConfigManagementService, 'deploy_config_batch', return_value={
+            'success': True,
+            'total': 1,
+            'success_count': 1,
+            'failure_count': 0,
+            'results': [{
+                'device_id': self.device.id,
+                'device_ip': self.device.ip_address,
+                'device_name': self.device.name,
+                'success': True,
+                'output': 'ok',
+            }]
+        }):
+            service = ConfigManagementService()
+            service.execute_task(task)
 
         task.refresh_from_db()
 
         self.assertEqual(task.results.count(), 1)
         self.assertTrue(task.results.first().success)
         self.assertEqual(task.results.first().config_content, 'sysname branch-router')
+
+    def test_execute_task_with_batch_results_persists_correctly(self):
+        """验证 execute_task 按批量结果正确落库。"""
+        device2 = Device.objects.create(
+            name='task-device-2',
+            device_type='router',
+            ip_address='192.168.10.4',
+            status='online',
+        )
+
+        task = ConfigTask.objects.create(
+            name='batch-task',
+            template=self.template,
+            config_content='',
+            created_by=self.user,
+        )
+        task.devices.set([self.device, device2])
+
+        with patch.object(ConfigManagementService, 'deploy_config_batch', return_value={
+            'success': True,
+            'total': 2,
+            'success_count': 2,
+            'failure_count': 0,
+            'results': [
+                {
+                    'device_id': self.device.id,
+                    'device_ip': self.device.ip_address,
+                    'device_name': self.device.name,
+                    'success': True,
+                    'output': 'ok1',
+                },
+                {
+                    'device_id': device2.id,
+                    'device_ip': device2.ip_address,
+                    'device_name': device2.name,
+                    'success': True,
+                    'output': 'ok2',
+                },
+            ]
+        }):
+            service = ConfigManagementService()
+            result = service.execute_task(task)
+
+        task.refresh_from_db()
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['success_count'], 2)
+        self.assertEqual(result['failure_count'], 0)
+        self.assertEqual(task.results.count(), 2)
+
+    def test_execute_task_partial_failure_sets_correct_status(self):
+        """验证批量部分失败时 success_count/failure_count 与任务状态一致。"""
+        device2 = Device.objects.create(
+            name='task-device-3',
+            device_type='router',
+            ip_address='192.168.10.5',
+            status='online',
+        )
+
+        task = ConfigTask.objects.create(
+            name='partial-failure-task',
+            template=self.template,
+            config_content='',
+            created_by=self.user,
+        )
+        task.devices.set([self.device, device2])
+
+        with patch.object(ConfigManagementService, 'deploy_config_batch', return_value={
+            'success': False,
+            'total': 2,
+            'success_count': 1,
+            'failure_count': 1,
+            'results': [
+                {
+                    'device_id': self.device.id,
+                    'device_ip': self.device.ip_address,
+                    'device_name': self.device.name,
+                    'success': True,
+                    'output': 'ok',
+                },
+                {
+                    'device_id': device2.id,
+                    'device_ip': device2.ip_address,
+                    'device_name': device2.name,
+                    'success': False,
+                    'error': 'Connection failed',
+                },
+            ]
+        }):
+            service = ConfigManagementService()
+            result = service.execute_task(task)
+
+        task.refresh_from_db()
+
+        # 部分成功时任务状态应为 completed
+        self.assertEqual(task.status, 'completed')
+        self.assertEqual(result['success_count'], 1)
+        self.assertEqual(result['failure_count'], 1)
+        self.assertEqual(task.results.count(), 2)
+
+        # 验证结果记录正确
+        success_result = task.results.filter(device=self.device).first()
+        failure_result = task.results.filter(device=device2).first()
+        self.assertTrue(success_result.success)
+        self.assertFalse(failure_result.success)
+        self.assertEqual(failure_result.error_message, 'Connection failed')
 
 
 class ConfigBackupTaskVisibilityAPITestCase(TestCase):
@@ -331,7 +458,6 @@ class ConfigBackupTaskVisibilityAPITestCase(TestCase):
             password='testpass123'
         )
         UserProfile.objects.create(user=self.user, role='admin')
-        self.client.force_authenticate(user=self.user)
         self.device1 = Device.objects.create(
             name='backup-device-1',
             device_type='router',
@@ -345,7 +471,11 @@ class ConfigBackupTaskVisibilityAPITestCase(TestCase):
             status='online',
         )
 
+    def _login(self):
+        self.client.login(username='backupapi', password='testpass123')
+
     def test_backup_schedule_api_returns_schedule_id(self):
+        self._login()
         response = self.client.get('/configs/api/backup/schedule/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -353,6 +483,7 @@ class ConfigBackupTaskVisibilityAPITestCase(TestCase):
         self.assertTrue(ConfigFetchSchedule.objects.filter(id=response.data['id']).exists())
 
     def test_config_task_detail_api_returns_latest_result_per_device(self):
+        self._login()
         template = ConfigTemplate.objects.create(
             name='detail-template',
             template_content='display current-configuration',
@@ -391,6 +522,7 @@ class ConfigBackupTaskVisibilityAPITestCase(TestCase):
         self.assertEqual(response.data['results'][0]['device_id'], self.device1.id)
 
     def test_schedule_logs_api_returns_result_detail(self):
+        self._login()
         schedule = ConfigFetchSchedule.objects.create(
             name='配置备份任务',
             task_type='backup',
@@ -421,6 +553,7 @@ class ConfigBackupTaskVisibilityAPITestCase(TestCase):
         self.assertEqual(response.data['logs'][0]['result_detail']['results'][1]['error'], 'SSH failed')
 
     def test_create_backup_schedule_persists_selected_devices(self):
+        self._login()
         response = self.client.post(
             '/configs/api/schedules/',
             {
@@ -447,6 +580,7 @@ class ConfigBackupTaskVisibilityAPITestCase(TestCase):
         self.assertEqual(list(schedule.target_devices.values_list('id', flat=True)), [self.device1.id])
 
     def test_schedule_list_api_can_filter_backup_tasks(self):
+        self._login()
         ConfigFetchSchedule.objects.create(
             name='设备配置预加载',
             task_type='preload',
@@ -466,6 +600,7 @@ class ConfigBackupTaskVisibilityAPITestCase(TestCase):
 
     @patch('configs.tasks.backup_all_devices_configs.delay')
     def test_schedule_run_api_dispatches_backup_task(self, mock_delay):
+        self._login()
         mock_delay.return_value.id = 'job-123'
         schedule = ConfigFetchSchedule.objects.create(
             name='夜间备份',

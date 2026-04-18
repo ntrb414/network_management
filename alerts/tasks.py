@@ -16,7 +16,6 @@ def check_device_status(self):
     检查设备状态，当设备为离线或故障时生成告警。
     为避免重复告警，仅在该设备当前无同类活动告警时才创建新告警。
 
-    Requirements: 5.1
     """
     from devices.models import Device
     from alerts.models import Alert
@@ -63,7 +62,6 @@ def cleanup_old_alerts(self):
 
     清理30天前的已处理告警
 
-    Requirements: 5.9
     """
     from .services import AlertService
 

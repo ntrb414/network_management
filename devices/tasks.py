@@ -2,7 +2,6 @@
 设备发现 Celery 异步任务
 
 包含设备发现的异步任务和定时任务。
-需求引用：1.5, 1.6
 """
 
 from celery import shared_task
@@ -21,7 +20,6 @@ def scan_ip_range_task(self, start_ip: str, end_ip: str):
         start_ip: 起始IP地址
         end_ip: 结束IP地址
 
-    Requirements: 1.1, 1.6
     """
     from .services import DeviceDiscoveryService
     from .models import Device
@@ -66,7 +64,6 @@ def scan_lldp_task(self, seed_device_id: int):
     Args:
         seed_device_id: 种子设备ID
 
-    Requirements: 1.2
     """
     from .services import DeviceDiscoveryService
     from .models import Device
@@ -113,7 +110,6 @@ def scheduled_device_discovery(self):
     """
     定时设备发现任务 - 每2小时执行一次
 
-    Requirements: 1.5
     """
     from .models import Device
 
@@ -147,7 +143,6 @@ def discover_device_details(self, device_id: int):
     Args:
         device_id: 设备ID
 
-    Requirements: 1.4
     """
     from .services import DeviceDiscoveryService
     from .models import Device, Port
@@ -207,7 +202,6 @@ def check_device_online(self):
     如果设备离线，同步更新设备状态并触发告警。
     使用并发ping提高检测效率。
 
-    Requirements: 设备管理-定时检测
     """
     from .models import Device
 

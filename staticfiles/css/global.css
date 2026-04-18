@@ -258,6 +258,91 @@ body {
     align-items: center;
 }
 
+.nb-sidebar-drawer {
+    margin: 0;
+    width: 100%;
+}
+
+.nb-sidebar-drawer summary {
+    list-style: none;
+}
+
+.nb-sidebar-drawer > summary {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.nb-sidebar-drawer > summary::marker {
+    display: none;
+    content: "";
+}
+
+.nb-sidebar-drawer summary::-webkit-details-marker {
+    display: none;
+}
+
+.nb-sidebar-drawer-toggle {
+    cursor: pointer;
+    justify-content: space-between;
+}
+
+.nb-sidebar-drawer-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.nb-sidebar-drawer-icon {
+    width: 14px;
+    height: 14px;
+    margin-left: auto;
+    opacity: 0.7;
+    transition: transform 0.15s ease;
+}
+
+.nb-sidebar-drawer[open] .nb-sidebar-drawer-icon {
+    transform: rotate(180deg);
+}
+
+.nb-sidebar-submenu {
+    display: grid;
+    gap: 0.125rem;
+    padding: 0.25rem 0 0.5rem;
+    overflow: hidden;
+}
+
+.nb-sidebar-drawer:not([open]) > .nb-sidebar-submenu {
+    display: none;
+}
+
+.nb-sidebar-drawer[open] > .nb-sidebar-submenu {
+    display: grid;
+}
+
+.nb-sidebar-subitem {
+    display: block;
+    margin-left: 2.5rem;
+    margin-right: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    color: #8ba3bc;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: background 0.12s, color 0.12s;
+}
+
+.nb-sidebar-subitem:hover {
+    background: rgba(255,255,255,0.05);
+    color: #c9d8e8;
+}
+
+.nb-sidebar-subitem.active {
+    background: rgba(77,171,247,0.14);
+    color: #74c0fc;
+}
+
 .card-title {
     font-size: 0.9375rem;
     font-weight: 600;

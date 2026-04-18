@@ -147,6 +147,7 @@ class MonitoringPageNavigationTestCase(TestCase):
 
         self.assertNotIn('监控设备数', content)
         self.assertIn('监控项目', content)
+        self.assertNotIn('当前监控指标', content)
 
     def test_metric_types_page_accessible(self):
         """Test that metric types page is accessible from monitoring module."""

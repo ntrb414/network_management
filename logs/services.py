@@ -2,7 +2,6 @@
 日志分析服务
 
 提供日志收集、查询、统计分析等功能。
-需求引用：7.1, 7.2, 7.3, 7.4, 7.6, 10.1, 10.2
 """
 
 import logging
@@ -38,7 +37,6 @@ class LogService:
         Returns:
             创建的日志对象
 
-        Requirements: 7.1
         """
         from .models import SystemLog
 
@@ -127,7 +125,6 @@ class LogService:
         Returns:
             分页后的日志列表
 
-        Requirements: 7.2, 7.3
         """
         from .models import SystemLog
 
@@ -213,7 +210,6 @@ class LogService:
         Returns:
             统计信息
 
-        Requirements: 7.4
         """
         from .models import SystemLog
 
@@ -263,7 +259,6 @@ class LogService:
         Returns:
             清理结果
 
-        Requirements: 7.6
         """
         from .models import SystemLog
 

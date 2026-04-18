@@ -382,7 +382,8 @@
         }
         .device-item:last-child { border-bottom: none; }
         .device-item:hover { background: var(--gray-50); }
-        .device-item input[type="checkbox"] { margin-right: 0.75rem; }
+        .device-item input[type="checkbox"],
+        .device-item input[type="radio"] { margin-right: 0.75rem; width: auto !important; margin-bottom: 0; flex-shrink: 0; }
         .device-info { flex: 1; }
         .device-name { font-weight: 500; color: var(--gray-800); }
         .device-meta { font-size: 0.75rem; color: var(--gray-500); }
@@ -390,7 +391,9 @@
         .status-online { background: #22c55e; }
         .status-offline { background: #6b7280; }
         .status-fault { background: #ef4444; }
-        .select-all { padding: 0.5rem; background: var(--gray-50); border-bottom: 1px solid var(--gray-200); margin-bottom: 0.5rem; }
+        .select-all { padding: 0.5rem; background: var(--gray-50); border-bottom: 1px solid var(--gray-200); margin-bottom: 0.5rem; display: flex; align-items: center; }
+        .select-all label { display: inline-flex; align-items: center; margin-bottom: 0; font-weight: normal; cursor: pointer; color: var(--gray-800); }
+        .select-all input[type="checkbox"] { width: auto !important; margin: 0 0.5rem 0 0 !important; flex-shrink: 0; }
         .selected-count { font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem; }
         .variables-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-200); }
         .schedule-name-btn {
@@ -649,7 +652,7 @@
                                     <td>{{ task.created_at }}</td>
                                     <td>
                                         {% if task.status == 'pending' %}
-                                            <button class="nb-action-btn apply" onclick="executeTask({{ task.id }})">执行</button>
+                                            <button class="nb-action-btn apply" onclick="executeTask({{ task.id }}, this)">执行</button>
                                         {% endif %}
                                         <button class="nb-action-btn approve" onclick="openTaskResultModal({{ task.id }}, '{{ task.name|escapejs }}')">执行结果</button>
                                     </td>
@@ -1142,9 +1145,12 @@
             });
             const data = await parseApiResponse(response);
             if (response.ok) {
-                showAlert('配置任务创建成功！');
+                showAlert('配置任务创建成功！已转至任务列表。');
                 closeDeviceModal();
-                setTimeout(() => location.reload(), 1000);
+                setTimeout(() => {
+                    window.location.hash = 'tasks';
+                    window.location.reload();
+                }, 1000);
             } else {
                 showAlert(data.error || '创建任务失败', 'error');
             }
@@ -1156,7 +1162,11 @@
         }
     }
 
-    async function executeTask(id) {
+    async function executeTask(id, btnElement) {
+        if (btnElement) {
+            btnElement.disabled = true;
+            btnElement.textContent = '发起...';
+        }
         try {
             const response = await fetch(`/configs/api/tasks/${id}/execute/`, {
                 method: 'POST',
@@ -1164,21 +1174,49 @@
             });
             const data = await parseApiResponse(response);
             if (response.ok) {
-                showAlert('任务已开始执行！');
-                setTimeout(() => location.reload(), 1000);
+                showAlert('任务已开始执行！正在获取状态...');
+                if (btnElement) {
+                    const tr = btnElement.closest('tr');
+                    if (tr) {
+                        const statusTd = tr.querySelector('td:nth-child(3)');
+                        if (statusTd) {
+                            statusTd.innerHTML = '<span class="status-badge status-executing">执行中</span>';
+                        }
+                    }
+                    btnElement.style.display = 'none';
+                }
+                openTaskResultModal(id);
             } else {
                 showAlert(data.error || '执行失败', 'error');
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.textContent = '执行';
+                }
             }
         } catch (error) {
             showAlert('网络错误', 'error');
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.textContent = '执行';
+            }
         }
     }
 
+    let taskResultPollInterval = null;
+
     async function openTaskResultModal(id, name = '') {
         document.getElementById('taskResultModal').classList.add('active');
-        document.getElementById('taskResultTitle').textContent = name ? `${name} - 执行结果` : '任务执行结果';
+        if (name) {
+            document.getElementById('taskResultTitle').textContent = `${name} - 执行结果`;
+        }
         document.getElementById('taskResultSummary').textContent = '正在加载任务执行结果...';
         document.getElementById('taskResultList').innerHTML = '<div style="text-align: center; color: var(--gray-500);">正在加载执行结果...</div>';
+
+        fetchTaskResult(id);
+    }
+
+    async function fetchTaskResult(id) {
+        if (!document.getElementById('taskResultModal').classList.contains('active')) return;
 
         try {
             const response = await fetch(`/configs/api/tasks/${id}/`, {
@@ -1194,6 +1232,10 @@
 
             document.getElementById('taskResultTitle').textContent = `${data.name} - 执行结果`;
             renderTaskResults(data);
+
+            if (data.status === 'executing' || data.status === 'pending') {
+                taskResultPollInterval = setTimeout(() => fetchTaskResult(id), 3000);
+            }
         } catch (error) {
             document.getElementById('taskResultSummary').textContent = '加载失败';
             document.getElementById('taskResultList').innerHTML = '<div style="text-align: center; color: var(--danger);">加载执行结果失败</div>';
@@ -1202,6 +1244,13 @@
 
     function closeTaskResultModal() {
         document.getElementById('taskResultModal').classList.remove('active');
+        clearTimeout(taskResultPollInterval);
+        
+        // Reload page to reflect task status changes
+        if (window.location.hash !== '#tasks') {
+            window.location.hash = 'tasks';
+        }
+        window.location.reload();
     }
 
     function renderTaskResults(task) {
@@ -1675,6 +1724,14 @@
             row.style.display = name.includes(searchTerm) ? '' : 'none';
         });
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const hash = window.location.hash.replace('#', '');
+        if (['templates', 'tasks', 'schedules'].includes(hash)) {
+            const btn = document.querySelector(`.tab-btn[onclick*="${hash}"]`);
+            if (btn) switchTab(hash, btn);
+        }
+    });
 
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
     document.getElementById('templateModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });

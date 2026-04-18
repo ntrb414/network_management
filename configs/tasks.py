@@ -2,7 +2,6 @@
 配置管理 Celery 异步任务
 
 包含配置下发、定时备份等异步任务。
-需求引用：3.9
 """
 
 from celery import shared_task

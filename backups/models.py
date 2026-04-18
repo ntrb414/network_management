@@ -2,7 +2,6 @@
 配置备份数据模型
 
 包含 ConfigBackup（配置备份）模型。
-需求引用：8.2
 """
 
 from django.conf import settings

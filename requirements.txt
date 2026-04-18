@@ -15,6 +15,8 @@ django-celery-beat>=2.5
 
 # Network protocols
 netmiko>=4.2
+nornir>=3.4
+nornir-netmiko>=1.0
 pysnmp>=4.4
 scapy>=2.5
 

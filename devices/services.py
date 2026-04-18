@@ -2,7 +2,6 @@
 设备发现服务
 
 提供设备发现相关功能：IP范围扫描、LLDP发现、手动添加设备、设备详细信息获取。
-需求引用：1.1, 1.2, 1.3, 1.4
 """
 
 import socket
@@ -47,7 +46,6 @@ class DeviceDiscoveryService:
         Returns:
             发现设备的信息列表
 
-        Requirements: 1.1, 1.4
         """
         discovered_devices = []
 
@@ -213,7 +211,6 @@ class DeviceDiscoveryService:
         Returns:
             发现的相邻设备列表
 
-        Requirements: 1.2, 1.4
         """
         discovered_devices = []
 
@@ -324,7 +321,6 @@ class DeviceDiscoveryService:
         Returns:
             创建的设备对象
 
-        Requirements: 1.3
         """
         device = Device.objects.create(
             name=device_info.get('name'),
@@ -351,7 +347,6 @@ class DeviceDiscoveryService:
         Returns:
             设备详细信息字典
 
-        Requirements: 1.4
         """
         details = {
             'id': device.id,

@@ -2,7 +2,6 @@
 配置备份服务
 
 提供配置备份、版本对比等功能。
-需求引用：8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
 """
 
 import logging
@@ -10,6 +9,7 @@ import os
 import difflib
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,6 @@ class BackupService:
         Returns:
             备份结果
 
-        Requirements: 8.1, 8.2, 8.3, 8.4
         """
         try:
             import git
@@ -208,7 +207,6 @@ class BackupService:
         Returns:
             对比结果
 
-        Requirements: 8.5, 8.6
         """
         from .models import ConfigBackup
 
@@ -264,7 +262,6 @@ class BackupService:
         Returns:
             备份列表
 
-        Requirements: 8.2
         """
         from .models import ConfigBackup
 
@@ -316,12 +313,11 @@ class BackupService:
         Returns:
             清理结果
 
-        Requirements: 8.7
         """
         from .models import ConfigBackup
 
         # 计算截止时间
-        cutoff_time = datetime.now() - timedelta(days=days)
+        cutoff_time = timezone.now() - timedelta(days=days)
 
         # 获取要删除的备份
         old_backups = ConfigBackup.objects.filter(backed_up_at__lt=cutoff_time)

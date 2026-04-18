@@ -7,7 +7,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.urls import reverse
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage
 from unittest.mock import patch
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -127,7 +127,7 @@ class DeviceModelTestCase(TestCase):
             status='offline',
         )
 
-        self.assertEqual(str(device), 'test-switch')
+        self.assertEqual(str(device), 'test-switch (交换机) - 192.168.1.2')
 
     def test_device_choices(self):
         """测试设备类型和状态选项"""
@@ -180,7 +180,7 @@ class DeviceAPITestCase(TestCase):
 
     def test_device_list_api_authenticated(self):
         """测试认证后的设备列表API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
         response = self.client.get('/devices/api/list/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -199,7 +199,7 @@ class DeviceAPITestCase(TestCase):
                 status='online',
             )
 
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
         response = self.client.get('/devices/api/list/?page=1&page_size=10')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -216,7 +216,7 @@ class DeviceAPITestCase(TestCase):
             status='online',
         )
 
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
         response = self.client.get('/devices/api/list/?device_type=router')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -232,7 +232,7 @@ class DeviceAPITestCase(TestCase):
             status='offline',
         )
 
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
         response = self.client.get('/devices/api/list/?status=online')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -242,7 +242,7 @@ class DeviceAPITestCase(TestCase):
 
     def test_device_list_api_search(self):
         """测试搜索功能"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
         response = self.client.get('/devices/api/list/?search=api-test')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -251,7 +251,7 @@ class DeviceAPITestCase(TestCase):
 
     def test_device_detail_api(self):
         """测试设备详情API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
         response = self.client.get(f'/devices/api/{self.device.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -260,7 +260,7 @@ class DeviceAPITestCase(TestCase):
 
     def test_device_create_api(self):
         """测试创建设备API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
 
         new_device = {
             'name': 'new-api-device',
@@ -280,7 +280,7 @@ class DeviceAPITestCase(TestCase):
 
     def test_device_update_api(self):
         """测试更新设备API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
 
         response = self.client.put(
             f'/devices/api/{self.device.id}/',
@@ -296,7 +296,7 @@ class DeviceAPITestCase(TestCase):
 
     def test_device_delete_api(self):
         """测试删除设备API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
 
         device_id = self.device.id
 
@@ -309,7 +309,7 @@ class DeviceAPITestCase(TestCase):
 
     def test_device_statistics_api(self):
         """测试设备统计API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='apitest', password='testpass123')
         response = self.client.get('/devices/api/statistics/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -342,7 +342,7 @@ class DeviceExportTestCase(TestCase):
 
     def test_device_export_json(self):
         """测试JSON导出"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='exporttest', password='testpass123')
         response = self.client.get('/devices/api/export/?format=json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -386,8 +386,8 @@ class DevicePaginationTestCase(TestCase):
         queryset = Device.objects.all().order_by('name')
         paginator = Paginator(queryset, 20)
 
-        page = paginator.page(10)
-        self.assertEqual(len(page), 0)
+        with self.assertRaises(EmptyPage):
+            paginator.page(10)
 
 
 class DeviceReadonlyPermissionTestCase(TestCase):
@@ -424,8 +424,8 @@ class DeviceReadonlyPermissionTestCase(TestCase):
         self.assertIn('测试', content)
         self.assertIn('配置', content)
         self.assertIn('SSH', content)
-        self.assertNotIn('添加设备', content)
-        self.assertNotIn('刷新状态', content)
+        self.assertNotIn('id="refreshStatusBtn"', content)
+        self.assertNotIn('onclick="openAddModal()"', content)
         self.assertNotIn('编辑</button>', content)
         self.assertNotIn('删除</button>', content)
 
@@ -434,7 +434,7 @@ class DeviceReadonlyPermissionTestCase(TestCase):
         """只读用户允许执行设备测试。"""
         mock_ping_host.return_value = {'reachable': True, 'latency': 12.5}
 
-        self.api_client.force_authenticate(user=self.user)
+        self.api_client.login(username='readonly-device', password='testpass123')
         response = self.api_client.post(reverse('devices:device_ping_api', args=[self.device.id]))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -442,7 +442,7 @@ class DeviceReadonlyPermissionTestCase(TestCase):
 
     def test_readonly_user_cannot_update_device(self):
         """只读用户不允许编辑设备。"""
-        self.api_client.force_authenticate(user=self.user)
+        self.api_client.login(username='readonly-device', password='testpass123')
         response = self.api_client.put(
             reverse('devices:device_detail_api', args=[self.device.id]),
             {'name': 'blocked-update'},

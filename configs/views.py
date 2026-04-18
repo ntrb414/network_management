@@ -474,6 +474,11 @@ def config_task_execute_api(request, pk):
     if task.status == 'executing':
         return Response({'error': '任务正在执行中'}, status=400)
 
+    # Update state immediately so UI won't flip-flop to "pending" upon early refresh
+    if task.status != 'executing':
+        task.status = 'executing'
+        task.save(update_fields=['status'])
+
     job = execute_config_task.delay(task.id)
 
     return Response({

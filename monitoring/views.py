@@ -265,7 +265,6 @@ class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
         context['reload_time'] = getattr(settings, 'MONITORING_RELOAD_TIME', 30)
 
         service = MonitoringService()
-        metric_identifiers = set()
         monitored_metric_types = set()
 
         devices = Device.objects.all().order_by('name')
@@ -290,30 +289,6 @@ class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
                 down_count = max(0, len(interfaces) - up_count)
                 item['summary']['interface_status'] = f"{up_count} UP / {down_count} DOWN"
 
-                for interface in interfaces:
-                    iface_name = interface.get('name', 'unknown')
-                    metric_identifiers.add((device.id, 'interface_status', f'{iface_name}_status'))
-
-                    if interface.get('in_mbps') is not None:
-                        metric_identifiers.add((device.id, 'interface_in_traffic', f'{iface_name}_in_mbps'))
-
-                    if interface.get('out_mbps') is not None:
-                        metric_identifiers.add((device.id, 'interface_out_traffic', f'{iface_name}_out_mbps'))
-
-                    metric_identifiers.add((device.id, 'interface_in_drops', f'{iface_name}_in_drops'))
-                    metric_identifiers.add((device.id, 'interface_out_drops', f'{iface_name}_out_drops'))
-
-            for traffic in metrics.get('traffic', []):
-                iface_name = traffic.get('interface', 'unknown')
-                metric_identifiers.add((device.id, 'traffic', f'{iface_name}_in'))
-                metric_identifiers.add((device.id, 'traffic', f'{iface_name}_out'))
-
-            if metrics.get('packet_loss') is not None:
-                metric_identifiers.add((device.id, 'packet_loss', 'packet_loss_rate'))
-
-            if metrics.get('connections') is not None:
-                metric_identifiers.add((device.id, 'connections', 'active_connections'))
-
             ospf_neighbors = metrics.get('ospf_neighbors', [])
             if ospf_neighbors:
                 full_count = sum(
@@ -324,17 +299,12 @@ class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
                 total_count = len(ospf_neighbors)
                 item['summary']['ospf'] = f"{full_count}/{total_count} Full"
 
-                for neighbor in ospf_neighbors:
-                    neighbor_ip = neighbor.get('neighbor_ip', 'unknown')
-                    metric_identifiers.add((device.id, 'ospf_neighbor', f'ospf_nbr_{neighbor_ip}'))
-
             item['last_metric_time'] = _parse_snapshot_timestamp(
                 latest_snapshot.get('timestamp') if latest_snapshot else None
             )
 
             device_list.append(item)
 
-        context['total_metrics'] = len(metric_identifiers)
         context['monitored_metric_types'] = _build_metric_type_items(monitored_metric_types)
         context['monitored_metric_types_count'] = len(context['monitored_metric_types'])
         context['device_list'] = device_list

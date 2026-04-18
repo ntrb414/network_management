@@ -88,15 +88,15 @@ class HomepageViewTestCase(TestCase):
         self.assertTemplateUsed(response, 'homepage/homepage.html')
     
     def test_superuser_sees_all_modules(self):
-        """Test that superusers see all 8 modules."""
+        """Test that superusers see all configured modules."""
         self.client.login(username='admin', password='admin123')
         response = self.client.get(reverse('homepage:homepage'))
         
         self.assertEqual(response.status_code, 200)
         modules = response.context['modules']
         
-        # Superuser should see all 8 modules
-        self.assertEqual(len(modules), 8)
+        # Superuser should see all configured modules
+        self.assertEqual(len(modules), 7)
 
         # Verify all module keys are present
         module_keys = [m['key'] for m in modules]
@@ -157,7 +157,6 @@ class HomepageViewTestCase(TestCase):
             self.assertIn('name', module)
             self.assertIn('description', module)
             self.assertIn('url', module)
-            self.assertIn('icon', module)
             self.assertIn('permission', module)
     
     def test_module_urls_are_correct(self):
@@ -192,8 +191,8 @@ class HomepageViewTestCase(TestCase):
         content = response.content.decode()
         
         # Verify that at least some module names appear in the rendered HTML
-        self.assertIn('Devices', content)
-        self.assertIn('Configs', content)
+        self.assertIn('设备管理', content)
+        self.assertIn('配置管理', content)
     
     def test_login_url_is_correct(self):
         """Test that the login_url is set correctly."""

@@ -404,17 +404,8 @@
             </div>
         </div>
 
-        <!-- Stats overview -->
+        <!-- Action bar -->
         <div class="nb-stats-row">
-            <a href="{% url 'monitoring:monitoring_list' %}" class="nb-stat-card" style="text-decoration:none;">
-                <div class="nb-stat-icon blue">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                </div>
-                <div>
-                    <div class="nb-stat-value">{{ total_metrics }}</div>
-                    <div class="nb-stat-label">当前监控指标</div>
-                </div>
-            </a>
             <a href="{% url 'monitoring:metric_types' %}" class="nb-stat-card" style="text-decoration:none;">
                 <div class="nb-stat-icon orange">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -426,7 +417,6 @@
             </a>
         </div>
 
-        <!-- Action bar -->
         <div class="nb-action-bar">
             <button id="collectAllBtn" class="btn btn-primary btn-sm" onclick="collectAll()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>

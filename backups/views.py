@@ -3,7 +3,6 @@
 
 包含 BackupListView（备份列表页面）、BackupDetailView（备份详情页面）、
 ConfigBackupView（手动备份页面）和备份相关API。
-需求引用：8.1, 8.2, 8.3, 8.4, 8.5, 8.6
 """
 
 from django.views.generic import ListView, DetailView, TemplateView
@@ -80,7 +79,6 @@ def backup_list_api(request):
     """
     备份列表API端点
 
-    Requirements: 8.2
     """
     from .services import BackupService
 
@@ -103,7 +101,6 @@ def device_backup_list_api(request, device_id):
     """
     设备备份列表API端点
 
-    Requirements: 8.2
     """
     from .services import BackupService
 
@@ -149,7 +146,6 @@ def backup_create_api(request):
     """
     创建设备配置备份API端点
 
-    Requirements: 8.1, 8.3, 8.4
     """
     from devices.models import Device
     from .services import BackupService
@@ -187,7 +183,6 @@ def backup_compare_api(request):
     """
     备份版本对比API端点
 
-    Requirements: 8.5, 8.6
     """
     from .services import BackupService
 
@@ -218,7 +213,6 @@ def backup_trigger_api(request):
 
     将备份任务投入 Celery 队列异步执行。
 
-    Requirements: 8.1
     """
     from devices.models import Device
     from .tasks import backup_single_device

@@ -2,7 +2,6 @@
 日志数据模型
 
 包含 SystemLog（系统日志）模型。
-需求引用：7.1, 10.1, 10.2
 """
 
 from django.conf import settings

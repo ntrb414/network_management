@@ -1,15 +1,17 @@
 """
 配置管理服务。
-
-配置查看使用 Netmiko 主链路与 Paramiko 备用链路；配置下发仍保留 Nornir 路径。
-需求引用：3.1, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9
+配置查看使用Netmiko；配置下发Nornir路径。
 """
 
 from typing import List, Dict, Any, Optional
+from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 import logging
 import json
+import os
+import tempfile
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,42 @@ class ConfigManagementService:
         if task.template:
             return task.template.render(task.variables or {})
         return task.config_content or ''
+
+    def render_template(self, template, variables: Optional[Dict[str, Any]] = None) -> str:
+        """渲染模板内容。"""
+        variables = variables or {}
+        try:
+            from jinja2 import Template
+            return Template(template.template_content).render(**variables)
+        except Exception:
+            return template.render(variables)
+
+    def validate_template(self, template, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """校验模板变量并尝试渲染。"""
+        variables = variables or {}
+        required = []
+        schema = getattr(template, 'variables_schema', None)
+        if isinstance(schema, dict):
+            required = schema.get('required', []) or []
+
+        missing = [name for name in required if not variables.get(name)]
+        if missing:
+            return {
+                'valid': False,
+                'errors': [f"缺少必填变量: {', '.join(missing)}"],
+            }
+
+        try:
+            self.render_template(template, variables)
+            return {
+                'valid': True,
+                'errors': [],
+            }
+        except Exception as exc:
+            return {
+                'valid': False,
+                'errors': [str(exc)],
+            }
 
     def get_current_config(self, device, use_cache=True) -> str:
         """
@@ -351,6 +389,83 @@ class ConfigManagementService:
         key = (vendor, config_type)
         return commands_map.get(key, 'display current-configuration')
 
+    def _write_temp_inventory_file(self, data: Dict[str, Any]) -> str:
+        """写入临时 inventory 文件并返回路径。"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8') as temp_file:
+            json.dump(data, temp_file)
+            temp_file.flush()
+            return temp_file.name
+
+    def _build_simple_inventory_files(self, devices: List) -> Dict[str, str]:
+        """按本次设备集合构建 SimpleInventory 临时文件。"""
+        connect_timeout = getattr(settings, 'CONFIG_DEPLOY_CONNECT_TIMEOUT', 15)
+        auth_timeout = getattr(settings, 'CONFIG_DEPLOY_AUTH_TIMEOUT', 15)
+        banner_timeout = getattr(settings, 'CONFIG_DEPLOY_BANNER_TIMEOUT', 15)
+        read_timeout = getattr(settings, 'CONFIG_DEPLOY_READ_TIMEOUT', 30)
+
+        hosts_data = {}
+        for device in devices:
+            host_name = f"device_{device.id}"
+            hosts_data[host_name] = {
+                'hostname': device.ip_address,
+                'username': device.ssh_username,
+                'password': device.ssh_password,
+                'port': device.ssh_port or 22,
+                'platform': self._map_device_type(device),
+                'data': {
+                    'device_id': device.id,
+                    'device_name': device.name,
+                },
+                'connection_options': {
+                    'netmiko': {
+                        'extras': {
+                            'timeout': connect_timeout,
+                            'conn_timeout': connect_timeout,
+                            'auth_timeout': auth_timeout,
+                            'banner_timeout': banner_timeout,
+                            'read_timeout_override': read_timeout,
+                            'fast_cli': False,
+                        }
+                    }
+                }
+            }
+
+        return {
+            'host_file': self._write_temp_inventory_file(hosts_data),
+            'group_file': self._write_temp_inventory_file({}),
+            'defaults_file': self._write_temp_inventory_file({}),
+        }
+
+    def _cleanup_temp_inventory_files(self, inventory_options: Dict[str, str]):
+        """清理 SimpleInventory 临时文件。"""
+        for option_name in ('host_file', 'group_file', 'defaults_file'):
+            file_path = inventory_options.get(option_name)
+            if not file_path:
+                continue
+            try:
+                os.remove(file_path)
+            except OSError as exc:
+                logger.warning(f"清理临时 inventory 文件失败 {file_path}: {exc}")
+
+    def _build_batch_error_response(self, devices: List, error: str) -> Dict[str, Any]:
+        """构造批量下发统一失败结构。"""
+        return {
+            'success': False,
+            'total': len(devices),
+            'success_count': 0,
+            'failure_count': len(devices),
+            'results': [
+                {
+                    'device_id': device.id,
+                    'device_ip': device.ip_address,
+                    'device_name': device.name,
+                    'success': False,
+                    'error': error,
+                }
+                for device in devices
+            ],
+        }
+
     def deploy_config(self, device, config: str) -> Dict[str, Any]:
         """
         通过 Nornir 下发配置到设备
@@ -362,73 +477,16 @@ class ConfigManagementService:
         Returns:
             执行结果字典
         """
-        commands = self._split_config_commands(config)
+        batch_result = self.deploy_config_batch([device], config)
+        if batch_result['results']:
+            return batch_result['results'][0]
 
-        if not commands:
-            return {
-                'success': False,
-                'device_id': device.id,
-                'device_name': device.name,
-                'error': '配置内容为空',
-            }
-
-        try:
-            from nornir import InitNornir
-            from nornir_netmiko.tasks import netmiko_send_config
-
-            vendor = self._detect_vendor(device)
-
-            nr = InitNornir(
-                runner={
-                    'plugin': 'nornir_runner.SerialRunner'},
-                inventory={
-                    'plugin': 'nornir.plugins.inventory.simple.SimpleInventory',
-                    'options': {
-                        'hosts': {
-                            device.ip_address: {
-                                'hostname': device.ip_address,
-                                'username': device.ssh_username,
-                                'password': device.ssh_password,
-                                'port': device.ssh_port or 22,
-                                'device_type': self._map_device_type(device),
-                            }
-                        }
-                    }
-                }
-            )
-
-            disable_paging_cmd = 'screen-length 0 temporary' if vendor == 'huawei' else 'screen-length disable'
-
-            if disable_paging_cmd:
-                nr.run(
-                    task=netmiko_send_config,
-                    config_commands=[disable_paging_cmd],
-                    read_timeout=30
-                )
-
-            result = nr.run(
-                task=netmiko_send_config,
-                config_commands=commands,
-                read_timeout=30
-            )
-
-            for host, task_result in result.items():
-                if task_result[0].failed:
-                    raise Exception(task_result[0].exception)
-                return {
-                    'success': True,
-                    'device_id': device.id,
-                    'device_name': device.name,
-                    'output': task_result[0].result,
-                }
-
-        except ImportError:
-            logger.warning("Nornir库未安装，使用 Netmiko 备用方式下发配置")
-            return self._deploy_config_via_netmiko(device, commands)
-        except Exception as e:
-            logger.error(f"Nornir 配置下发失败: {e}")
-            logger.info("尝试使用 Netmiko 备用方式下发配置")
-            return self._deploy_config_via_netmiko(device, commands)
+        return {
+            'success': False,
+            'device_id': device.id,
+            'device_name': device.name,
+            'error': '未获取到下发结果',
+        }
 
     def _deploy_config_via_netmiko(self, device, commands: List[str]) -> Dict[str, Any]:
         """通过 Netmiko 直接下发配置"""
@@ -436,16 +494,21 @@ class ConfigManagementService:
             from netmiko import ConnectHandler
 
             vendor = self._detect_vendor(device)
+            connect_timeout = getattr(settings, 'CONFIG_DEPLOY_CONNECT_TIMEOUT', 15)
+            auth_timeout = getattr(settings, 'CONFIG_DEPLOY_AUTH_TIMEOUT', 15)
+            banner_timeout = getattr(settings, 'CONFIG_DEPLOY_BANNER_TIMEOUT', 15)
+            read_timeout = getattr(settings, 'CONFIG_DEPLOY_READ_TIMEOUT', 30)
+
             connection = ConnectHandler(
                 device_type=self._map_device_type(device),
                 host=device.ip_address,
                 username=device.ssh_username,
                 password=device.ssh_password,
                 port=device.ssh_port or 22,
-                timeout=30,
-                conn_timeout=30,
-                auth_timeout=30,
-                banner_timeout=30,
+                timeout=connect_timeout,
+                conn_timeout=connect_timeout,
+                auth_timeout=auth_timeout,
+                banner_timeout=banner_timeout,
                 fast_cli=False,
             )
 
@@ -453,7 +516,7 @@ class ConfigManagementService:
             if disable_paging_cmd:
                 connection.send_command_timing(disable_paging_cmd, strip_prompt=False, strip_command=False)
 
-            output = connection.send_config_set(commands, read_timeout=30, cmd_verify=False)
+            output = connection.send_config_set(commands, read_timeout=read_timeout, cmd_verify=False)
             connection.disconnect()
 
             return {
@@ -482,28 +545,176 @@ class ConfigManagementService:
         Returns:
             执行结果字典
         """
+        start_time = time.perf_counter()
+        devices = list(devices)
+        if not devices:
+            return {
+                'success': True,
+                'total': 0,
+                'success_count': 0,
+                'failure_count': 0,
+                'results': [],
+            }
+
+        commands = self._split_config_commands(config)
+        if not commands:
+            return self._build_batch_error_response(devices, '配置内容为空')
+
+        try:
+            from nornir import InitNornir
+            from nornir_netmiko.tasks import netmiko_send_config
+        except ImportError:
+            logger.error("Nornir库未安装，无法执行批量并发下发")
+            return self._build_batch_error_response(devices, 'Nornir依赖未安装')
+
+        workers = getattr(settings, 'CONFIG_DEPLOY_NORNIR_WORKERS', 20)
+        read_timeout = getattr(settings, 'CONFIG_DEPLOY_READ_TIMEOUT', 30)
+
+        valid_devices = []
+        invalid_results = {}
+        for device in devices:
+            missing_fields = []
+            if not device.ip_address:
+                missing_fields.append('IP地址')
+            if not device.ssh_username:
+                missing_fields.append('SSH用户名')
+            if not device.ssh_password:
+                missing_fields.append('SSH密码')
+
+            if missing_fields:
+                invalid_results[device.id] = {
+                    'device_id': device.id,
+                    'device_ip': device.ip_address,
+                    'device_name': device.name,
+                    'success': False,
+                    'error': f"缺少SSH连接信息: {', '.join(missing_fields)}",
+                }
+                continue
+
+            valid_devices.append(device)
+
+        if not valid_devices:
+            elapsed = time.perf_counter() - start_time
+            logger.warning(f"批量配置下发被跳过，所有设备SSH信息不完整: total={len(devices)}, elapsed={elapsed:.2f}s")
+            return {
+                'success': False,
+                'total': len(devices),
+                'success_count': 0,
+                'failure_count': len(devices),
+                'results': [invalid_results[device.id] for device in devices],
+            }
+
+        active_workers = max(1, min(workers, len(valid_devices)))
+        logger.info(
+            f"开始批量配置下发: total={len(devices)}, valid={len(valid_devices)}, "
+            f"invalid={len(invalid_results)}, workers={active_workers}, commands={len(commands)}"
+        )
+
+        inventory_options = {}
+        nornir_results = {}
+        try:
+            inventory_options = self._build_simple_inventory_files(valid_devices)
+
+            nr = InitNornir(
+                runner={
+                    'plugin': 'threaded',
+                    'options': {
+                        'num_workers': active_workers,
+                    },
+                },
+                inventory={
+                    'plugin': 'SimpleInventory',
+                    'options': inventory_options,
+                }
+            )
+
+            nornir_result = nr.run(
+                task=netmiko_send_config,
+                config_commands=commands,
+                read_timeout=read_timeout,
+                cmd_verify=False,
+                raise_on_error=False,
+            )
+
+            for device in valid_devices:
+                host_name = f"device_{device.id}"
+                host_result = nornir_result.get(host_name)
+
+                if not host_result:
+                    nornir_results[device.id] = {
+                        'device_id': device.id,
+                        'device_ip': device.ip_address,
+                        'device_name': device.name,
+                        'success': False,
+                        'error': '未获取到设备执行结果',
+                    }
+                    continue
+
+                if host_result.failed:
+                    error_message = ''
+                    for task_result in host_result:
+                        if task_result.failed:
+                            error_message = str(task_result.exception or task_result.result)
+                            break
+                    if not error_message:
+                        error_message = '配置下发失败'
+
+                    nornir_results[device.id] = {
+                        'device_id': device.id,
+                        'device_ip': device.ip_address,
+                        'device_name': device.name,
+                        'success': False,
+                        'error': error_message,
+                    }
+                    continue
+
+                output_parts = [str(task_result.result) for task_result in host_result if task_result.result]
+                nornir_results[device.id] = {
+                    'device_id': device.id,
+                    'device_ip': device.ip_address,
+                    'device_name': device.name,
+                    'success': True,
+                    'output': '\n'.join(output_parts),
+                }
+        except Exception as exc:
+            logger.error(f"Nornir 批量配置下发失败: {exc}")
+            for device in valid_devices:
+                nornir_results[device.id] = {
+                    'device_id': device.id,
+                    'device_ip': device.ip_address,
+                    'device_name': device.name,
+                    'success': False,
+                    'error': str(exc),
+                }
+        finally:
+            if inventory_options:
+                self._cleanup_temp_inventory_files(inventory_options)
+
         success_count = 0
         failure_count = 0
         results = []
 
         for device in devices:
-            result = self.deploy_config(device, config)
+            result = invalid_results.get(device.id) or nornir_results.get(device.id) or {
+                'device_id': device.id,
+                'device_ip': device.ip_address,
+                'device_name': device.name,
+                'success': False,
+                'error': '未获取到设备执行结果',
+            }
+
             if result['success']:
                 success_count += 1
-                results.append({
-                    'device_ip': device.ip_address,
-                    'device_name': device.name,
-                    'success': True,
-                    'output': result.get('output', ''),
-                })
             else:
                 failure_count += 1
-                results.append({
-                    'device_ip': device.ip_address,
-                    'device_name': device.name,
-                    'success': False,
-                    'error': result.get('error', ''),
-                })
+
+            results.append(result)
+
+        elapsed = time.perf_counter() - start_time
+        logger.info(
+            f"批量配置下发完成: total={len(devices)}, success={success_count}, "
+            f"failed={failure_count}, elapsed={elapsed:.2f}s"
+        )
 
         return {
             'success': failure_count == 0,
@@ -542,12 +753,17 @@ class ConfigManagementService:
         # 同一任务再次执行时，仅保留本次执行结果，避免历史结果重复展示。
         ConfigTaskResult.objects.filter(task=task).delete()
 
-        results = []
-        success_count = 0
-        failure_count = 0
+        devices = list(task.devices.all())
+        batch_result = self.deploy_config_batch(devices, rendered_config)
 
-        for device in task.devices.all():
-            result = self.deploy_config(device, rendered_config)
+        success_count = batch_result.get('success_count', 0)
+        failure_count = batch_result.get('failure_count', 0)
+        device_map = {device.id: device for device in devices}
+
+        for result in batch_result.get('results', []):
+            device = device_map.get(result.get('device_id'))
+            if not device:
+                continue
 
             ConfigTaskResult.objects.create(
                 task=task,
@@ -556,11 +772,6 @@ class ConfigManagementService:
                 config_content=rendered_config,
                 error_message=result.get('error', ''),
             )
-
-            if result['success']:
-                success_count += 1
-            else:
-                failure_count += 1
 
         # 更新任务状态
         if failure_count == 0:

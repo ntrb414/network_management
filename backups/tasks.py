@@ -14,7 +14,6 @@ def backup_all_devices(self):
 
     遍历所有设备进行配置备份
 
-    Requirements: 8.1
     """
     from devices.models import Device
     from configs.services import ConfigManagementService
@@ -106,7 +105,6 @@ def cleanup_old_backups(self, days: int = 30):
     Args:
         days: 保留天数
 
-    Requirements: 8.7
     """
     from .services import BackupService
 

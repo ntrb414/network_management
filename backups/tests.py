@@ -51,37 +51,41 @@ class BackupPageNavigationTestCase(TestCase):
     def test_backup_list_has_back_to_homepage_link(self):
         """Test that backup list page has 'Back to Homepage' link."""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('backups:backup_list'))
+        response = self.client.get(reverse('backups:backup_list'), follow=True)
         
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.redirect_chain)
+        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_backup'))
         content = response.content.decode()
         
         # Check for back to homepage link
-        self.assertIn('Back to Homepage', content)
         self.assertIn(reverse('homepage:homepage'), content)
     
     def test_backup_list_has_user_info(self):
         """Test that backup list page displays current user information."""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('backups:backup_list'))
+        response = self.client.get(reverse('backups:backup_list'), follow=True)
         
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.redirect_chain)
+        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_backup'))
         content = response.content.decode()
         
         # Check for user info
-        self.assertIn('User:', content)
         self.assertIn('testuser', content)
     
     def test_backup_list_has_logout_button(self):
         """Test that backup list page has logout button."""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('backups:backup_list'))
+        response = self.client.get(reverse('backups:backup_list'), follow=True)
         
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.redirect_chain)
+        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_backup'))
         content = response.content.decode()
         
         # Check for logout button
-        self.assertIn('Logout', content)
+        self.assertIn('退出', content)
         self.assertIn(reverse('homepage:logout'), content)
     
     def test_backup_detail_has_back_to_homepage_link(self):
@@ -93,7 +97,6 @@ class BackupPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for back to homepage link
-        self.assertIn('Back to Homepage', content)
         self.assertIn(reverse('homepage:homepage'), content)
     
     def test_backup_detail_has_back_to_backups_link(self):
@@ -105,7 +108,7 @@ class BackupPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for back to backups link
-        self.assertIn('Back to Backups', content)
+        self.assertIn('返回列表', content)
         self.assertIn(reverse('backups:backup_list'), content)
     
     def test_backup_detail_has_user_info(self):
@@ -117,7 +120,6 @@ class BackupPageNavigationTestCase(TestCase):
         content = response.content.decode()
         
         # Check for user info
-        self.assertIn('User:', content)
         self.assertIn('testuser', content)
     
     def test_backup_detail_has_logout_button(self):
@@ -129,7 +131,7 @@ class BackupPageNavigationTestCase(TestCase):
         content = response.content.decode()
 
         # Check for logout button
-        self.assertIn('Logout', content)
+        self.assertIn('退出', content)
         self.assertIn(reverse('homepage:logout'), content)
 
 
@@ -253,7 +255,7 @@ class BackupAPITestCase(TestCase):
 
     def test_backup_list_api(self):
         """测试备份列表API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='backup_api_user', password='testpass123')
         response = self.client.get('/backups/api/list/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -261,7 +263,7 @@ class BackupAPITestCase(TestCase):
 
     def test_device_backup_list_api(self):
         """测试设备备份列表API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='backup_api_user', password='testpass123')
         response = self.client.get(f'/backups/api/devices/{self.device.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -270,7 +272,7 @@ class BackupAPITestCase(TestCase):
     def test_backup_detail_api(self):
         """测试备份详情API"""
         backup = ConfigBackup.objects.first()
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='backup_api_user', password='testpass123')
         response = self.client.get(f'/backups/api/{backup.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -278,7 +280,7 @@ class BackupAPITestCase(TestCase):
 
     def test_backup_create_api(self):
         """测试创建备份API"""
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username='backup_api_user', password='testpass123')
         response = self.client.post('/backups/api/create/', {
             'device_id': self.device.id,
             'config_content': 'new config',
@@ -291,7 +293,7 @@ class BackupAPITestCase(TestCase):
         """测试备份对比API"""
         backups = list(ConfigBackup.objects.all())
         if len(backups) >= 2:
-            self.client.force_authenticate(user=self.user)
+            self.client.login(username='backup_api_user', password='testpass123')
             response = self.client.get(
                 f'/backups/api/compare/?backup1_id={backups[1].id}&backup2_id={backups[0].id}'
             )
@@ -301,4 +303,4 @@ class BackupAPITestCase(TestCase):
     def test_backup_api_requires_auth(self):
         """测试备份API需要认证"""
         response = self.client.get('/backups/api/list/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

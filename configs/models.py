@@ -2,7 +2,6 @@
 配置管理数据模型
 
 包含 ConfigTemplate（配置模板）、ConfigTask（配置任务）、ConfigTaskResult（配置任务结果）模型。
-需求引用：3.2, 3.4, 3.7, 3.8
 """
 
 from django.conf import settings

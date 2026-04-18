@@ -2,7 +2,6 @@
 设备管理数据模型
 
 包含 Device（设备）和 Port（端口）模型。
-需求引用：1.4, 2.1, 2.9
 """
 
 from django.db import models

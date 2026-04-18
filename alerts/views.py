@@ -2,7 +2,6 @@
 告警管理页面视图和API
 
 包含告警列表、详情页面和API视图。
-需求引用：5.6, 5.7, 5.8, 5.9, 5.10
 """
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -62,7 +61,6 @@ def alert_list_api(request):
     """
     告警列表API端点
 
-    Requirements: 5.9
     """
     page = int(request.GET.get('page', 1))
     page_size = int(request.GET.get('page_size', 20))
@@ -160,7 +158,6 @@ def alert_acknowledge_api(request, pk):
     """
     确认告警API端点
 
-    Requirements: 5.7
     """
     try:
         alert = Alert.objects.get(pk=pk)
@@ -191,7 +188,6 @@ def alert_ignore_api(request, pk):
     """
     忽略告警API端点
 
-    Requirements: 5.8
     """
     try:
         alert = Alert.objects.get(pk=pk)
@@ -283,7 +279,6 @@ def alert_statistics_api(request):
     """
     告警统计API端点
 
-    Requirements: 5.10
     """
     days = int(request.GET.get('days', 7))
 
@@ -301,7 +296,6 @@ def alert_device_api(request, device_id):
     """
     设备告警列表API端点
 
-    Requirements: 5.9
     """
     try:
         device = Device.objects.get(pk=device_id)
@@ -358,7 +352,6 @@ def alert_active_api(request):
     """
     获取活动告警API端点
 
-    Requirements: 5.6
     """
     from .services import AlertService
     service = AlertService()

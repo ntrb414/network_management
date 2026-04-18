@@ -2,7 +2,6 @@
 用户账户管理页面视图
 
 包含 AccountListView（用户列表页面）和 AccountDetailView（用户详情页面）。
-需求引用：9.1, 9.4, 10.3
 """
 
 from django.views.generic import ListView, DetailView
@@ -98,7 +97,6 @@ def user_list_api(request):
     GET: 获取用户列表
     POST: 创建新用户
 
-    Requirements: 9.1
     """
     # 权限检查：仅管理员可访问
     if not _is_admin_user(request):
@@ -179,7 +177,6 @@ def user_detail_api(request, pk):
     PUT: 更新用户信息
     DELETE: 删除用户
 
-    Requirements: 9.1
     """
     # 权限检查：仅管理员可访问
     if not _is_admin_user(request):
@@ -244,7 +241,6 @@ def user_permissions_api(request, pk):
 
     为普通用户授予细粒度权限
 
-    Requirements: 9.4
     """
     # 权限检查：仅管理员可访问
     if not _is_admin_user(request):
@@ -277,7 +273,6 @@ def audit_log_list_api(request):
 
     筛选操作日志类型的SystemLog
 
-    Requirements: 10.3
     """
     from logs.models import SystemLog
 

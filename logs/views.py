@@ -2,7 +2,6 @@
 系统日志页面视图
 
 包含 LogListView（日志列表页面）和API视图。
-需求引用：7.2, 7.3, 7.4
 """
 
 from django.views.generic import ListView
@@ -49,7 +48,6 @@ def log_list_api(request):
 
     支持关键字搜索、时间范围筛选、日志类型筛选
 
-    Requirements: 7.2, 7.3
     """
     from .services import LogService
 
@@ -92,7 +90,6 @@ def log_detail_api(request, pk):
     """
     日志详情API端点
 
-    Requirements: 7.2
     """
     try:
         log = SystemLog.objects.get(pk=pk)
@@ -130,7 +127,6 @@ def log_statistics_api(request):
 
     按日志类型、时间段统计日志数量
 
-    Requirements: 7.4
     """
     from .services import LogService
 

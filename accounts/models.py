@@ -2,7 +2,6 @@
 用户权限数据模型
 
 包含 UserProfile（用户配置文件）模型，扩展 Django User 模型。
-需求引用：9.1, 9.2, 9.3
 """
 
 from django.conf import settings
