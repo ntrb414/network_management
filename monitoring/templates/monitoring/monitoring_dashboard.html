@@ -163,7 +163,7 @@
         /* Stats grid */
         .nb-stats-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -201,14 +201,6 @@
             margin-bottom: 1.5rem;
             flex-wrap: wrap;
             align-items: center;
-        }
-        .nb-auto-refresh {
-            margin-left: auto;
-            font-size: 0.875rem;
-            color: var(--gray-500);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
 
         /* Device list - Vertical card layout */
@@ -423,24 +415,15 @@
                     <div class="nb-stat-label">当前监控指标</div>
                 </div>
             </a>
-            <a href="{% url 'devices:device_list' %}" class="nb-stat-card" style="text-decoration:none;">
-                <div class="nb-stat-icon green">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                </div>
-                <div>
-                    <div class="nb-stat-value">{{ monitored_devices_count|default:"0" }}</div>
-                    <div class="nb-stat-label">监控设备数</div>
-                </div>
-            </a>
-            <div class="nb-stat-card" style="text-decoration:none; cursor: default;">
+            <a href="{% url 'monitoring:metric_types' %}" class="nb-stat-card" style="text-decoration:none;">
                 <div class="nb-stat-icon orange">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </div>
                 <div>
-                    <div class="nb-stat-value">{{ metric_types|length }}</div>
+                    <div class="nb-stat-value">{{ monitored_metric_types_count|default:"0" }}</div>
                     <div class="nb-stat-label">监控项目</div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- Action bar -->
@@ -449,10 +432,6 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                 全部采集
             </button>
-            <label class="nb-auto-refresh">
-                <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
-                自动刷新（30s）
-            </label>
         </div>
 
         <!-- Device list - Vertical Cards -->
@@ -519,8 +498,6 @@
 </div>
 
 <script>
-    let autoRefreshTimer = null;
-
     function getCsrfToken() {
         return document.cookie.split(';').map(c => c.trim())
             .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
@@ -590,13 +567,6 @@
         });
     }
 
-    function toggleAutoRefresh(enabled) {
-        if (enabled) {
-            autoRefreshTimer = setInterval(() => location.reload(), 30000);
-        } else {
-            clearInterval(autoRefreshTimer);
-        }
-    }
 </script>
 <style>
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

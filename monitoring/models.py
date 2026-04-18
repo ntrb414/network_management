@@ -2,7 +2,6 @@
 性能监控数据模型
 
 包含 MetricData（监控指标数据）模型。
-需求引用：4.1, 4.6
 """
 
 from django.db import models

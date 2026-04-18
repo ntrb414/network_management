@@ -2,22 +2,22 @@
 性能监控页面视图和API
 
 包含监控数据列表、实时监控、历史监控等视图。
-需求引用：4.4, 4.5
 """
 
-from django.views.generic import ListView, TemplateView, DetailView
+from django.views.generic import ListView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import MetricData
+from .services import MonitoringService
 from devices.models import Device
-from django.db import models
 
 
 EXCLUDED_METRIC_TYPES = {
@@ -39,6 +39,46 @@ OSPF_STATE_MAP = {
     7: 'Loading',
     8: 'Full',
 }
+METRIC_TYPE_LABELS = dict(MetricData.METRIC_TYPES)
+
+
+def _extract_metric_types(metrics):
+    monitored_metric_types = set()
+
+    interfaces = metrics.get('interfaces', [])
+    if interfaces:
+        if any(interface.get('status') is not None for interface in interfaces):
+            monitored_metric_types.add('interface_status')
+        if any(interface.get('in_mbps') is not None for interface in interfaces):
+            monitored_metric_types.add('interface_in_traffic')
+        if any(interface.get('out_mbps') is not None for interface in interfaces):
+            monitored_metric_types.add('interface_out_traffic')
+        if any(interface.get('in_drop_rate') is not None for interface in interfaces):
+            monitored_metric_types.add('interface_in_drops')
+        if any(interface.get('out_drop_rate') is not None for interface in interfaces):
+            monitored_metric_types.add('interface_out_drops')
+
+    if metrics.get('traffic'):
+        monitored_metric_types.add('traffic')
+    if metrics.get('packet_loss') is not None:
+        monitored_metric_types.add('packet_loss')
+    if metrics.get('connections') is not None:
+        monitored_metric_types.add('connections')
+    if metrics.get('ospf_neighbors'):
+        monitored_metric_types.add('ospf_neighbor')
+
+    return monitored_metric_types
+
+
+def _build_metric_type_items(monitored_metric_types):
+    return [
+        {
+            'metric_type': metric_type,
+            'label': METRIC_TYPE_LABELS.get(metric_type, metric_type),
+        }
+        for metric_type, _ in MetricData.METRIC_TYPES
+        if metric_type in monitored_metric_types
+    ]
 
 
 def _get_interface_name(metric_name):
@@ -108,18 +148,20 @@ def _is_interface_up(value):
         return False
 
 
-def _get_latest_interface_status_metrics(device):
-    return MetricData.objects.filter(
-        device=device,
-        metric_type='interface_status'
-    ).order_by('metric_name', '-timestamp').distinct('metric_name')
+def _parse_snapshot_timestamp(timestamp):
+    if not timestamp:
+        return None
 
+    try:
+        parsed = datetime.fromisoformat(timestamp)
+    except ValueError:
+        return None
 
-def _get_latest_ospf_neighbor_metrics(device):
-    return MetricData.objects.filter(
-        device=device,
-        metric_type='ospf_neighbor'
-    ).order_by('metric_name', '-timestamp').distinct('metric_name')
+    if timezone.is_naive(parsed):
+        return timezone.make_aware(parsed)
+
+    return parsed
+
 
 
 def _get_interface_status_display(value):
@@ -162,12 +204,44 @@ class MonitoringListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Return all metrics ordered by timestamp, with optional type filter."""
-        qs = MetricData.objects.exclude(metric_type__in=EXCLUDED_METRIC_TYPES).order_by('-timestamp')
+        """Return flattened Redis metrics ordered by timestamp, with optional type filter."""
+        service = MonitoringService()
+        rows = []
         metric_type = self.request.GET.get('metric_type')
-        if metric_type and metric_type not in EXCLUDED_METRIC_TYPES:
-            qs = qs.filter(metric_type=metric_type)
-        return qs
+        devices = Device.objects.all().order_by('name')
+        fallback_ts = timezone.make_aware(datetime(1970, 1, 1))
+
+        for device in devices:
+            snapshots = service.get_device_snapshots_from_redis(device.id, limit=100)
+            metric_rows = service.flatten_snapshots_to_metric_rows(snapshots)
+
+            for row in metric_rows:
+                row_type = row.get('metric_type')
+                if row_type in EXCLUDED_METRIC_TYPES:
+                    continue
+                if metric_type and metric_type not in EXCLUDED_METRIC_TYPES and row_type != metric_type:
+                    continue
+
+                row_timestamp = _parse_snapshot_timestamp(row.get('timestamp'))
+                rows.append({
+                    'device': {
+                        'id': device.id,
+                        'name': device.name,
+                    },
+                    'metric_type': row_type,
+                    'metric_type_display': METRIC_TYPE_LABELS.get(row_type, row_type),
+                    'metric_name': row.get('metric_name', ''),
+                    'value': row.get('value'),
+                    'unit': row.get('unit', ''),
+                    'timestamp': row_timestamp or row.get('timestamp'),
+                    'timestamp_sort': row_timestamp or fallback_ts,
+                })
+
+        rows.sort(key=lambda item: item['timestamp_sort'], reverse=True)
+        for row in rows:
+            row.pop('timestamp_sort', None)
+
+        return rows
 
     def get_context_data(self, **kwargs):
         """Add user info and metric summary to context."""
@@ -187,60 +261,20 @@ class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
         """Add user info and device list to context."""
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
-
-        # 统计当前监控指标数：同一设备下同一个 metric_type + metric_name 的最新值记为 1 个指标。
-        context['total_metrics'] = MetricData.objects.order_by(
-            'device_id', 'metric_type', 'metric_name', '-timestamp'
-        ).distinct('device_id', 'metric_type', 'metric_name').count()
         context['metric_types'] = DISPLAY_METRIC_TYPES
+        context['reload_time'] = getattr(settings, 'MONITORING_RELOAD_TIME', 30)
 
-        # 统计被监控的设备数量
-        context['monitored_devices_count'] = Device.objects.count()
+        service = MonitoringService()
+        metric_identifiers = set()
+        monitored_metric_types = set()
 
-        # 获取所有设备
         devices = Device.objects.all().order_by('name')
-        device_ids = [d.id for d in devices]
-
-        # 基于每个接口最新状态进行统计，避免历史数据累计导致显示失真
-        from django.db.models import Count, Case, When
-        latest_interface_status = MetricData.objects.filter(
-            device_id__in=device_ids,
-            metric_type='interface_status'
-        ).order_by('device_id', 'metric_name', '-timestamp').distinct('device_id', 'metric_name')
-
-        interface_counts_by_device = {}
-        latest_intf_ts_by_device = {}
-        for metric in latest_interface_status:
-            stats = interface_counts_by_device.setdefault(metric.device_id, {'up_count': 0, 'down_count': 0})
-            if int(metric.value) == 1:
-                stats['up_count'] += 1
-            else:
-                stats['down_count'] += 1
-
-            latest_ts = latest_intf_ts_by_device.get(metric.device_id)
-            if latest_ts is None or metric.timestamp > latest_ts:
-                latest_intf_ts_by_device[metric.device_id] = metric.timestamp
-
-        # 批量获取所有设备的 OSPF 邻居状态统计
-        ospf_counts = MetricData.objects.filter(
-            device_id__in=device_ids,
-            metric_type='ospf_neighbor'
-        ).values('device_id').annotate(
-            full_count=Count(Case(When(value=8, then=1))),
-            total_count=Count('id')
-        )
-        ospf_counts_by_device = {item['device_id']: item for item in ospf_counts}
-
-        # 批量获取所有设备的最新 OSPF timestamp
-        latest_ospf_timestamps = MetricData.objects.filter(
-            device_id__in=device_ids,
-            metric_type='ospf_neighbor'
-        ).order_by('device_id', '-timestamp').distinct('device_id').values('device_id', 'timestamp')
-        latest_ospf_ts_by_device = {item['device_id']: item['timestamp'] for item in latest_ospf_timestamps}
-
-        # 构建设备列表
         device_list = []
         for device in devices:
+            latest_snapshot = service.get_latest_metrics_from_redis(device.id)
+            metrics = latest_snapshot.get('metrics', {}) if latest_snapshot else {}
+            monitored_metric_types.update(_extract_metric_types(metrics))
+
             item = {
                 'device': device,
                 'summary': {
@@ -250,26 +284,85 @@ class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
                 'last_metric_time': None,
             }
 
-            # 接口状态统计
-            intf_counts = interface_counts_by_device.get(device.id)
-            if intf_counts:
-                up_count = intf_counts['up_count']
-                down_count = intf_counts['down_count']
+            interfaces = metrics.get('interfaces', [])
+            if interfaces:
+                up_count = sum(1 for iface in interfaces if _is_interface_up(iface.get('status')))
+                down_count = max(0, len(interfaces) - up_count)
                 item['summary']['interface_status'] = f"{up_count} UP / {down_count} DOWN"
-                item['last_metric_time'] = latest_intf_ts_by_device.get(device.id)
 
-            # OSPF邻居状态
-            ospf_stats = ospf_counts_by_device.get(device.id)
-            if ospf_stats:
-                full_count = ospf_stats['full_count']
-                total_count = ospf_stats['total_count']
+                for interface in interfaces:
+                    iface_name = interface.get('name', 'unknown')
+                    metric_identifiers.add((device.id, 'interface_status', f'{iface_name}_status'))
+
+                    if interface.get('in_mbps') is not None:
+                        metric_identifiers.add((device.id, 'interface_in_traffic', f'{iface_name}_in_mbps'))
+
+                    if interface.get('out_mbps') is not None:
+                        metric_identifiers.add((device.id, 'interface_out_traffic', f'{iface_name}_out_mbps'))
+
+                    metric_identifiers.add((device.id, 'interface_in_drops', f'{iface_name}_in_drops'))
+                    metric_identifiers.add((device.id, 'interface_out_drops', f'{iface_name}_out_drops'))
+
+            for traffic in metrics.get('traffic', []):
+                iface_name = traffic.get('interface', 'unknown')
+                metric_identifiers.add((device.id, 'traffic', f'{iface_name}_in'))
+                metric_identifiers.add((device.id, 'traffic', f'{iface_name}_out'))
+
+            if metrics.get('packet_loss') is not None:
+                metric_identifiers.add((device.id, 'packet_loss', 'packet_loss_rate'))
+
+            if metrics.get('connections') is not None:
+                metric_identifiers.add((device.id, 'connections', 'active_connections'))
+
+            ospf_neighbors = metrics.get('ospf_neighbors', [])
+            if ospf_neighbors:
+                full_count = sum(
+                    1
+                    for neighbor in ospf_neighbors
+                    if neighbor.get('is_full') or str(neighbor.get('state')) == '8'
+                )
+                total_count = len(ospf_neighbors)
                 item['summary']['ospf'] = f"{full_count}/{total_count} Full"
-                if not item['last_metric_time']:
-                    item['last_metric_time'] = latest_ospf_ts_by_device.get(device.id)
+
+                for neighbor in ospf_neighbors:
+                    neighbor_ip = neighbor.get('neighbor_ip', 'unknown')
+                    metric_identifiers.add((device.id, 'ospf_neighbor', f'ospf_nbr_{neighbor_ip}'))
+
+            item['last_metric_time'] = _parse_snapshot_timestamp(
+                latest_snapshot.get('timestamp') if latest_snapshot else None
+            )
 
             device_list.append(item)
 
+        context['total_metrics'] = len(metric_identifiers)
+        context['monitored_metric_types'] = _build_metric_type_items(monitored_metric_types)
+        context['monitored_metric_types_count'] = len(context['monitored_metric_types'])
         context['device_list'] = device_list
+
+        return context
+
+
+class MonitoringMetricTypesView(LoginRequiredMixin, TemplateView):
+    """Display list of currently monitored metric categories."""
+
+    template_name = 'monitoring/monitoring_metric_types.html'
+    login_url = 'homepage:login'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['user'] = self.request.user
+
+        service = MonitoringService()
+        devices = Device.objects.all().order_by('name')
+        monitored_metric_types = set()
+
+        for device in devices:
+            latest_snapshot = service.get_latest_metrics_from_redis(device.id)
+            metrics = latest_snapshot.get('metrics', {}) if latest_snapshot else {}
+            monitored_metric_types.update(_extract_metric_types(metrics))
+
+        context['metric_type_items'] = _build_metric_type_items(monitored_metric_types)
+        context['metric_types_count'] = len(context['metric_type_items'])
 
         return context
 
@@ -283,88 +376,55 @@ class MonitoringDeviceDetailView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         device = get_object_or_404(Device, pk=self.kwargs['device_id'])
+        service = MonitoringService()
+
         context['user'] = self.request.user
         context['device'] = device
+        context['reload_time'] = getattr(settings, 'MONITORING_RELOAD_TIME', 30)
 
-        # 各指标最新值
-        metrics_latest = {}
-        for mt, label in DISPLAY_METRIC_TYPES:
-            if mt == 'interface_status':
-                latest_status_metrics = list(_get_latest_interface_status_metrics(device))
-                up_interfaces = [
-                    _get_interface_name(metric.metric_name)
-                    for metric in latest_status_metrics
-                    if _is_interface_up(metric.value)
-                ]
-                metrics_latest[mt] = {
-                    'label': label,
-                    'value': len(up_interfaces) if latest_status_metrics else None,
-                    'unit': 'ports',
-                    'timestamp': latest_status_metrics[0].timestamp if latest_status_metrics else None,
-                    'display_value': '、'.join(up_interfaces) if up_interfaces else ('暂无UP端口' if latest_status_metrics else None),
-                }
-                continue
+        snapshots = service.get_device_snapshots_from_redis(device.id, limit=50)
+        metric_rows = service.flatten_snapshots_to_metric_rows(snapshots)
 
-            if mt == 'ospf_neighbor':
-                latest_ospf_metrics = list(_get_latest_ospf_neighbor_metrics(device))
-                neighbor_ips = []
-                for metric in latest_ospf_metrics:
-                    neighbor_ip = _get_ospf_neighbor_ip(metric.metric_name)
-                    if neighbor_ip and neighbor_ip not in neighbor_ips:
-                        neighbor_ips.append(neighbor_ip)
-                latest_timestamp = max((metric.timestamp for metric in latest_ospf_metrics), default=None)
-                metrics_latest[mt] = {
-                    'label': label,
-                    'value': len(neighbor_ips) if neighbor_ips else (len(latest_ospf_metrics) if latest_ospf_metrics else None),
-                    'unit': 'neighbors',
-                    'timestamp': latest_timestamp,
-                    'display_value': '、'.join(neighbor_ips) if neighbor_ips else ('暂无邻居IP' if latest_ospf_metrics else None),
-                }
-                continue
+        rows_by_type = {}
+        for row in metric_rows:
+            row_type = row.get('metric_type')
+            rows_by_type.setdefault(row_type, []).append(row)
 
-            latest = MetricData.objects.filter(
-                device=device, metric_type=mt
-            ).order_by('-timestamp').first()
-            metrics_latest[mt] = {
-                'label': label,
-                'value': latest.value if latest else None,
-                'unit': latest.unit if latest else '',
-                'timestamp': latest.timestamp if latest else None,
-                'display_value': _get_metric_display_value(mt, latest.value, latest.unit) if latest else None,
-            }
-        context['metrics_latest'] = metrics_latest
-
-        # 各指标历史记录（最近50条）
         metrics_history = {}
-        for mt, label in DISPLAY_METRIC_TYPES:
-            history = list(
-                MetricData.objects.filter(device=device, metric_type=mt)
-                .order_by('-timestamp')[:50]
-                .values('value', 'unit', 'metric_name', 'timestamp')
-            )
-            history = [
-                {
-                    **row,
-                    'display_metric_name': _get_metric_display_name(mt, row['metric_name']),
-                }
-                for row in history
-                if mt != 'interface_status' or _is_interface_up(row['value'])
-            ]
-            metrics_history[mt] = history
+        for mt, _ in DISPLAY_METRIC_TYPES:
+            history_rows = []
+            for row in metric_rows:
+                if row.get('metric_type') != mt:
+                    continue
+                if mt == 'interface_status' and not _is_interface_up(row.get('value')):
+                    continue
+
+                history_rows.append({
+                    'value': row.get('value'),
+                    'unit': row.get('unit', ''),
+                    'metric_name': row.get('metric_name', ''),
+                    'timestamp': _parse_snapshot_timestamp(row.get('timestamp')),
+                    'display_metric_name': _get_metric_display_name(mt, row.get('metric_name', '')),
+                })
+
+                if len(history_rows) >= 50:
+                    break
+
+            metrics_history[mt] = history_rows
         context['metrics_history'] = metrics_history
 
         # JSON序列化供JS使用
         import json
-        from django.utils.timezone import localtime
         history_json = {}
         for mt, rows in metrics_history.items():
             history_json[mt] = [
                 {
                     'metric_type': mt,
                     'metric_name': r['metric_name'],
+                    'display_metric_name': r['display_metric_name'],
                     'value': r['value'],
                     'unit': r['unit'],
-                    'timestamp': localtime(r['timestamp']).isoformat(),
+                    'timestamp': r['timestamp'].isoformat() if r['timestamp'] else '',
                 }
                 for r in rows
             ]
@@ -391,7 +451,6 @@ def monitoring_device_realtime_api(request, device_id):
     """
     实时监控数据API端点
 
-    Requirements: 4.4
     """
     try:
         device = Device.objects.get(pk=device_id)
@@ -469,11 +528,34 @@ def monitoring_device_realtime_api(request, device_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def monitoring_device_realtime_redis_api(request, device_id):
+    """从 Redis 获取设备实时监控数据。"""
+    try:
+        device = Device.objects.get(pk=device_id)
+    except Device.DoesNotExist:
+        return Response({'error': 'Device not found'}, status=404)
+
+    service = MonitoringService()
+    latest_snapshot = service.get_latest_metrics_from_redis(device_id)
+
+    return Response({
+        'device': {
+            'id': device.id,
+            'name': device.name,
+            'ip_address': device.ip_address,
+        },
+        'reload_time': getattr(settings, 'MONITORING_RELOAD_TIME', 30),
+        'metrics': latest_snapshot.get('metrics', {}) if latest_snapshot else {},
+        'timestamp': latest_snapshot.get('timestamp') if latest_snapshot else None,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def monitoring_device_metrics_api(request, device_id):
     """
     历史监控数据API端点
 
-    Requirements: 4.5
     """
     try:
         device = Device.objects.get(pk=device_id)
@@ -497,26 +579,20 @@ def monitoring_device_metrics_api(request, device_id):
     except (ValueError, TypeError):
         page_size = 100
 
-    # 计算时间范围
     duration = timedelta(minutes=duration_minutes)
-    start_time = timezone.now() - duration
-
-    # 构建查询
-    queryset = MetricData.objects.filter(
-        device=device,
-        timestamp__gte=start_time
-    ).order_by('-timestamp')
+    service = MonitoringService()
+    snapshots = service.get_device_snapshots_from_redis(device.id, duration=duration, limit=200)
+    metric_rows = service.flatten_snapshots_to_metric_rows(snapshots)
 
     if metric_type and metric_type not in EXCLUDED_METRIC_TYPES:
-        queryset = queryset.filter(metric_type=metric_type)
+        metric_rows = [row for row in metric_rows if row.get('metric_type') == metric_type]
     else:
-        queryset = queryset.exclude(metric_type__in=EXCLUDED_METRIC_TYPES)
+        metric_rows = [row for row in metric_rows if row.get('metric_type') not in EXCLUDED_METRIC_TYPES]
 
     if metric_type == 'interface_status':
-        queryset = queryset.filter(value=1)
+        metric_rows = [row for row in metric_rows if _is_interface_up(row.get('value'))]
 
-    # 分页
-    paginator = Paginator(queryset, page_size)
+    paginator = Paginator(metric_rows, page_size)
 
     try:
         metrics_page = paginator.page(page)
@@ -526,16 +602,21 @@ def monitoring_device_metrics_api(request, device_id):
         metrics_page = paginator.page(paginator.num_pages)
 
     metrics_data = []
-    for metric in metrics_page:
+    start_index = (metrics_page.number - 1) * page_size
+    for index, metric in enumerate(metrics_page.object_list, start=1):
+        metric_type_value = metric.get('metric_type')
         metrics_data.append({
-            'id': metric.id,
-            'metric_type': metric.metric_type,
-            'metric_type_display': metric.get_metric_type_display(),
-            'metric_name': metric.metric_name,
-            'display_metric_name': _get_metric_display_name(metric.metric_type, metric.metric_name),
-            'value': metric.value,
-            'unit': metric.unit,
-            'timestamp': metric.timestamp.isoformat(),
+            'id': start_index + index,
+            'metric_type': metric_type_value,
+            'metric_type_display': METRIC_TYPE_LABELS.get(metric_type_value, metric_type_value),
+            'metric_name': metric.get('metric_name', ''),
+            'display_metric_name': _get_metric_display_name(
+                metric_type_value,
+                metric.get('metric_name', ''),
+            ),
+            'value': metric.get('value'),
+            'unit': metric.get('unit', ''),
+            'timestamp': metric.get('timestamp'),
         })
 
     return Response({
@@ -546,7 +627,7 @@ def monitoring_device_metrics_api(request, device_id):
         },
         'count': paginator.count,
         'total_pages': paginator.num_pages,
-        'current_page': page,
+        'current_page': metrics_page.number,
         'metrics': metrics_data,
     })
 
@@ -557,27 +638,16 @@ def monitoring_statistics_api(request):
     """
     监控统计API端点
     """
-    # 按设备统计（优化：使用批量查询避免 N+1）
+    service = MonitoringService()
     devices = Device.objects.all()
-    device_ids = list(devices.values_list('id', flat=True))
-
-    # 批量获取每个接口的最新状态，再按设备聚合 UP/DOWN
-    latest_interface_status = MetricData.objects.filter(
-        device_id__in=device_ids,
-        metric_type='interface_status'
-    ).order_by('device_id', 'metric_name', '-timestamp').distinct('device_id', 'metric_name')
-
-    stats_by_device = {}
-    for metric in latest_interface_status:
-        stat = stats_by_device.setdefault(metric.device_id, {'up': 0, 'down': 0})
-        if int(metric.value) == 1:
-            stat['up'] += 1
-        else:
-            stat['down'] += 1
 
     device_stats = []
     for device in devices:
-        stat = stats_by_device.get(device.id, {'up': 0, 'down': 0})
+        latest_snapshot = service.get_latest_metrics_from_redis(device.id)
+        interfaces = latest_snapshot.get('metrics', {}).get('interfaces', []) if latest_snapshot else []
+        up_count = sum(1 for interface in interfaces if _is_interface_up(interface.get('status')))
+        down_count = max(0, len(interfaces) - up_count)
+
         device_stats.append({
             'device': {
                 'id': device.id,
@@ -585,8 +655,8 @@ def monitoring_statistics_api(request):
                 'ip_address': device.ip_address,
             },
             'interface_status': {
-                'up': stat.get('up', 0),
-                'down': stat.get('down', 0),
+                'up': up_count,
+                'down': down_count,
             },
         })
 
@@ -601,7 +671,6 @@ def monitoring_collect_api(request, device_id):
     """
     手动触发监控数据采集API端点
 
-    Requirements: 4.1
     """
     try:
         device = Device.objects.get(pk=device_id)

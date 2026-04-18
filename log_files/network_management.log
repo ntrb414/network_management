@@ -15091,3 +15091,52 @@ Device settings: huawei 22.22.22.2:22
 [2026-04-14 21:42:47,130] INFO monitoring.services services [采集完成] router4: 接口=0, OSPF邻居=0
 [2026-04-14 21:42:47,276] DEBUG monitoring.services services SSH连接数采集失败 [router2]: timed out
 [2026-04-14 21:42:47,277] INFO monitoring.services services [采集完成] router2: 接口=0, OSPF邻居=0
+[2026-04-16 17:45:27,809] INFO configs.tasks tasks 定时配置备份已触发: [{'schedule_id': 1, 'schedule_name': '配置备份任务', 'job_id': 'c5506c5b-512d-417e-8be7-7ad7203ec4f3'}]
+[2026-04-16 17:45:29,838] INFO configs.tasks tasks 定时配置备份已触发: [{'schedule_id': 1, 'schedule_name': '配置备份任务', 'job_id': '7d32ad74-3fc1-4117-be66-a55f58c7d33b'}]
+[2026-04-16 17:45:29,941] INFO configs.tasks tasks 定时配置备份已触发: [{'schedule_id': 1, 'schedule_name': '配置备份任务', 'job_id': '9391803b-42df-4da4-a40c-f2a64280b9e1'}]
+[2026-04-16 17:45:31,956] INFO configs.tasks tasks 定时配置备份已触发: [{'schedule_id': 1, 'schedule_name': '配置备份任务', 'job_id': 'cd8b91d6-11b4-4961-9bce-d0ef8e25527f'}]
+[2026-04-16 17:45:32,025] INFO configs.tasks tasks 定时配置备份已触发: [{'schedule_id': 1, 'schedule_name': '配置备份任务', 'job_id': '347ab019-01ba-4fd2-baad-926b3e4aab30'}]
+[2026-04-16 17:45:34,058] INFO configs.tasks tasks 定时配置备份已触发: [{'schedule_id': 1, 'schedule_name': '配置备份任务', 'job_id': 'e17511c8-af52-431e-a99a-6c3e93a8aed5'}]
+[2026-04-16 18:52:51,135] INFO alerts.services services 告警通知已发送: 紧急 - 设备 readonly-ping-device (192.168.1.10) 发生故障
+[2026-04-16 18:54:45,058] INFO alerts.services services 告警通知已发送: 紧急 - 设备 readonly-ping-device (192.168.1.10) 发生故障
+[2026-04-16 19:01:18,269] INFO alerts.services services 告警通知已发送: 紧急 - 设备 readonly-ping-device (192.168.1.10) 发生故障
+[2026-04-16 19:11:46,943] INFO alerts.services services 告警通知已发送: 紧急 - 设备 readonly-ping-device (192.168.1.10) 发生故障
+[2026-04-16 19:12:17,052] INFO alerts.services services 告警通知已发送: 紧急 - Test alert message
+[2026-04-16 19:12:17,414] INFO alerts.services services 告警通知已发送: 重要 - 设备 alert-test-device 配置下发失败: SSH connection failed
+[2026-04-16 19:12:17,796] INFO alerts.services services 告警通知已发送: 紧急 - 设备 alert-test-device (192.168.100.1) 已离线
+[2026-04-16 19:12:18,159] INFO alerts.services services 告警通知已发送: 重要 - 设备 alert-test-device CPU 超过阈值: 85.0% > 80.0%
+[2026-04-16 19:12:39,655] INFO configs.services services 配置已缓存: device_config:1:running
+[2026-04-16 19:12:39,665] ERROR configs.services services Netmiko 获取配置失败: netmiko failed
+[2026-04-16 19:12:39,665] INFO configs.services services 尝试使用 Paramiko 备用方法获取配置
+[2026-04-16 19:12:39,665] INFO configs.services services 配置已缓存: device_config:1:startup
+[2026-04-16 19:13:47,491] INFO monitoring.services services 设备 monitoring-device-svc 未配置SNMP团体名，跳过SNMP采集
+[2026-04-16 19:23:47,517] INFO alerts.services services 告警通知已发送: 紧急 - 设备 readonly-ping-device (192.168.1.10) 发生故障
+[2026-04-16 19:24:19,156] INFO alerts.services services 告警通知已发送: 紧急 - Test alert message
+[2026-04-16 19:24:19,503] INFO alerts.services services 告警通知已发送: 重要 - 设备 alert-test-device 配置下发失败: SSH connection failed
+[2026-04-16 19:24:19,883] INFO alerts.services services 告警通知已发送: 紧急 - 设备 alert-test-device (192.168.100.1) 已离线
+[2026-04-16 19:24:20,293] INFO alerts.services services 告警通知已发送: 重要 - 设备 alert-test-device CPU 超过阈值: 85.0% > 80.0%
+[2026-04-16 19:24:43,023] INFO configs.services services 配置已缓存: device_config:1:running
+[2026-04-16 19:24:43,029] ERROR configs.services services Netmiko 获取配置失败: netmiko failed
+[2026-04-16 19:24:43,030] INFO configs.services services 尝试使用 Paramiko 备用方法获取配置
+[2026-04-16 19:24:43,030] INFO configs.services services 配置已缓存: device_config:1:startup
+[2026-04-16 19:25:54,884] INFO monitoring.services services 设备 monitoring-device-svc 未配置SNMP团体名，跳过SNMP采集
+[2026-04-16 19:36:13,118] INFO alerts.services services 告警通知已发送: 紧急 - 设备 readonly-ping-device (192.168.1.10) 发生故障
+[2026-04-16 19:36:42,318] INFO alerts.services services 告警通知已发送: 紧急 - Test alert message
+[2026-04-16 19:36:42,652] INFO alerts.services services 告警通知已发送: 重要 - 设备 alert-test-device 配置下发失败: SSH connection failed
+[2026-04-16 19:36:43,011] INFO alerts.services services 告警通知已发送: 紧急 - 设备 alert-test-device (192.168.100.1) 已离线
+[2026-04-16 19:36:43,366] INFO alerts.services services 告警通知已发送: 重要 - 设备 alert-test-device CPU 超过阈值: 85.0% > 80.0%
+[2026-04-16 19:37:04,248] INFO configs.services services 配置已缓存: device_config:1:running
+[2026-04-16 19:37:04,256] ERROR configs.services services Netmiko 获取配置失败: netmiko failed
+[2026-04-16 19:37:04,256] INFO configs.services services 尝试使用 Paramiko 备用方法获取配置
+[2026-04-16 19:37:04,256] INFO configs.services services 配置已缓存: device_config:1:startup
+[2026-04-16 19:38:10,680] INFO monitoring.services services 设备 monitoring-device-svc 未配置SNMP团体名，跳过SNMP采集
+[2026-04-16 19:44:04,350] INFO alerts.services services 告警通知已发送: 紧急 - 设备 readonly-ping-device (192.168.1.10) 发生故障
+[2026-04-16 19:44:36,769] INFO alerts.services services 告警通知已发送: 紧急 - Test alert message
+[2026-04-16 19:44:37,137] INFO alerts.services services 告警通知已发送: 重要 - 设备 alert-test-device 配置下发失败: SSH connection failed
+[2026-04-16 19:44:37,543] INFO alerts.services services 告警通知已发送: 紧急 - 设备 alert-test-device (192.168.100.1) 已离线
+[2026-04-16 19:44:37,945] INFO alerts.services services 告警通知已发送: 重要 - 设备 alert-test-device CPU 超过阈值: 85.0% > 80.0%
+[2026-04-16 19:45:01,208] INFO configs.services services 配置已缓存: device_config:1:running
+[2026-04-16 19:45:01,217] ERROR configs.services services Netmiko 获取配置失败: netmiko failed
+[2026-04-16 19:45:01,218] INFO configs.services services 尝试使用 Paramiko 备用方法获取配置
+[2026-04-16 19:45:01,218] INFO configs.services services 配置已缓存: device_config:1:startup
+[2026-04-16 19:46:12,985] INFO monitoring.services services 设备 monitoring-device-svc 未配置SNMP团体名，跳过SNMP采集

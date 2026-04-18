@@ -2,7 +2,6 @@
 性能监控服务
 
 提供监控数据采集、存储、查询等功能。
-需求引用：4.1, 4.2, 4.3, 4.6
 """
 
 import logging
@@ -64,7 +63,6 @@ class MonitoringService:
         Returns:
             监控指标数据字典
 
-        Requirements: 4.1, 4.2, 4.3
         """
         metrics = {}
 
@@ -558,7 +556,6 @@ class MonitoringService:
         Returns:
             存储的记录数
 
-        Requirements: 4.1
         """
         from .models import MetricData
 
@@ -699,7 +696,6 @@ class MonitoringService:
         Returns:
             监控数据查询集
 
-        Requirements: 4.5
         """
         from .models import MetricData
         from django.utils import timezone
@@ -723,7 +719,6 @@ class MonitoringService:
         Returns:
             告警列表
 
-        Requirements: 5.3
         """
         alerts = []
 
@@ -888,7 +883,6 @@ class MonitoringService:
         Args:
             retention_hours: 保留时间（小时）
 
-        Requirements: 4.6
         """
         from .models import MetricData
         from django.utils import timezone

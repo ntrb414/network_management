@@ -2,7 +2,6 @@
 性能监控 Celery 异步任务
 
 包含监控数据采集、清理等任务。
-需求引用：4.2, 4.3, 4.6
 """
 
 from celery import shared_task
@@ -17,7 +16,6 @@ def collect_device_metrics(self, device_id: int):
     Args:
         device_id: 设备ID
 
-    Requirements: 4.1, 4.2, 4.3
     """
     from devices.models import Device
     from .services import MonitoringService
@@ -65,7 +63,6 @@ def collect_all_online_devices_metrics(self):
     - AP: 实时采集 (实际上会更频繁)
     - 其他: 每5分钟采集一次
 
-    Requirements: 4.2, 4.3
     """
     from devices.models import Device
 
@@ -93,7 +90,6 @@ def collect_ap_devices_metrics(self):
     """
     采集AP设备监控数据 (实时采集)
 
-    Requirements: 4.2
     """
     from devices.models import Device
 
@@ -124,7 +120,6 @@ def cleanup_old_metrics(self):
 
     保留24小时的数据
 
-    Requirements: 4.6
     """
     from .services import MonitoringService
 
