@@ -66,7 +66,8 @@ def collect_all_online_devices_metrics(self):
     """
     from devices.models import Device
 
-    online_devices = Device.objects.filter(status='online')
+    # Exclude devices that use 'dial_out' mode, as they push their data to the gRPC receiver
+    online_devices = Device.objects.filter(status='online').exclude(telemetry_mode='dial_out')
 
     results = []
 

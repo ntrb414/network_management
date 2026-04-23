@@ -287,9 +287,13 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             告警管理
         </a>
-        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <a href="{% url 'logs:runtime_log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
             设备日志
+        </a>
+<a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            系统日志
         </a>
         <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -326,112 +330,106 @@
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 320px; gap:1rem; align-items:start;">
+        <div style="display:grid; grid-template-columns: 1fr 320px; gap:1rem; align-items:stretch;">
 
-            <!-- History data -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">历史监控数据</h3>
-                    <button class="btn btn-secondary btn-sm" onclick="collectNow()" id="collectBtn">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                        立即采集
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="history-tabs">
-                        {% for mt, label in metric_types %}
-                            <button class="history-tab {% if forloop.first %}active{% endif %}"
-                                    onclick="switchTab('{{ mt }}', this)">{{ label }}</button>
-                        {% endfor %}
-                    </div>
-
-                    {% for mt, label in metric_types %}
-                        <div class="tab-panel {% if forloop.first %}active{% endif %}" id="tab-{{ mt }}">
-                            {% if metrics_history %}
-                                <div style="overflow-x:auto;">
-                                    <table class="history-table">
-                                        <thead>
-                                            <tr>
-                                                <th>指标名称</th>
-                                                <th>监控数值</th>
-                                                <th>采集时间</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tbody-{{ mt }}">
-                                            <!-- Filled by JS -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            {% endif %}
+            <!-- Left column: Realtime Metrics Grid -->
+            <div style="display: grid; grid-template-rows: auto 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                    <div class="card" style="margin-bottom: 0;">
+                        <div class="card-header"><h3 class="card-title">CPU 利用率</h3></div>
+                        <div class="card-body" style="display: flex; align-items: center; justify-content: center; height: 120px;">
+                            <div id="cpu-util" style="font-size: 2.5rem; font-weight: 700; color: #4dabf7;">--%</div>
                         </div>
-                    {% endfor %}
+                    </div>
+                    <div class="card" style="margin-bottom: 0;">
+                        <div class="card-header"><h3 class="card-title">内存利用率</h3></div>
+                        <div class="card-body" style="display: flex; align-items: center; justify-content: center; height: 120px;">
+                            <div id="mem-util" style="font-size: 2.5rem; font-weight: 700; color: #4dabf7;">--%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card" style="display: flex; flex-direction: column; margin-bottom: 0;">
+                    <div class="card-header"><h3 class="card-title">接口状态及流量</h3></div>
+                    <div class="card-body" style="flex: 1; overflow-y: auto;">
+                        <div id="interfaces-data" style="font-size: 0.9rem; color: var(--gray-600); text-align: center; padding: 2rem 0;">
+                            正在加载实时数据...
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Right column: Device info + Alerts -->
-            <div style="display:flex; flex-direction:column; gap:1rem;">
+            <!-- Right column: Device info + OSPF -->
+            <div style="display: grid; grid-template-rows: auto 1fr; gap: 1rem;">
 
                 <!-- Device info -->
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">设备信息</h3></div>
-                    <div class="card-body">
-                        <div class="info-grid" style="grid-template-columns:1fr;">
-                            <div class="info-item">
-                                <div class="info-label">设备名称</div>
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="card-header" style="padding: 0.75rem 1.25rem;"><h3 class="card-title">设备信息</h3></div>
+                    <div class="card-body" style="padding: 0.75rem 1.25rem;">
+                        <div class="info-grid" style="grid-template-columns:1fr; gap:0;">
+                            <div class="info-item" style="padding: 0.35rem 0; display: flex; justify-content: space-between;">
+                                <div class="info-label" style="margin-bottom:0;">设备名称</div>
                                 <div class="info-value">{{ device.name }}</div>
                             </div>
-                            <div class="info-item">
-                                <div class="info-label">IP 地址</div>
+                            <div class="info-item" style="padding: 0.35rem 0; display: flex; justify-content: space-between;">
+                                <div class="info-label" style="margin-bottom:0;">IP 地址</div>
                                 <div class="info-value" style="font-family:monospace;">{{ device.ip_address }}</div>
                             </div>
-                            <div class="info-item">
-                                <div class="info-label">设备类型</div>
+                            <div class="info-item" style="padding: 0.35rem 0; display: flex; justify-content: space-between;">
+                                <div class="info-label" style="margin-bottom:0;">设备类型</div>
                                 <div class="info-value">{{ device.get_device_type_display }}</div>
                             </div>
-                            <div class="info-item">
-                                <div class="info-label">设备型号</div>
+                            <div class="info-item" style="padding: 0.35rem 0; display: flex; justify-content: space-between;">
+                                <div class="info-label" style="margin-bottom:0;">设备型号</div>
                                 <div class="info-value">{{ device.model|default:"—" }}</div>
                             </div>
-                            <div class="info-item">
-                                <div class="info-label">网络层级</div>
+                            <div class="info-item" style="padding: 0.35rem 0; display: flex; justify-content: space-between;">
+                                <div class="info-label" style="margin-bottom:0;">网络层级</div>
                                 <div class="info-value">{{ device.get_layer_display|default:"—" }}</div>
                             </div>
-                            <div class="info-item">
-                                <div class="info-label">位置</div>
+                            <div class="info-item" style="padding: 0.35rem 0; display: flex; justify-content: space-between;">
+                                <div class="info-label" style="margin-bottom:0;">位置</div>
                                 <div class="info-value">{{ device.location|default:"—" }}</div>
                             </div>
-                            <div class="info-item">
-                                <div class="info-label">延迟</div>
+                            <div class="info-item" style="padding: 0.35rem 0; display: flex; justify-content: space-between;">
+                                <div class="info-label" style="margin-bottom:0;">延迟</div>
                                 <div class="info-value">{% if device.latency %}{{ device.latency|floatformat:2 }} ms{% else %}—{% endif %}</div>
                             </div>
-                            <div class="info-item">
-                                <div class="info-label">最后在线</div>
+                            <div class="info-item" style="padding: 0.35rem 0; border-bottom: none; display: flex; justify-content: space-between;">
+                                <div class="info-label" style="margin-bottom:0;">最后在线</div>
                                 <div class="info-value">{% if device.last_seen %}{{ device.last_seen|date:"m-d H:i" }}{% else %}—{% endif %}</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Related alerts -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">相关告警</h3>
-                        <a href="{% url 'alerts:alert_list' %}" class="btn btn-ghost btn-sm">查看全部</a>
-                    </div>
-                    <div class="card-body">
-                        {% if device_alerts %}
-                            {% for alert in device_alerts %}
-                                <div class="alert-item">
-                                    <span class="alert-dot {{ alert.severity }}"></span>
-                                    <div>
-                                        <div class="alert-msg">{{ alert.message|truncatechars:60 }}</div>
-                                        <div class="alert-time">{{ alert.timestamp|date:"m-d H:i" }} · {{ alert.get_status_display }}</div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p style="color:var(--gray-400); font-size:0.875rem; text-align:center; padding:1rem 0;">暂无告警</p>
-                        {% endif %}
+                <!-- Latest OSPF neighbors -->
+                <div class="card" style="display: flex; flex-direction: column; margin-bottom: 0;">
+                    <div class="card-header" style="padding: 0.75rem 1.25rem;"><h3 class="card-title">最新 OSPF 邻居</h3></div>
+                    <div class="card-body" style="padding: 0.75rem 1.25rem; flex: 1; overflow-y: auto;">
+                        <div id="ospf-data">
+                            {% if latest_ospf_neighbors %}
+                                <table class="history-table" style="width:100%;">
+                                    <thead>
+                                        <tr>
+                                            <th style="padding: 0.5rem; text-align: left;">邻居IP</th>
+                                            <th style="padding: 0.5rem; text-align: left;">Router ID</th>
+                                            <th style="padding: 0.5rem; text-align: left;">状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for neighbor in latest_ospf_neighbors %}
+                                        <tr>
+                                            <td style="padding: 0.5rem;">{{ neighbor.neighbor_ip|default:"—" }}</td>
+                                            <td style="padding: 0.5rem;">{{ neighbor.router_id|default:"—" }}</td>
+                                            <td style="padding: 0.5rem;">{{ neighbor.state_name|default:neighbor.state|default:"—" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}
+                                <p style="color:var(--gray-400); font-size:0.875rem; text-align:center; padding:1rem 0;">暂无 OSPF 邻居数据</p>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
@@ -441,242 +439,98 @@
 </div>
 
 <script>
-    const metricsHistory = {{ metrics_history_json|safe }};
+    function fetchRealtimeData() {
+        fetch(`/monitoring/api/devices/{{ device.id }}/realtime/`)
+            .then(res => res.json())
+            .then(data => {
+                const metrics = data.metrics || {};
 
-    function formatBandwidth(value, unit, showInBytes = false) {
-        // 异常处理
-        if (value === null || value === undefined || isNaN(value) || value < 0) {
-            return '0 bps';
-        }
+                // 更新 CPU 和内存
+                const cpuRaw = metrics.cpu_usage ?? metrics.cpu_utilization;
+                const memRaw = metrics.memory_usage ?? metrics.memory_utilization;
+                const cpuValue = Number(cpuRaw);
+                const memValue = Number(memRaw);
+                const cpu = Number.isFinite(cpuValue) ? cpuValue.toFixed(1) + '%' : '--%';
+                const mem = Number.isFinite(memValue) ? memValue.toFixed(1) + '%' : '--%';
+                document.getElementById('cpu-util').textContent = cpu;
+                document.getElementById('mem-util').textContent = mem;
 
-        // 转换为数值
-        const numValue = Number.parseFloat(value);
-        if (numValue === 0) {
-            return '0 bps';
-        }
+                // 更新接口和流量信息
+                const interfaces = metrics.interfaces || [];
+                const trafficRows = metrics.traffic || [];
+                const trafficMap = {};
+                trafficRows.forEach(row => {
+                    if (row && row.interface) {
+                        trafficMap[row.interface] = row;
+                    }
+                });
+                if (interfaces.length > 0) {
+                    let html = '<table class="history-table" style="width:100%;"><thead><tr><th>接口</th><th>状态</th><th>接收流量</th><th>发送流量</th></tr></thead><tbody>';
+                    interfaces.forEach(iface => {
+                        const interfaceName = iface.name || '--';
+                        const trafficEntry = trafficMap[interfaceName] || {};
+                        const inMbps = Number(iface.in_mbps);
+                        const outMbps = Number(iface.out_mbps);
+                        const statusText = Number(iface.status) === 1 ? 'UP' : 'DOWN';
+                        const statusBg = Number(iface.status) === 1 ? '#dcfce7' : '#fee2e2';
+                        const statusColor = Number(iface.status) === 1 ? '#166534' : '#991b1b';
+                        const inOctets = Number(trafficEntry.in_octets);
+                        const outOctets = Number(trafficEntry.out_octets);
 
-        // 如果单位已经是字节单位且要求显示字节，直接格式化
-        if (showInBytes && unit && unit.includes('B')) {
-            return formatBytes(numValue, unit);
-        }
+                        const inText = Number.isFinite(inMbps)
+                            ? `${inMbps.toFixed(2)} Mbps`
+                            : (Number.isFinite(inOctets) ? `${inOctets.toLocaleString()} octets` : '—');
+                        const outText = Number.isFinite(outMbps)
+                            ? `${outMbps.toFixed(2)} Mbps`
+                            : (Number.isFinite(outOctets) ? `${outOctets.toLocaleString()} octets` : '—');
 
-        // 如果单位是字节单位但不要求显示字节，转换为bits
-        if (!showInBytes && unit && unit.includes('B')) {
-            value = numValue * 8;
-        }
+                        html += `<tr>
+                            <td style="color:var(--gray-800); font-weight:500;">${interfaceName}</td>
+                            <td>
+                                <span class="status-badge" style="background:${statusBg}; color:${statusColor}; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                                    ${statusText}
+                                </span>
+                            </td>
+                            <td>${inText}</td>
+                            <td>${outText}</td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('interfaces-data').innerHTML = html;
+                } else {
+                    document.getElementById('interfaces-data').innerHTML = '<div style="color:var(--gray-400); padding: 2rem;">暂无接口数据</div>';
+                }
 
-        // 格式化bits
-        return formatBits(value);
-    }
-
-    function formatBits(bitsPerSecond) {
-        const units = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
-        let unitIndex = 0;
-        let value = Number.parseFloat(bitsPerSecond);
-
-        while (value >= 1000 && unitIndex < units.length - 1) {
-            value /= 1000;
-            unitIndex++;
-        }
-
-        // 保留最多2位小数，自动去除末尾0
-        value = Number.parseFloat(value.toFixed(2));
-        return `${value} ${units[unitIndex]}`;
-    }
-
-    function formatBytes(bytesPerSecond, originalUnit) {
-        const units = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];
-        let unitIndex = 0;
-        let value = Number.parseFloat(bytesPerSecond);
-
-        while (value >= 1000 && unitIndex < units.length - 1) {
-            value /= 1000;
-            unitIndex++;
-        }
-
-        // 保留最多2位小数，自动去除末尾0
-        value = Number.parseFloat(value.toFixed(2));
-        return `${value} ${units[unitIndex]}`;
-    }
-
-    function formatInterfaceStatus(value) {
-        const status = Number.parseInt(value, 10);
-        if (status === 1) return '开启(UP)';
-        if (status === 2) return '关闭(DOWN)';
-        return `状态(${value})`;
-    }
-
-    function formatOspfState(value) {
-        const state = Number.parseInt(value, 10);
-        const stateMap = {
-            1: 'Down',
-            2: 'Attempt',
-            3: 'Init',
-            4: 'TwoWay',
-            5: 'ExStart',
-            6: 'Exchange',
-            7: 'Loading',
-            8: 'Full'
-        };
-        return stateMap[state] || `Unknown(${value})`;
-    }
-
-    function formatMetricValue(metricType, value, unit) {
-        if (metricType === 'interface_status') {
-            return formatInterfaceStatus(value);
-        }
-        if (metricType === 'ospf_neighbor') {
-            return formatOspfState(value);
-        }
-        return formatBandwidth(value, unit, false);
-    }
-
-    function switchTab(mt, btn) {
-        document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('tab-' + mt).classList.add('active');
-    }
-
-    // 分页状态管理
-    const paginationState = {};
-    
-    function renderHistoryTable(mt) {
-        const tbody = document.getElementById('tbody-' + mt);
-        if (!tbody) return;
-        
-        const rows = metricsHistory[mt] || [];
-        if (rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:2rem;">暂无历史数据</td></tr>';
-            return;
-        }
-        
-        // 初始化分页状态
-        if (!paginationState[mt]) {
-            paginationState[mt] = {
-                currentPage: 1,
-                itemsPerPage: 10
-            };
-        }
-        
-        const state = paginationState[mt];
-        const totalPages = Math.ceil(rows.length / state.itemsPerPage);
-        const startIndex = (state.currentPage - 1) * state.itemsPerPage;
-        const endIndex = startIndex + state.itemsPerPage;
-        const pageRows = rows.slice(startIndex, endIndex);
-        
-        // 生成表格行
-        const tableRows = pageRows.map(r => {
-            const formattedValue = formatMetricValue(r.metric_type, r.value, r.unit);
-            return `
-                <tr>
-                    <td style="color:var(--gray-500);font-size:0.8rem;">${r.display_metric_name || r.metric_name || '—'}</td>
-                    <td>${formattedValue}</td>
-                    <td style="color:var(--gray-400);font-size:0.8rem;">${new Date(r.timestamp).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td>
-                </tr>
-            `;
-        }).join('');
-        
-        // 生成分页控件
-        let paginationHtml = '';
-        if (totalPages > 1) {
-            paginationHtml = `
-                <tr>
-                    <td colspan="3" style="padding: 1rem 0; text-align: center; border-top: 1px solid var(--gray-200);">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
-                            <span style="color: var(--gray-600); font-size: 0.875rem;">
-                                ${state.currentPage} / ${totalPages}
-                            </span>
-                            <button 
-                                onclick="changePage('${mt}', ${state.currentPage - 1})"
-                                ${state.currentPage <= 1 ? 'disabled' : ''}
-                                style="
-                                    padding: 0.25rem 0.75rem;
-                                    border: 1px solid var(--gray-300);
-                                    background: ${state.currentPage <= 1 ? 'var(--gray-100)' : 'white'};
-                                    color: ${state.currentPage <= 1 ? 'var(--gray-400)' : 'var(--gray-700)'};
-                                    border-radius: 4px;
-                                    cursor: ${state.currentPage <= 1 ? 'not-allowed' : 'pointer'};
-                                    font-size: 0.875rem;
-                                "
-                            >
-                                上一页
-                            </button>
-                            <button 
-                                onclick="changePage('${mt}', ${state.currentPage + 1})"
-                                ${state.currentPage >= totalPages ? 'disabled' : ''}
-                                style="
-                                    padding: 0.25rem 0.75rem;
-                                    border: 1px solid var(--gray-300);
-                                    background: ${state.currentPage >= totalPages ? 'var(--gray-100)' : 'white'};
-                                    color: ${state.currentPage >= totalPages ? 'var(--gray-400)' : 'var(--gray-700)'};
-                                    border-radius: 4px;
-                                    cursor: ${state.currentPage >= totalPages ? 'not-allowed' : 'pointer'};
-                                    font-size: 0.875rem;
-                                "
-                            >
-                                下一页
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-        
-        tbody.innerHTML = tableRows + paginationHtml;
-    }
-    
-    // 分页切换函数
-    function changePage(mt, newPage) {
-        const rows = metricsHistory[mt] || [];
-        const totalPages = Math.ceil(rows.length / 10);
-        
-        if (newPage < 1 || newPage > totalPages) {
-            return;
-        }
-        
-        paginationState[mt].currentPage = newPage;
-        renderHistoryTable(mt);
+                // 更新 OSPF 邻居信息
+                const ospfNeighbors = metrics.ospf_neighbors || [];
+                if (ospfNeighbors.length > 0) {
+                    let ospfHtml = '<table class="history-table" style="width:100%;"><thead><tr><th style="padding: 0.5rem; text-align: left;">邻居IP</th><th style="padding: 0.5rem; text-align: left;">Router ID</th><th style="padding: 0.5rem; text-align: left;">状态</th></tr></thead><tbody>';
+                    ospfNeighbors.forEach(neighbor => {
+                        const neighborIp = neighbor.neighbor_ip || '--';
+                        const routerId = neighbor.router_id || '--';
+                        const stateText = neighbor.state_name || neighbor.state || '--';
+                        ospfHtml += `<tr><td style="padding: 0.5rem;">${neighborIp}</td><td style="padding: 0.5rem;">${routerId}</td><td style="padding: 0.5rem;">${stateText}</td></tr>`;
+                    });
+                    ospfHtml += '</tbody></table>';
+                    document.getElementById('ospf-data').innerHTML = ospfHtml;
+                } else {
+                    document.getElementById('ospf-data').innerHTML = '<p style="color:var(--gray-400); font-size:0.875rem; text-align:center; padding:1rem 0;">暂无 OSPF 邻居数据</p>';
+                }
+            })
+            .catch(err => {
+                console.error('Fetch realtime error:', err);
+                document.getElementById('cpu-util').textContent = 'Error';
+                document.getElementById('mem-util').textContent = 'Error';
+            });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        Object.keys(metricsHistory).forEach(mt => renderHistoryTable(mt));
+        // 初始拉取数据
+        fetchRealtimeData();
+        // 设置定时拉取（例如每5秒）
+        const reloadTimeSeconds = {{ reload_time|default:30 }};
+        setInterval(fetchRealtimeData, reloadTimeSeconds * 1000);
     });
-
-    function getCsrfToken() {
-        return document.cookie.split(';').map(c => c.trim())
-            .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
-    }
-
-    function collectNow() {
-        const btn = document.getElementById('collectBtn');
-        btn.disabled = true;
-        btn.innerHTML = '采集中...';
-        fetch(`/monitoring/api/devices/{{ device.id }}/collect/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>立即采集';
-                
-                if (data.success) {
-                    // 采集成功，刷新页面数据
-                    location.reload();
-                } else {
-                    alert('采集失败: ' + (data.error || '未知错误'));
-                }
-            }, 3000); // 增加等待时间到3秒
-        })
-        .catch(error => {
-            console.error('Collect error:', error);
-            btn.disabled = false;
-            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>立即采集';
-            alert('采集请求失败: ' + error.message);
-        });
-    }
 </script>
 </body>
 </html>

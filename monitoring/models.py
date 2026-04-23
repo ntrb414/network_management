@@ -19,6 +19,8 @@ class MetricData(models.Model):
         ('traffic', '端口流量'),
         ('packet_loss', '丢包率'),
         ('connections', '连接数'),
+        ('cpu', 'CPU利用率'),
+        ('memory', '内存利用率'),
         ('interface_status', '接口状态'),
         ('interface_in_traffic', '接口入向流量'),
         ('interface_out_traffic', '接口出向流量'),

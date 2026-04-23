@@ -41,3 +41,47 @@ Device settings: hp_comware 172.16.1.4:22
 
 
 
+2026-04-20 21:51:49,282 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['system-view', 'grpc enable', 'telemetry', 'sensor-group path', 'sensor-group test', 'sensor path device/cpus', 'sensor path diagnostic/memories', 'sensor path ifmgr/statistics', 'sensor path interfaces/interface/state', 'sensor path ospf/neighbours', 'destination-group test', 'ipv4-address 192.168.50.1 port 50000', 'ipv4-address 192.168.50.132 port 50000', 'subscription test', 'sensor-group test sample-interval 10', 'destination-group test'], 'read_timeout': 20, 'cmd_verify': False} on 2 hosts
+2026-04-20 21:51:49,303 - nornir.core.task -    ERROR -      start() - Host 'device_5': task 'netmiko_send_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 407, in connect
+    raise NoValidConnectionsError(errors)
+paramiko.ssh_exception.NoValidConnectionsError: [Errno None] Unable to connect to port 22 on 172.16.1.4
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_send_config.py", line 28, in netmiko_send_config
+    net_connect = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 172.16.1.4:22
+
+
+
+2026-04-21 21:59:14,952 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['system-view', 'grpc enable', 'grpc port 57400', 'telemetry', 'sensor-group path', 'sensor-group test', 'sensor path device/cpus', 'sensor path diagnostic/memories', 'sensor path ifmgr/statistics', 'sensor path interfaces/interface/state', 'sensor path ospf/neighbours', 'destination-group test', 'ipv4-address 192.168.50.1 port 50000', 'ipv4-address 192.168.50.132 port 50000', 'subscription test', 'sensor-group test sample-interval 10', 'destination-group test', 'quit', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 1 hosts

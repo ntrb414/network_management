@@ -1,5 +1,59 @@
+# Python
 *.pyc
+*.pyo
+__pycache__/
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Environment Variables
 *.env
+.env
+.env.local
+.env.*.local
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
 CLAUDE.md
 *.md
 *.sh
+b64.txt
+fix_*.py
+patch_*.py
+run_patch*.py
+replacement.txt
+
+# Logs
+logs/*.log
+*.log
+
+# Backup files
+*.bak
+*.backup
+
+# Migration cache (keep migration files, ignore cache)
+*.py[cod]
+*$py.class

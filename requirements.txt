@@ -17,7 +17,7 @@ django-celery-beat>=2.5
 netmiko>=4.2
 nornir>=3.4
 nornir-netmiko>=1.0
-pysnmp>=4.4
+pygnmi>=0.8.15
 scapy>=2.5
 
 # Template engine

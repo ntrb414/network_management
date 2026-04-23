@@ -4,6 +4,8 @@
 包含 AccountListView（用户列表页面）和 AccountDetailView（用户详情页面）。
 """
 
+import json
+
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
@@ -38,7 +40,7 @@ class AccountListView(LoginRequiredMixin, ListView):
                 if user.id in missing_user_ids:
                     profiles_to_create.append(UserProfile(
                         user=user,
-                        role='admin' if user.is_superuser else 'readonly'
+                        role='admin' if user.is_superuser else 'user'
                     ))
             UserProfile.objects.bulk_create(profiles_to_create)
 
@@ -66,9 +68,12 @@ class AccountDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         try:
-            context['profile'] = self.object.profile
+            profile = self.object.profile
+            context['profile'] = profile
+            context['permissions_json'] = json.dumps(profile.permissions)
         except UserProfile.DoesNotExist:
             context['profile'] = None
+            context['permissions_json'] = '{}'
         return context
 
 
@@ -126,7 +131,7 @@ def user_list_api(request):
                     'email': user.email,
                     'is_active': user.is_active,
                     'date_joined': user.date_joined,
-                    'role': 'readonly',
+                    'role': 'user',
                     'permissions': {},
                 })
 
@@ -137,7 +142,7 @@ def user_list_api(request):
         username = request.data.get('username')
         email = request.data.get('email')
         password = request.data.get('password')
-        role = request.data.get('role', 'readonly')
+        role = request.data.get('role', 'user')
 
         if not username or not password:
             return Response({'error': 'username and password are required'}, status=400)
@@ -206,7 +211,7 @@ def user_detail_api(request, pk):
                 'email': user.email,
                 'is_active': user.is_active,
                 'date_joined': user.date_joined,
-                'role': 'readonly',
+                'role': 'user',
                 'permissions': {},
             })
 

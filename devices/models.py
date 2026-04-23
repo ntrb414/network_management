@@ -1,11 +1,8 @@
 """
-设备管理数据模型
-
-包含 Device（设备）和 Port（端口）模型。
+设备管理数据模型--Device（设备）和 Port（端口）模型。
 """
 
 from django.db import models
-
 
 class Device(models.Model):
     """网络设备模型"""
@@ -43,8 +40,40 @@ class Device(models.Model):
     ssh_username = models.CharField('SSH用户名', max_length=50, blank=True)
     ssh_password = models.CharField('SSH密码', max_length=200, blank=True)  # 生产环境应加密存储
 
-    # SNMP 配置
-    snmp_community = models.CharField('SNMP团体名', max_length=100, blank=True)
+    # gNMI 配置 (H3C 等设备使用)
+    TELEMETRY_MODE_CHOICES = [
+        ('dial_in', '拨入拉取(Dial-in)'),
+        ('dial_out', '拨出推送(Dial-out)'),
+    ]
+    SYSLOG_PROTOCOL_CHOICES = [
+        ('udp', 'UDP'),
+    ]
+    SYSLOG_SEVERITY_CHOICES = [
+        ('emergency', '紧急'),
+        ('alert', '告警'),
+        ('critical', '严重'),
+        ('error', '错误'),
+        ('warning', '警告'),
+        ('notice', '通知'),
+        ('informational', '信息'),
+        ('debug', '调试'),
+    ]
+
+    telemetry_mode = models.CharField('遥测模式', max_length=20, choices=TELEMETRY_MODE_CHOICES, default='dial_in')
+    gnmi_port = models.IntegerField('gNMI端口', default=50000)
+    gnmi_insecure = models.BooleanField('跳过 TLS 验证', default=True)
+
+    # Syslog 配置
+    syslog_enabled = models.BooleanField('启用Syslog', default=False)
+    syslog_server_ip = models.GenericIPAddressField('Syslog服务器IP', null=True, blank=True)
+    syslog_server_port = models.IntegerField('Syslog服务器端口', default=10514)
+    syslog_protocol = models.CharField('Syslog协议', max_length=10, choices=SYSLOG_PROTOCOL_CHOICES, default='udp')
+    syslog_severity_threshold = models.CharField(
+        'Syslog级别阈值',
+        max_length=20,
+        choices=SYSLOG_SEVERITY_CHOICES,
+        default='informational',
+    )
 
     # 网络测试字段
     latency = models.FloatField('延迟(ms)', null=True, blank=True, help_text='Ping测试延迟，单位毫秒')

@@ -7,6 +7,7 @@ from accounts.models import UserProfile
 from devices.models import Device
 from logs.models import SystemLog
 from logs.services import LogService
+from alerts.models import Alert
 
 
 class LogPageNavigationTestCase(TestCase):
@@ -173,6 +174,25 @@ class LogServiceTestCase(TestCase):
 
         self.assertIn('deleted_count', result)
 
+    def test_process_syslog_message(self):
+        """测试Syslog报文处理与落库"""
+        self.device.syslog_enabled = True
+        self.device.save(update_fields=['syslog_enabled'])
+
+        payload = '<190>Apr 21 10:20:30 edge-sw01 IFNET: Interface GigabitEthernet1/0/1 down'
+        result = self.service.process_syslog_message(
+            source_ip=self.device.ip_address,
+            raw_message=payload,
+        )
+
+        self.assertTrue(result['success'])
+        log = SystemLog.objects.get(id=result['log_id'])
+        self.assertEqual(log.log_type, 'system')
+        self.assertEqual(log.device_id, self.device.id)
+        self.assertEqual((log.details or {}).get('source'), 'syslog')
+        self.assertEqual((log.details or {}).get('source_ip'), self.device.ip_address)
+        self.assertGreaterEqual(Alert.objects.filter(device=self.device).count(), 1)
+
 
 # ==================== API Tests ====================
 
@@ -231,3 +251,43 @@ class LogAPITestCase(TestCase):
         """测试日志API需要认证"""
         response = self.client.get('/logs/api/list/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_runtime_log_list_api(self):
+        """测试设备运行日志API"""
+        self.device.syslog_enabled = True
+        self.device.save(update_fields=['syslog_enabled'])
+        self.service.process_syslog_message(
+            source_ip=self.device.ip_address,
+            raw_message='<190>Apr 21 10:20:30 edge-sw01 IFNET: Interface GigabitEthernet1/0/1 down',
+        )
+
+        self.client.login(username='log_api_user', password='testpass123')
+        response = self.client.get('/logs/api/runtime/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('logs', response.data)
+        self.assertGreaterEqual(response.data.get('total', 0), 1)
+
+    def test_device_syslog_config_api(self):
+        """测试设备Syslog配置API"""
+        self.client.login(username='log_api_user', password='testpass123')
+
+        response = self.client.put(
+            f'/logs/api/devices/{self.device.id}/syslog-config/',
+            {
+                'enabled': True,
+                'server_ip': '192.168.50.132',
+                'server_port': 10514,
+                'protocol': 'udp',
+                'severity_threshold': 'warning',
+                'push_to_device': False,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.device.refresh_from_db()
+        self.assertTrue(self.device.syslog_enabled)
+        self.assertEqual(self.device.syslog_server_ip, '192.168.50.132')
+        self.assertEqual(self.device.syslog_server_port, 10514)
+        self.assertEqual(self.device.syslog_protocol, 'udp')
+        self.assertEqual(self.device.syslog_severity_threshold, 'warning')

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+// Standard gNMI Dial-Out (Draft) RPC stub for H3C
+package gnmi_dialout;
+
+import "gnmi_pb2.proto";
+
+service gNMIDialOut {
+   rpc Publish(stream gnmi.SubscribeResponse) returns (stream gnmi.SubscribeRequest);
+}

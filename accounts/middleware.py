@@ -3,7 +3,7 @@
 from django.http import JsonResponse
 from django.shortcuts import render
 
-from .permissions import get_user_role, is_readonly_request_allowed
+from .permissions import get_user_role
 
 
 class PermissionMiddleware:
@@ -53,20 +53,7 @@ class PermissionMiddleware:
 
         role = get_user_role(request.user)
 
-        if role == 'readonly':
-            if not is_readonly_request_allowed(request):
-                return self._permission_denied_response(
-                    request,
-                    '只读用户仅可访问设备管理中的测试、配置查看与 SSH 相关功能'
-                )
-            return self.get_response(request)
-
         if role == 'admin':
-            return self.get_response(request)
-
-        # 普通用户根据permissions字段检查权限
-        if request.method == 'GET':
-            # GET请求通常不需要额外权限
             return self.get_response(request)
 
         # 检查模块权限
@@ -185,10 +172,6 @@ def has_permission(user, module, action):
     # 管理员拥有全部权限
     if profile.is_admin:
         return True
-
-    # 只读用户只有view权限
-    if profile.is_readonly:
-        return action == 'view'
 
     # 普通用户根据permissions字段检查
     permissions = profile.permissions

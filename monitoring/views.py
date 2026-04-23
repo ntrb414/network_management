@@ -66,6 +66,10 @@ def _extract_metric_types(metrics):
         monitored_metric_types.add('connections')
     if metrics.get('ospf_neighbors'):
         monitored_metric_types.add('ospf_neighbor')
+    if metrics.get('cpu_usage') is not None or metrics.get('cpu_utilization') is not None:
+        monitored_metric_types.add('cpu')
+    if metrics.get('memory_usage') is not None or metrics.get('memory_utilization') is not None:
+        monitored_metric_types.add('memory')
 
     return monitored_metric_types
 
@@ -138,6 +142,12 @@ def _get_metric_display_name(metric_type, metric_name):
     if metric_type == 'connections' and metric_name == 'active_connections':
         return '活动连接数'
 
+    if metric_type == 'cpu' and metric_name == 'cpu_usage':
+        return 'CPU利用率'
+
+    if metric_type == 'memory' and metric_name == 'memory_usage':
+        return '内存利用率'
+
     return metric_name
 
 
@@ -161,6 +171,35 @@ def _parse_snapshot_timestamp(timestamp):
         return timezone.make_aware(parsed)
 
     return parsed
+
+
+def _normalize_ospf_neighbors(neighbors):
+    """Normalize legacy H3C OSPF state values for display/API output."""
+    normalized_neighbors = []
+
+    for neighbor in neighbors or []:
+        if not isinstance(neighbor, dict):
+            continue
+
+        normalized = dict(neighbor)
+
+        try:
+            state_value = int(normalized.get('state'))
+        except (TypeError, ValueError):
+            state_value = None
+
+        state_name = str(normalized.get('state_name') or '').strip().lower()
+
+        # Legacy H3C snapshots may store zero-based state 7 as "Loading" while
+        # actual adjacency is Full. Convert it to the standard 1-based Full(8).
+        if normalized.get('interface_index') is not None and state_value == 7 and state_name == 'loading':
+            normalized['state'] = 8
+            normalized['state_name'] = 'Full'
+            normalized['is_full'] = True
+
+        normalized_neighbors.append(normalized)
+
+    return normalized_neighbors
 
 
 
@@ -189,6 +228,11 @@ def _get_metric_display_value(metric_type, value, unit):
             return OSPF_STATE_MAP.get(state_value, f'Unknown({state_value})')
         except (TypeError, ValueError):
             return f'Unknown({value})'
+    if metric_type in {'cpu', 'memory'}:
+        try:
+            return f"{float(value):.2f} %"
+        except (TypeError, ValueError):
+            return f'{value} %'
     return f'{value} {unit}'.strip()
 
 
@@ -278,19 +322,23 @@ class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
                 'device': device,
                 'summary': {
                     'interface_status': None,
+                    'interface_traffic': None,
                     'ospf': None,
+                    'cpu': None,
+                    'memory': None,
                 },
                 'last_metric_time': None,
             }
 
             interfaces = metrics.get('interfaces', [])
-            if interfaces:
+            if device.status == 'online' and interfaces:
                 up_count = sum(1 for iface in interfaces if _is_interface_up(iface.get('status')))
                 down_count = max(0, len(interfaces) - up_count)
                 item['summary']['interface_status'] = f"{up_count} UP / {down_count} DOWN"
 
             ospf_neighbors = metrics.get('ospf_neighbors', [])
-            if ospf_neighbors:
+            ospf_neighbors = _normalize_ospf_neighbors(ospf_neighbors)
+            if device.status == 'online' and ospf_neighbors:
                 full_count = sum(
                     1
                     for neighbor in ospf_neighbors
@@ -298,6 +346,25 @@ class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
                 )
                 total_count = len(ospf_neighbors)
                 item['summary']['ospf'] = f"{full_count}/{total_count} Full"
+
+            traffic_rows = metrics.get('traffic', [])
+            if device.status == 'online' and traffic_rows:
+                top_traffic = max(
+                    traffic_rows,
+                    key=lambda row: (row.get('in_octets') or 0) + (row.get('out_octets') or 0),
+                )
+                iface_name = top_traffic.get('interface', '-')
+                in_octets = int(top_traffic.get('in_octets') or 0)
+                out_octets = int(top_traffic.get('out_octets') or 0)
+                item['summary']['interface_traffic'] = f"{iface_name}: IN {in_octets} / OUT {out_octets}"
+
+            cpu_usage = metrics.get('cpu_usage')
+            if cpu_usage is not None:
+                item['summary']['cpu'] = f"{float(cpu_usage):.1f}%"
+
+            memory_usage = metrics.get('memory_usage')
+            if memory_usage is not None:
+                item['summary']['memory'] = f"{float(memory_usage):.1f}%"
 
             item['last_metric_time'] = _parse_snapshot_timestamp(
                 latest_snapshot.get('timestamp') if latest_snapshot else None
@@ -347,58 +414,12 @@ class MonitoringDeviceDetailView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         device = get_object_or_404(Device, pk=self.kwargs['device_id'])
         service = MonitoringService()
+        latest_snapshot = service.get_latest_metrics_from_redis(device.id)
+        metrics = latest_snapshot.get('metrics', {}) if latest_snapshot else {}
 
         context['user'] = self.request.user
         context['device'] = device
         context['reload_time'] = getattr(settings, 'MONITORING_RELOAD_TIME', 30)
-
-        snapshots = service.get_device_snapshots_from_redis(device.id, limit=50)
-        metric_rows = service.flatten_snapshots_to_metric_rows(snapshots)
-
-        rows_by_type = {}
-        for row in metric_rows:
-            row_type = row.get('metric_type')
-            rows_by_type.setdefault(row_type, []).append(row)
-
-        metrics_history = {}
-        for mt, _ in DISPLAY_METRIC_TYPES:
-            history_rows = []
-            for row in metric_rows:
-                if row.get('metric_type') != mt:
-                    continue
-                if mt == 'interface_status' and not _is_interface_up(row.get('value')):
-                    continue
-
-                history_rows.append({
-                    'value': row.get('value'),
-                    'unit': row.get('unit', ''),
-                    'metric_name': row.get('metric_name', ''),
-                    'timestamp': _parse_snapshot_timestamp(row.get('timestamp')),
-                    'display_metric_name': _get_metric_display_name(mt, row.get('metric_name', '')),
-                })
-
-                if len(history_rows) >= 50:
-                    break
-
-            metrics_history[mt] = history_rows
-        context['metrics_history'] = metrics_history
-
-        # JSON序列化供JS使用
-        import json
-        history_json = {}
-        for mt, rows in metrics_history.items():
-            history_json[mt] = [
-                {
-                    'metric_type': mt,
-                    'metric_name': r['metric_name'],
-                    'display_metric_name': r['display_metric_name'],
-                    'value': r['value'],
-                    'unit': r['unit'],
-                    'timestamp': r['timestamp'].isoformat() if r['timestamp'] else '',
-                }
-                for r in rows
-            ]
-        context['metrics_history_json'] = json.dumps(history_json, ensure_ascii=False)
 
         # 该设备的告警
         try:
@@ -408,6 +429,10 @@ class MonitoringDeviceDetailView(LoginRequiredMixin, TemplateView):
             ).order_by('-timestamp')[:10]
         except Exception:
             context['device_alerts'] = []
+
+        context['latest_ospf_neighbors'] = _normalize_ospf_neighbors(metrics.get('ospf_neighbors', []))
+        context['latest_cpu_usage'] = metrics.get('cpu_usage')
+        context['latest_memory_usage'] = metrics.get('memory_usage')
 
         context['metric_types'] = DISPLAY_METRIC_TYPES
         return context
@@ -420,71 +445,32 @@ class MonitoringDeviceDetailView(LoginRequiredMixin, TemplateView):
 def monitoring_device_realtime_api(request, device_id):
     """
     实时监控数据API端点
-
     """
     try:
         device = Device.objects.get(pk=device_id)
     except Device.DoesNotExist:
         return Response({'error': 'Device not found'}, status=404)
 
-    latest_metrics = {}
+    service = MonitoringService()
+    latest_snapshot = service.get_latest_metrics_from_redis(device_id)
+    metrics_payload = latest_snapshot.get('metrics', {}) if latest_snapshot else {}
+    if metrics_payload:
+        metrics_payload = dict(metrics_payload)
+        if metrics_payload.get('cpu_usage') is not None and metrics_payload.get('cpu_utilization') is None:
+            metrics_payload['cpu_utilization'] = metrics_payload.get('cpu_usage')
+        if metrics_payload.get('memory_usage') is not None and metrics_payload.get('memory_utilization') is None:
+            metrics_payload['memory_utilization'] = metrics_payload.get('memory_usage')
+    interfaces = metrics_payload.get('interfaces', []) if metrics_payload else []
+    if interfaces:
+        metrics_payload = dict(metrics_payload)
+        metrics_payload['interfaces'] = [
+            interface for interface in interfaces if _is_interface_up(interface.get('status'))
+        ]
 
-    # 获取流量数据
-    traffic_metrics = MetricData.objects.filter(
-        device=device,
-        metric_type='traffic'
-    ).order_by('-timestamp')[:10]
-
-    latest_metrics['traffic'] = [
-        {
-            'name': m.metric_name,
-            'value': m.value,
-            'unit': m.unit,
-            'timestamp': m.timestamp.isoformat(),
-        }
-        for m in traffic_metrics
-    ]
-    
-    # 获取接口状态
-    interface_status_list = MetricData.objects.filter(
-        device=device, metric_type='interface_status'
-    ).order_by('-timestamp')[:20]
-    
-    latest_metrics['interfaces'] = []
-    seen_interfaces = set()
-    for m in interface_status_list:
-        iface_name = _get_interface_name(m.metric_name)
-        if iface_name not in seen_interfaces:
-            seen_interfaces.add(iface_name)
-            if not _is_interface_up(m.value):
-                continue
-            latest_metrics['interfaces'].append({
-                'name': iface_name,
-                'status': int(m.value),
-                'status_display': _get_interface_status_display(m.value),
-                'timestamp': m.timestamp.isoformat(),
-            })
-    
-    # 获取OSPF邻居状态
-    ospf_list = MetricData.objects.filter(
-        device=device, metric_type='ospf_neighbor'
-    ).order_by('-timestamp')[:10]
-    
-    latest_metrics['ospf_neighbors'] = []
-    seen_ospf = set()
-    for m in ospf_list:
-        neighbor_ip = m.metric_name.replace('ospf_nbr_', '')
-        neighbor_ip = _get_ospf_neighbor_ip(m.metric_name)
-        if neighbor_ip not in seen_ospf:
-            seen_ospf.add(neighbor_ip)
-            state_value = int(m.value)
-            latest_metrics['ospf_neighbors'].append({
-                'neighbor_ip': neighbor_ip,
-                'state': state_value,
-                'state_name': OSPF_STATE_MAP.get(state_value, f'Unknown({state_value})'),
-                'is_full': state_value == 8,
-                'timestamp': m.timestamp.isoformat(),
-            })
+    ospf_neighbors = metrics_payload.get('ospf_neighbors', []) if metrics_payload else []
+    if ospf_neighbors:
+        metrics_payload = dict(metrics_payload)
+        metrics_payload['ospf_neighbors'] = _normalize_ospf_neighbors(ospf_neighbors)
 
     return Response({
         'device': {
@@ -492,7 +478,9 @@ def monitoring_device_realtime_api(request, device_id):
             'name': device.name,
             'ip_address': device.ip_address,
         },
-        'metrics': latest_metrics,
+        'reload_time': getattr(settings, 'MONITORING_RELOAD_TIME', 30),
+        'metrics': metrics_payload,
+        'timestamp': latest_snapshot.get('timestamp') if latest_snapshot else None,
     })
 
 
@@ -507,6 +495,24 @@ def monitoring_device_realtime_redis_api(request, device_id):
 
     service = MonitoringService()
     latest_snapshot = service.get_latest_metrics_from_redis(device_id)
+    metrics_payload = latest_snapshot.get('metrics', {}) if latest_snapshot else {}
+    if metrics_payload:
+        metrics_payload = dict(metrics_payload)
+        if metrics_payload.get('cpu_usage') is not None and metrics_payload.get('cpu_utilization') is None:
+            metrics_payload['cpu_utilization'] = metrics_payload.get('cpu_usage')
+        if metrics_payload.get('memory_usage') is not None and metrics_payload.get('memory_utilization') is None:
+            metrics_payload['memory_utilization'] = metrics_payload.get('memory_usage')
+    interfaces = metrics_payload.get('interfaces', []) if metrics_payload else []
+    if interfaces:
+        metrics_payload = dict(metrics_payload)
+        metrics_payload['interfaces'] = [
+            interface for interface in interfaces if _is_interface_up(interface.get('status'))
+        ]
+
+    ospf_neighbors = metrics_payload.get('ospf_neighbors', []) if metrics_payload else []
+    if ospf_neighbors:
+        metrics_payload = dict(metrics_payload)
+        metrics_payload['ospf_neighbors'] = _normalize_ospf_neighbors(ospf_neighbors)
 
     return Response({
         'device': {
@@ -515,7 +521,7 @@ def monitoring_device_realtime_redis_api(request, device_id):
             'ip_address': device.ip_address,
         },
         'reload_time': getattr(settings, 'MONITORING_RELOAD_TIME', 30),
-        'metrics': latest_snapshot.get('metrics', {}) if latest_snapshot else {},
+        'metrics': metrics_payload,
         'timestamp': latest_snapshot.get('timestamp') if latest_snapshot else None,
     })
 

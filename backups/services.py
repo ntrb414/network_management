@@ -1,7 +1,5 @@
 """
-配置备份服务
-
-提供配置备份、版本对比等功能。
+配置备份服务--配置备份、版本对比等功能。
 """
 
 import logging
@@ -27,12 +25,6 @@ class BackupService:
         os.makedirs(self.backup_dir, exist_ok=True)
 
     def _init_git_repo(self) -> bool:
-        """
-        初始化Git仓库
-
-        Returns:
-            是否成功
-        """
         try:
             import git
         except ImportError:
@@ -60,19 +52,7 @@ class BackupService:
         commit_message: str = None,
         user=None
     ) -> Optional[Dict[str, Any]]:
-        """
-        备份设备配置
 
-        Args:
-            device: 设备对象
-            config_content: 配置内容
-            commit_message: 提交说明
-            user: 操作用户
-
-        Returns:
-            备份结果
-
-        """
         try:
             import git
         except ImportError:
@@ -197,17 +177,7 @@ class BackupService:
         backup1_id: int,
         backup2_id: int
     ) -> Dict[str, Any]:
-        """
-        对比两个版本的配置
-
-        Args:
-            backup1_id: 第一个备份ID
-            backup2_id: 第二个备份ID
-
-        Returns:
-            对比结果
-
-        """
+        
         from .models import ConfigBackup
 
         try:
@@ -253,15 +223,6 @@ class BackupService:
     ) -> Dict[str, Any]:
         """
         获取设备的备份历史
-
-        Args:
-            device_id: 设备ID
-            page: 页码
-            page_size: 每页数量
-
-        Returns:
-            备份列表
-
         """
         from .models import ConfigBackup
 
@@ -304,16 +265,7 @@ class BackupService:
         }
 
     def cleanup_old_backups(self, days: int = 30) -> Dict[str, Any]:
-        """
-        清理老旧备份
-
-        Args:
-            days: 保留天数
-
-        Returns:
-            清理结果
-
-        """
+       
         from .models import ConfigBackup
 
         # 计算截止时间

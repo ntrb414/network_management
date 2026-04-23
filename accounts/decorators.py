@@ -80,13 +80,6 @@ def has_permission(user, permissions, logic='AND'):
     except AttributeError:
         pass
     
-    # 只读用户无权限
-    try:
-        if user.profile.is_readonly:
-            return False
-    except AttributeError:
-        pass
-    
     # 检查细粒度权限
     try:
         user_permissions = user.profile.permissions

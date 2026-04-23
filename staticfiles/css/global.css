@@ -587,7 +587,6 @@ body {
 
 .role-admin    { background: var(--danger-bg);  color: var(--danger);  border-color: var(--danger-border); }
 .role-user     { background: var(--info-bg);    color: var(--info);    border-color: var(--info-border); }
-.role-readonly { background: var(--muted);      color: var(--muted-foreground); border-color: var(--border); }
 
 /* ── Modal ── */
 .nw-modal-overlay {

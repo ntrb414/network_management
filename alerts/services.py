@@ -190,12 +190,7 @@ class AlertService:
         return True
 
     def _record_alert_log(self, alert) -> None:
-        """
-        记录告警到系统日志
-
-        Args:
-            alert: 告警对象
-        """
+        #alert: 告警对象
         try:
             from logs.services import LogService
             service = LogService()

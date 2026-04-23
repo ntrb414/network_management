@@ -4,6 +4,8 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 from unittest.mock import patch
+from types import ModuleType
+import sys
 from accounts.models import UserProfile
 from devices.models import Device
 from monitoring.models import MetricData
@@ -192,6 +194,127 @@ class MonitoringServiceTestCase(TestCase):
         count = self.service.store_metrics(self.device, metrics)
         self.assertGreater(count, 0)
 
+    def test_store_metrics_merges_partial_snapshots(self):
+        self.service.store_metrics(
+            self.device,
+            {
+                'traffic': [],
+                'packet_loss': None,
+                'connections': None,
+                'interfaces': [{'name': 'GigabitEthernet1/0', 'status': 1}],
+                'ospf_neighbors': [],
+                '_partial_update': True,
+            },
+        )
+
+        self.service.store_metrics(
+            self.device,
+            {
+                'traffic': [{'interface': 'GigabitEthernet1/0', 'in_octets': 100, 'out_octets': 80}],
+                'packet_loss': None,
+                'connections': None,
+                'interfaces': [{'name': 'GigabitEthernet1/0', 'in_octets': 100, 'out_octets': 80}],
+                'ospf_neighbors': [],
+                '_partial_update': True,
+            },
+        )
+
+        latest = self.service.get_latest_metrics_from_redis(self.device.id)
+        self.assertIsNotNone(latest)
+
+        interfaces = latest['metrics']['interfaces']
+        self.assertEqual(len(interfaces), 1)
+        self.assertEqual(interfaces[0]['name'], 'GigabitEthernet1/0')
+        self.assertEqual(interfaces[0]['status'], 1)
+        self.assertEqual(interfaces[0]['in_octets'], 100)
+
+
+class H3CDialoutParserTestCase(TestCase):
+    @staticmethod
+    def _extract_metrics(sensor_path, payload):
+        if 'grpc' not in sys.modules:
+            grpc_stub = ModuleType('grpc')
+            grpc_stub.GenericRpcHandler = object
+            grpc_stub.stream_stream_rpc_method_handler = lambda *args, **kwargs: None
+            grpc_stub.server = lambda *args, **kwargs: None
+            sys.modules['grpc'] = grpc_stub
+
+        from monitoring.management.commands.run_gnmi_receiver import _extract_h3c_metrics
+
+        return _extract_h3c_metrics(sensor_path, payload)
+
+    def test_extract_ifmgr_statistics_metrics(self):
+        payload = {
+            'Notification': {
+                'Ifmgr': {
+                    'Statistics': {
+                        'Interface': [
+                            {
+                                'Name': 'GigabitEthernet1/0',
+                                'IfIndex': 17,
+                                'InOctets': 17950301,
+                                'OutOctets': 5201673,
+                                'InRate': 2883,
+                                'OutRate': 570,
+                                'InDiscards': 0,
+                                'OutDiscards': 0,
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+
+        metrics = self._extract_metrics('Ifmgr/Statistics', payload)
+
+        self.assertEqual(len(metrics['interfaces']), 1)
+        self.assertEqual(metrics['interfaces'][0]['name'], 'GigabitEthernet1/0')
+        self.assertEqual(metrics['traffic'][0]['in_octets'], 17950301)
+        self.assertEqual(metrics['traffic'][0]['out_octets'], 5201673)
+
+    def test_extract_ospf_cpu_memory_metrics(self):
+        payload = {
+            'Notification': {
+                'OSPF': {
+                    'Neighbours': {
+                        'Nbr': [
+                            {
+                                'IfIndex': 33,
+                                'NbrAddress': '10.20.2.2',
+                                'NbrRouterId': '2.2.2.2',
+                                'State': 7,
+                            }
+                        ]
+                    }
+                },
+                'Device': {
+                    'CPUs': {
+                        'CPU': [
+                            {'CPUUsage': 3}
+                        ]
+                    }
+                },
+                'Diagnostic': {
+                    'Memories': {
+                        'Memory': [
+                            {'Total': 2000, 'Used': 800}
+                        ]
+                    }
+                },
+            }
+        }
+
+        metrics = self._extract_metrics('OSPF/Neighbours', payload)
+
+        self.assertEqual(len(metrics['ospf_neighbors']), 1)
+        self.assertEqual(metrics['ospf_neighbors'][0]['neighbor_ip'], '10.20.2.2')
+        self.assertEqual(metrics['ospf_neighbors'][0]['raw_state'], 7)
+        self.assertEqual(metrics['ospf_neighbors'][0]['state'], 8)
+        self.assertEqual(metrics['ospf_neighbors'][0]['state_name'], 'Full')
+        self.assertTrue(metrics['ospf_neighbors'][0]['is_full'])
+        self.assertEqual(metrics['cpu_usage'], 3.0)
+        self.assertEqual(metrics['memory_usage'], 40.0)
+
 
 class MetricDataModelTestCase(TestCase):
     """测试监控数据模型"""
@@ -285,11 +408,18 @@ class MonitoringAPITestCase(TestCase):
 
     def test_realtime_api_only_returns_up_interfaces(self):
         self.client.login(username='monitorapi', password='testpass123')
-        MetricData.objects.create(
-            device=self.device, metric_type='interface_status', metric_name='Vlan-interface1_status', value=1, unit=''
-        )
-        MetricData.objects.create(
-            device=self.device, metric_type='interface_status', metric_name='Vlan-interface2_status', value=2, unit=''
+        self.service.store_metrics(
+            self.device,
+            {
+                'traffic': [],
+                'packet_loss': None,
+                'connections': None,
+                'interfaces': [
+                    {'name': 'Vlan-interface1', 'status': 1, 'in_drop_rate': 0, 'out_drop_rate': 0},
+                    {'name': 'Vlan-interface2', 'status': 2, 'in_drop_rate': 0, 'out_drop_rate': 0},
+                ],
+                'ospf_neighbors': [],
+            }
         )
 
         response = self.client.get(f'/monitoring/api/devices/{self.device.id}/realtime/')

@@ -15,7 +15,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.permissions import is_readonly_user
+from accounts.permissions import has_module_permission
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +42,9 @@ class DeviceListView(LoginRequiredMixin, ListView):
         """Add user info to context."""
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
-        context['is_readonly_user'] = is_readonly_user(self.request.user)
-        context['can_manage_devices'] = not context['is_readonly_user']
+        context["can_manage_devices"] = has_module_permission(self.request.user, "devices", "edit")
+        context["is_readonly_user"] = not context["can_manage_devices"]
+        
         return context
 
 
@@ -59,8 +60,9 @@ class DeviceDetailView(LoginRequiredMixin, DetailView):
         """Add user info and ports to context."""
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
-        context['is_readonly_user'] = is_readonly_user(self.request.user)
-        context['can_manage_devices'] = not context['is_readonly_user']
+        context["can_manage_devices"] = has_module_permission(self.request.user, "devices", "edit")
+        context["is_readonly_user"] = not context["can_manage_devices"]
+        
         context['ports'] = self.object.ports.all()
         return context
 
@@ -77,8 +79,9 @@ class DeviceConfigView(LoginRequiredMixin, DetailView):
         """Add configuration data to context."""
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
-        context['is_readonly_user'] = is_readonly_user(self.request.user)
-        context['can_manage_devices'] = not context['is_readonly_user']
+        context["can_manage_devices"] = has_module_permission(self.request.user, "devices", "edit")
+        context["is_readonly_user"] = not context["can_manage_devices"]
+        
 
         # 获取设备列表（用于垂直滚动切换）
         context['device_list'] = Device.objects.all().order_by('name')

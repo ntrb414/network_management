@@ -1,7 +1,5 @@
 """
-配置备份页面视图
-
-包含 BackupListView（备份列表页面）、BackupDetailView（备份详情页面）、
+配置备份页面视图--BackupListView（备份列表页面）、BackupDetailView（备份详情页面）、
 ConfigBackupView（手动备份页面）和备份相关API。
 """
 
@@ -78,7 +76,6 @@ class ConfigBackupView(LoginRequiredMixin, TemplateView):
 def backup_list_api(request):
     """
     备份列表API端点
-
     """
     from .services import BackupService
 
@@ -100,7 +97,6 @@ def backup_list_api(request):
 def device_backup_list_api(request, device_id):
     """
     设备备份列表API端点
-
     """
     from .services import BackupService
 
@@ -145,7 +141,6 @@ def backup_detail_api(request, pk):
 def backup_create_api(request):
     """
     创建设备配置备份API端点
-
     """
     from devices.models import Device
     from .services import BackupService
@@ -180,10 +175,8 @@ def backup_create_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_compare_api(request):
-    """
-    备份版本对比API端点
-
-    """
+   
+    #备份版本对比API端点
     from .services import BackupService
 
     service = BackupService()
@@ -210,9 +203,7 @@ def backup_compare_api(request):
 def backup_trigger_api(request):
     """
     触发单个设备配置备份任务（异步）
-
     将备份任务投入 Celery 队列异步执行。
-
     """
     from devices.models import Device
     from .tasks import backup_single_device

@@ -13,6 +13,34 @@ from rest_framework.pagination import PageNumberPagination
 from .models import SystemLog
 
 
+def _to_bool(value):
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+
+class RuntimeLogListView(LoginRequiredMixin, ListView):
+    """Display list of runtime logs (Syslog)."""
+
+    model = SystemLog
+    template_name = 'logs/runtime_log_list.html'
+    context_object_name = 'logs'
+    login_url = 'homepage:login'
+
+    def get_queryset(self):
+        return SystemLog.objects.filter(log_type='system', details__source='syslog').order_by('-timestamp')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['user'] = self.request.user
+        from devices.models import Device
+        context['devices'] = Device.objects.all().order_by('name')
+        return context
+
+
 class LogListView(LoginRequiredMixin, ListView):
     """Display list of all system logs."""
 
@@ -138,3 +166,86 @@ def log_statistics_api(request):
     statistics = service.get_statistics(days=days, log_type=log_type)
 
     return Response(statistics)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def runtime_log_list_api(request):
+    """设备运行日志（Syslog）查询接口。"""
+    from .services import LogService
+
+    service = LogService()
+
+    keyword = request.GET.get('keyword')
+    device_id = request.GET.get('device_id')
+    source_ip = request.GET.get('source_ip')
+    severity = request.GET.get('severity')
+    start_time = request.GET.get('start_time')
+    end_time = request.GET.get('end_time')
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 50))
+
+    from django.utils.dateparse import parse_datetime
+    if start_time:
+        start_time = parse_datetime(start_time)
+    if end_time:
+        end_time = parse_datetime(end_time)
+
+    result = service.query_runtime_logs(
+        keyword=keyword,
+        device_id=device_id,
+        source_ip=source_ip,
+        severity=severity,
+        start_time=start_time,
+        end_time=end_time,
+        page=page,
+        page_size=page_size,
+    )
+    return Response(result)
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def device_syslog_config_api(request, device_id):
+    """设备Syslog参数读取/保存接口，支持可选一键下发。"""
+    from devices.models import Device
+    from .services import LogService
+
+    try:
+        device = Device.objects.get(pk=device_id)
+    except Device.DoesNotExist:
+        return Response({'error': '设备不存在'}, status=404)
+
+    if request.method == 'GET':
+        return Response(
+            {
+                'device_id': device.id,
+                'device_name': device.name,
+                'syslog_enabled': device.syslog_enabled,
+                'syslog_server_ip': device.syslog_server_ip,
+                'syslog_server_port': device.syslog_server_port,
+                'syslog_protocol': device.syslog_protocol,
+                'syslog_severity_threshold': device.syslog_severity_threshold,
+            }
+        )
+
+    enabled = _to_bool(request.data.get('enabled'))
+    server_ip = request.data.get('server_ip')
+    server_port = request.data.get('server_port')
+    protocol = request.data.get('protocol')
+    severity_threshold = request.data.get('severity_threshold')
+    push_to_device = _to_bool(request.data.get('push_to_device')) or False
+
+    if server_port in (None, ''):
+        server_port = None
+
+    result = LogService().save_device_syslog_settings(
+        device=device,
+        enabled=enabled,
+        server_ip=server_ip,
+        server_port=server_port,
+        protocol=protocol,
+        severity_threshold=severity_threshold,
+        push_to_device=push_to_device,
+    )
+    return Response(result)

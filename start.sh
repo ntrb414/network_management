@@ -1,6 +1,6 @@
 #!/bin/bash
 # systemd 管理脚本：统一管理已注册的项目服务
-# 用法：./start.sh [start|stop|restart|status|web|worker|beat|flower]
+# 用法：./start.sh [start|stop|restart|status|web|worker|beat|flower|syslog]
 
 set -e
 
@@ -8,6 +8,7 @@ WEB_SERVICE="network_management.service"
 WORKER_SERVICE="network_management-celery-worker.service"
 BEAT_SERVICE="network_management-celery-beat.service"
 FLOWER_SERVICE="network_management-flower.service"
+SYSLOG_SERVICE="network_management-syslog.service"
 
 run_systemctl() {
     if [[ "$EUID" -ne 0 ]] && command -v sudo >/dev/null 2>&1; then
@@ -39,9 +40,15 @@ start_core() {
     if service_exists "$FLOWER_SERVICE"; then
         run_systemctl start "$FLOWER_SERVICE"
     fi
+    if service_exists "$SYSLOG_SERVICE"; then
+        run_systemctl start "$SYSLOG_SERVICE"
+    fi
 }
 
 stop_core() {
+    if service_exists "$SYSLOG_SERVICE"; then
+        run_systemctl stop "$SYSLOG_SERVICE"
+    fi
     if service_exists "$FLOWER_SERVICE"; then
         run_systemctl stop "$FLOWER_SERVICE"
     fi
@@ -54,6 +61,7 @@ status_all() {
     service_status_line "$WORKER_SERVICE"
     service_status_line "$BEAT_SERVICE"
     service_status_line "$FLOWER_SERVICE"
+    service_status_line "$SYSLOG_SERVICE"
     echo "────────────────────────────────────────────"
 }
 
@@ -70,6 +78,9 @@ case "${1:-status}" in
         run_systemctl restart "$WEB_SERVICE" "$WORKER_SERVICE" "$BEAT_SERVICE"
         if service_exists "$FLOWER_SERVICE"; then
             run_systemctl restart "$FLOWER_SERVICE"
+        fi
+        if service_exists "$SYSLOG_SERVICE"; then
+            run_systemctl restart "$SYSLOG_SERVICE"
         fi
         status_all
         ;;
@@ -97,8 +108,17 @@ case "${1:-status}" in
             exit 1
         fi
         ;;
+    syslog)
+        if service_exists "$SYSLOG_SERVICE"; then
+            run_systemctl restart "$SYSLOG_SERVICE"
+            status_all
+        else
+            echo "未检测到 $SYSLOG_SERVICE"
+            exit 1
+        fi
+        ;;
     *)
-        echo "用法：$0 {start|stop|restart|status|web|worker|beat|flower}"
+        echo "用法：$0 {start|stop|restart|status|web|worker|beat|flower|syslog}"
         exit 1
         ;;
 esac

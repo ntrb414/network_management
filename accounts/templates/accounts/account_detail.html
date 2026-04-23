@@ -164,6 +164,46 @@
         .detail-item { background: white; padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
         .detail-label { font-size: 0.75rem; color: var(--gray-500); text-transform: uppercase; margin-bottom: 0.25rem; }
         .detail-value { font-size: 1rem; font-weight: 500; color: var(--gray-900); }
+
+        .permission-section { background: white; padding: 1.25rem; border-radius: var(--radius); box-shadow: var(--shadow-sm); margin-top: 1rem; }
+        .permission-section-title { font-size: 1rem; font-weight: 600; color: #1a2332; margin-bottom: 1rem; }
+        .permission-header {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .permission-header-name { width: 100px; flex-shrink: 0; }
+        .permission-header-ops { display: flex; gap: 1.5rem; }
+        .permission-header-op { width: 52px; text-align: center; }
+        .permission-scroll-box {
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 0 0 6px 6px;
+            background: #fff;
+        }
+        .permission-row {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        .permission-row:last-child { border-bottom: none; }
+        .permission-row-name { width: 100px; font-size: 0.875rem; font-weight: 500; color: #495057; flex-shrink: 0; }
+        .permission-row-ops { display: flex; gap: 1.5rem; }
+        .permission-row-op { width: 52px; display: flex; justify-content: center; align-items: center; }
+        .permission-row-op input { cursor: pointer; width: 16px; height: 16px; }
+        .form-select { padding: 0.5rem 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.875rem; min-width: 200px; background: #fff; }
+        .admin-permission-hint { padding: 0.75rem 1rem; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; color: #6c757d; font-size: 0.875rem; }
     </style>
 </head>
 <body>
@@ -218,9 +258,13 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             告警管理
         </a>
-        <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <a href="{% url 'logs:runtime_log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
             设备日志
+        </a>
+<a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            系统日志
         </a>
         <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item active">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -264,8 +308,183 @@
                 </div>
             </div>
         </div>
+
+        {% if user.is_superuser or user.profile.role == 'admin' %}
+        <div class="permission-section">
+            <div class="permission-section-title">角色与权限配置</div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block;font-size:0.875rem;font-weight:500;color:#495057;margin-bottom:0.5rem;">角色</label>
+                <select id="roleSelect" class="form-select" onchange="toggleDetailPermissionArea()">
+                    <option value="admin" {% if profile.role == 'admin' %}selected{% endif %}>管理员</option>
+                    <option value="user" {% if profile.role == 'user' %}selected{% endif %}>普通用户</option>
+                </select>
+            </div>
+
+            <div id="permissionsArea">
+                <label style="display:block;font-size:0.875rem;font-weight:500;color:#495057;margin-bottom:0.5rem;">权限设置</label>
+                <div id="adminPermissionHint" class="admin-permission-hint" style="display:none;">管理员拥有所有权限，无需进行权限选择</div>
+                <div id="permissionMatrix">
+                    <div class="permission-header">
+                        <div class="permission-header-name">模块名称</div>
+                        <div class="permission-header-ops">
+                            <div class="permission-header-op">查看</div>
+                            <div class="permission-header-op">创建</div>
+                            <div class="permission-header-op">编辑</div>
+                            <div class="permission-header-op">删除</div>
+                        </div>
+                    </div>
+                    <div class="permission-scroll-box" id="permissionGrid"></div>
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="saveUserConfig()" style="padding:0.5rem 1rem;font-size:0.875rem;font-weight:500;border-radius:4px;border:none;background:#1971c2;color:#fff;cursor:pointer;">保存更改</button>
+            </div>
+        </div>
+        {% endif %}
     </main>
 </div>
 
+<script>
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const MODULES = [
+        {key: 'devices', name: '设备管理'},
+        {key: 'configs', name: '设备配置'},
+        {key: 'monitoring', name: '性能监控'},
+        {key: 'alerts', name: '告警管理'},
+        {key: 'logs', name: '日志管理'},
+        {key: 'backups', name: '备份管理'},
+        {key: 'accounts', name: '账户管理'},
+    ];
+    const OPS = [
+        {key: 'view', name: '查看'},
+        {key: 'create', name: '创建'},
+        {key: 'edit', name: '编辑'},
+        {key: 'delete', name: '删除'},
+    ];
+
+    const currentPermissions = JSON.parse('{{ permissions_json|safe }}');
+
+    function renderPermissions() {
+        const grid = document.getElementById('permissionGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        const role = document.getElementById('roleSelect').value;
+        MODULES.forEach(mod => {
+            const row = document.createElement('div');
+            row.className = 'permission-row';
+            let perms = currentPermissions[mod.key] || [];
+            if (role === 'admin') {
+                perms = ['view', 'create', 'edit', 'delete'];
+            }
+
+            let opsHtml = '';
+            OPS.forEach(op => {
+                const checked = perms.includes(op.key) ? 'checked' : '';
+                const disabled = role === 'admin' ? 'disabled' : '';
+                opsHtml += `<div class="permission-row-op"><input type="checkbox" data-mod="${mod.key}" data-op="${op.key}" ${checked} ${disabled}></div>`;
+            });
+
+            row.innerHTML = `<div class="permission-row-name">${mod.name}</div><div class="permission-row-ops">${opsHtml}</div>`;
+            grid.appendChild(row);
+        });
+    }
+
+    function toggleDetailPermissionArea() {
+        const role = document.getElementById('roleSelect').value;
+        const hint = document.getElementById('adminPermissionHint');
+        const matrix = document.getElementById('permissionMatrix');
+        if (role === 'admin') {
+            hint.style.display = 'block';
+            matrix.style.display = 'block';
+        } else {
+            hint.style.display = 'none';
+            matrix.style.display = 'block';
+        }
+        renderPermissions();
+    }
+
+    function showAlert(message, type) {
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.style.cssText = 'position:fixed;top:1.25rem;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:0.5rem;pointer-events:none;min-width:280px;';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        const bg = type === 'success' ? '#d1fae5' : '#fee2e2';
+        const color = type === 'success' ? '#065f46' : '#991b1b';
+        const border = type === 'success' ? '#a7f3d0' : '#fecaca';
+        toast.style.cssText = `background:${bg};color:${color};border:1px solid ${border};padding:0.75rem 1.25rem;border-radius:0.5rem;font-size:0.875rem;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;text-align:center;`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+    }
+
+    async function saveUserConfig() {
+        const role = document.getElementById('roleSelect').value;
+        let permissions = {};
+
+        if (role !== 'admin') {
+            MODULES.forEach(mod => {
+                const ops = [];
+                document.querySelectorAll(`input[data-mod="${mod.key}"]:checked`).forEach(cb => {
+                    ops.push(cb.dataset.op);
+                });
+                if (ops.length) permissions[mod.key] = ops;
+            });
+        }
+
+        try {
+            const roleRes = await fetch(`/accounts/api/users/{{ account.pk }}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({role: role})
+            });
+
+            const permRes = await fetch(`/accounts/api/users/{{ account.pk }}/permissions/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({permissions: permissions})
+            });
+
+            if (roleRes.ok && permRes.ok) {
+                showAlert('保存成功！', 'success');
+            } else {
+                const data = await roleRes.json().catch(() => ({}));
+                showAlert(data.error || '保存失败，请重试。', 'error');
+            }
+        } catch (error) {
+            showAlert('网络错误，请重试。', 'error');
+        }
+    }
+
+    toggleDetailPermissionArea();
+    renderPermissions();
+</script>
 </body>
 </html>

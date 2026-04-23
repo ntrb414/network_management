@@ -1,7 +1,5 @@
 """
-日志数据模型
-
-包含 SystemLog（系统日志）模型。
+日志数据模型--SystemLog（系统日志）模型。
 """
 
 from django.conf import settings

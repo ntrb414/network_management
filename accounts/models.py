@@ -1,6 +1,5 @@
 """
 用户权限数据模型
-
 包含 UserProfile（用户配置文件）模型，扩展 Django User 模型。
 """
 
@@ -14,14 +13,13 @@ class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('admin', '管理员'),
         ('user', '普通用户'),
-        ('readonly', '只读用户'),
     ]
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         verbose_name='用户', related_name='profile'
     )
-    role = models.CharField('角色', max_length=20, choices=ROLE_CHOICES, default='readonly')
+    role = models.CharField('角色', max_length=20, choices=ROLE_CHOICES, default='user')
     permissions = models.JSONField(
         '细粒度权限', default=dict,
         help_text='普通用户的细粒度权限配置，如 {"devices": ["view", "edit"], "configs": ["view"]}'
@@ -39,5 +37,5 @@ class UserProfile(models.Model):
         return self.role == 'admin'
 
     @property
-    def is_readonly(self):
-        return self.role == 'readonly'
+    def is_user(self):
+        return self.role == 'user'

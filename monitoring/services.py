@@ -6,6 +6,7 @@
 
 import json
 import logging
+import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
@@ -26,36 +27,92 @@ class MonitoringService:
         'interface_bandwidth': 80.0, # 带宽利用率阈值 (%)
     }
 
-    # SNMP OID 定义 (基于 EVE-NG 真实可用 OID)
-    SNMP_OIDS = {
-        # 接口状态: 1=up, 2=down
-        'ifOperStatus': '1.3.6.1.2.1.2.2.1.8',
-        # 接口名称
-        'ifDescr': '1.3.6.1.2.1.2.2.1.2',
-        # 接口索引
-        'ifIndex': '1.3.6.1.2.1.2.2.1.1',
-        # 64位入向流量 (bits)
-        'ifHCInOctets': '1.3.6.1.2.1.31.1.1.1.6',
-        # 64位出向流量 (bits)
-        'ifHCOutOctets': '1.3.6.1.2.1.31.1.1.1.10',
-        # 入向丢包 (Counter32)
-        'ifInDiscards': '1.3.6.1.2.1.2.2.1.13',
-        # 出向丢包 (Counter32)
-        'ifOutDiscards': '1.3.6.1.2.1.2.2.1.19',
-        # 接口速度 (bps)
-        'ifSpeed': '1.3.6.1.2.1.2.2.1.5',
-        # OSPF邻居状态: 8=Full
-        'ospfNbrState': '1.3.6.1.2.1.14.10.1.6',
-        # OSPF邻居IP
-        'ospfNbrIpAddr': '1.3.6.1.2.1.14.10.1.1',
-    }
-
     # 实例变量保存上次采集的接口流量数据用于计算Mbps (避免类变量共享导致并发问题)
     _interface_traffic_cache = None
 
     def __init__(self):
-        """初始化服务实例，使用实例变量避免并发问题"""
+        
         self._interface_traffic_cache = {}
+
+    def _default_metrics_payload(self) -> Dict[str, Any]:
+        return {
+            'traffic': [],
+            'packet_loss': None,
+            'connections': None,
+            'interfaces': [],
+            'ospf_neighbors': [],
+            'cpu_usage': None,
+            'memory_usage': None,
+        }
+
+    def _merge_interfaces(
+        self,
+        previous_interfaces: Optional[List[Dict[str, Any]]],
+        current_interfaces: Optional[List[Dict[str, Any]]],
+    ) -> List[Dict[str, Any]]:
+        merged: Dict[str, Dict[str, Any]] = {}
+
+        for interface in previous_interfaces or []:
+            if not isinstance(interface, dict):
+                continue
+            name = interface.get('name')
+            if not name:
+                continue
+            merged[name] = dict(interface)
+
+        for interface in current_interfaces or []:
+            if not isinstance(interface, dict):
+                continue
+            name = interface.get('name')
+            if not name:
+                continue
+            existing = merged.get(name, {})
+            existing.update(interface)
+            merged[name] = existing
+
+        return list(merged.values())
+
+    def _merge_metrics_payload(self, previous_metrics: Any, current_metrics: Any) -> Dict[str, Any]:
+        previous = previous_metrics if isinstance(previous_metrics, dict) else {}
+        current = current_metrics if isinstance(current_metrics, dict) else {}
+        partial_update = bool(current.get('_partial_update'))
+
+        merged = self._default_metrics_payload()
+
+        if partial_update:
+            merged['interfaces'] = self._merge_interfaces(
+                previous.get('interfaces'),
+                current.get('interfaces'),
+            )
+            merged['traffic'] = current.get('traffic') or previous.get('traffic') or []
+            merged['ospf_neighbors'] = current.get('ospf_neighbors') or previous.get('ospf_neighbors') or []
+
+            for scalar_key in ('packet_loss', 'connections', 'cpu_usage', 'memory_usage'):
+                scalar_value = current.get(scalar_key)
+                if scalar_value is None:
+                    scalar_value = previous.get(scalar_key)
+                merged[scalar_key] = scalar_value
+
+            extra_sources = (previous, current)
+        else:
+            merged['interfaces'] = list(current.get('interfaces') or [])
+            merged['traffic'] = list(current.get('traffic') or [])
+            merged['ospf_neighbors'] = list(current.get('ospf_neighbors') or [])
+
+            for scalar_key in ('packet_loss', 'connections', 'cpu_usage', 'memory_usage'):
+                merged[scalar_key] = current.get(scalar_key)
+
+            extra_sources = (current,)
+
+        # 保留非标准字段，避免兼容性回退。
+        for source in extra_sources:
+            for key, value in source.items():
+                if key in merged or key.startswith('_'):
+                    continue
+                if value is not None:
+                    merged[key] = value
+
+        return merged
 
     def _get_redis_connection_safe(self):
         """在测试环境下允许无 Redis 后端运行。"""
@@ -67,14 +124,7 @@ class MonitoringService:
 
     def collect_metrics(self, device) -> Dict[str, Any]:
         """
-        采集设备性能指标
-
-        Args:
-            device: 设备对象
-
-        Returns:
-            监控指标数据字典
-
+        采集设备性能指标，返监控指标数据
         """
         metrics = {}
 
@@ -94,13 +144,7 @@ class MonitoringService:
 
     def _collect_standard_metrics(self, device) -> Dict[str, Any]:
         """
-        采集标准设备监控指标
-
-        Args:
-            device: 设备对象
-
-        Returns:
-            监控指标数据
+        采集标准设备监控指标，返监控指标数据
         """
         metrics = {
             'traffic': [],
@@ -108,12 +152,12 @@ class MonitoringService:
             'connections': None,
         }
 
-        # 尝试通过SNMP采集
+        # 尝试通过gNMI采集
         try:
-            snmp_metrics = self._collect_via_snmp(device)
-            metrics.update(snmp_metrics)
+            gnmi_metrics = self._collect_via_gnmi(device)
+            metrics.update(gnmi_metrics)
         except Exception as e:
-            logger.warning(f"SNMP采集失败: {e}")
+            logger.warning(f"gNMI采集失败: {e}")
 
         return metrics
 
@@ -128,7 +172,7 @@ class MonitoringService:
             监控指标数据
         """
         # AP设备需要更频繁的采集
-        # 实际实现需要通过SSH或SNMP获取
+        # 实际实现需要通过SSH或gNMI获取
         metrics = {
             'traffic': [],
             'packet_loss': None,
@@ -136,258 +180,65 @@ class MonitoringService:
         }
 
         try:
-            snmp_metrics = self._collect_via_snmp(device)
-            metrics.update(snmp_metrics)
+            gnmi_metrics = self._collect_via_gnmi(device)
+            metrics.update(gnmi_metrics)
         except Exception as e:
-            logger.warning(f"SNMP采集失败: {e}")
+            logger.warning(f"gNMI采集失败: {e}")
 
         return metrics
 
-    def _collect_via_snmp(self, device) -> Dict[str, Any]:
+
+    def _collect_via_gnmi(self, device) -> Dict[str, Any]:
         """
-        通过SNMP采集设备监控指标 (基于 EVE-NG 真实可用 OID)
-
-        Args:
-            device: 设备对象
-
-        Returns:
-            监控指标数据
+        通过 gNMI 采集设备监控指标
         """
         metrics = {
             'traffic': [],
             'packet_loss': None,
             'connections': None,
-            'interfaces': [],  # 接口详细监控数据
-            'ospf_neighbors': [],  # OSPF邻居状态
+            'interfaces': [],
+            'ospf_neighbors': [],
+            'cpu_usage': None,
+            'memory_usage': None,
         }
-
-        if not device.snmp_community:
-            logger.info(f"设备 {device.name} 未配置SNMP团体名，跳过SNMP采集")
-            return metrics
-
+        
         try:
-            from pysnmp.hlapi import (
-                SnmpEngine, CommunityData, UdpTransportTarget,
-                ContextData, ObjectType, ObjectIdentity,
-                getCmd, nextCmd
-            )
-            from pysnmp.smi.rfc1902 import ObjectIdentity as SmiObjectIdentity
+            from pygnmi.client import gNMIclient
+            from monitoring.gnmi_parser import parse_gnmi_notification, format_metrics_from_map
         except ImportError:
-            logger.warning("PySNMP库未安装，无法通过SNMP采集")
+            logger.warning("pygnmi未安装或解析器缺失，无法通过gNMI采集")
             return metrics
 
-        snmp_target = (str(device.ip_address), 161)
-        community = device.snmp_community
+        if not device.ip_address or not device.ssh_username or not device.ssh_password:
+            logger.warning(f"设备 {device.name} gNMI配置不完整，跳过采集")
+            return metrics
         
-        logger.info(f"[采集] 开始SNMP采集: {device.name} ({device.ip_address}), 团体名: {community}")
-
         try:
-            # ── 接口层监控 (EVE-NG 真实可用 OID) ──
-            self._collect_interface_metrics(community, snmp_target, device.id, metrics)
+            with gNMIclient(
+                target=(str(device.ip_address), getattr(device, 'gnmi_port', 50000)),
+                username=device.ssh_username,
+                password=device.ssh_password,
+                insecure=getattr(device, 'gnmi_insecure', True)
+            ) as gc:
+                result = gc.get(path=["/interfaces/interface/state"])
+                interface_map: Dict[str, Dict[str, Any]] = {}
 
-            # ── OSPF邻居状态监控 ──
-            self._collect_ospf_neighbors(community, snmp_target, metrics)
+                notifications = []
+                if isinstance(result, dict):
+                    notifications = result.get('notification') or result.get('notifications') or []
 
-            # ── 连接数：尝试 SSH 获取 ──
-            if device.ssh_username and device.ssh_password:
-                try:
-                    conn_count = self._get_connections_via_ssh(device)
-                    if conn_count is not None:
-                        metrics['connections'] = conn_count
-                except Exception as e:
-                    logger.debug(f"SSH获取连接数失败: {e}")
+                for notification in notifications:
+                    if not isinstance(notification, dict):
+                        continue
+                    parse_gnmi_notification(notification, interface_map)
 
-            # 记录采集结果
-            interface_count = len(metrics.get('interfaces', []))
-            ospf_count = len(metrics.get('ospf_neighbors', []))
-            logger.info(f"[采集完成] {device.name}: 接口={interface_count}, OSPF邻居={ospf_count}")
-
+                parsed_metrics = format_metrics_from_map(interface_map)
+                metrics.update(parsed_metrics)
+                
         except Exception as e:
-            logger.error(f"SNMP采集错误 [{device.name}]: {e}", exc_info=True)
-
+            logger.warning(f"gNMI采集异常，返回空实时数据: {e}")
+        
         return metrics
-
-    def _collect_interface_metrics(self, community: str, target: tuple, device_id: int, metrics: Dict) -> None:
-        """
-        采集接口层监控指标
-
-        Args:
-            community: SNMP团体名
-            target: 目标设备 (ip, port)
-            device_id: 设备ID
-            metrics: 指标数据字典
-        """
-        try:
-            logger.debug(f"[接口采集] 开始采集 {target[0]} 的接口信息")
-
-            # 采集接口基础信息
-            if_index = self._snmp_walk(community, target, self.SNMP_OIDS['ifIndex'])
-            logger.debug(f"[接口采集] 获取到 {len(if_index)} 个接口索引")
-
-            if not if_index:
-                logger.warning(f"[接口采集] 未能获取接口索引，可能原因: 1) SNMP不可达 2) 团体名错误 3) 设备不支持标准OID")
-                return
-
-            if_descr = self._snmp_walk(community, target, self.SNMP_OIDS['ifDescr'])
-            if_status = self._snmp_walk(community, target, self.SNMP_OIDS['ifOperStatus'])
-            if_speed = self._snmp_walk(community, target, self.SNMP_OIDS['ifSpeed'])
-
-            # 采集流量数据 (64位计数器)
-            if_hc_in = self._snmp_walk(community, target, self.SNMP_OIDS['ifHCInOctets'])
-            if_hc_out = self._snmp_walk(community, target, self.SNMP_OIDS['ifHCOutOctets'])
-
-            # 采集丢包数据
-            if_in_drops = self._snmp_walk(community, target, self.SNMP_OIDS['ifInDiscards'])
-            if_out_drops = self._snmp_walk(community, target, self.SNMP_OIDS['ifOutDiscards'])
-
-            # 使用 timezone.now() 获取带时区的当前时间
-            from django.utils import timezone
-            current_time = timezone.now()
-            cache_key = f"device_{device_id}"
-
-            # 获取上次采集数据
-            last_data = self._interface_traffic_cache.get(cache_key, {})
-
-            for idx in if_index:
-                iface_name = if_descr.get(idx, f'if{idx}')
-                status = int(if_status.get(idx, 0))
-                speed_bps = int(if_speed.get(idx, 0))
-
-                # 计算流量 (Mbps)
-                in_mbps = None  # 首次采集时为 None，表示无有效计算值
-                out_mbps = None
-                in_drop_rate = 0
-                out_drop_rate = 0
-                is_first_collection = False  # 标记是否首次采集
-
-                if idx in if_hc_in and idx in if_hc_out:
-                    curr_in = int(if_hc_in[idx])
-                    curr_out = int(if_hc_out[idx])
-
-                    if last_data and idx in last_data:
-                        last_in = last_data[idx].get('in_octets', 0)
-                        last_out = last_data[idx].get('out_octets', 0)
-                        last_time = last_data[idx].get('timestamp', current_time)
-
-                        # 计算时间间隔 (秒)
-                        # 确保 last_time 是 aware datetime
-                        if timezone.is_naive(last_time):
-                            from django.utils.timezone import make_aware
-                            last_time = make_aware(last_time)
-
-                        interval = (current_time - last_time).total_seconds()
-                        if interval > 0:
-                            # 计算Mbps: (bytes * 8) / interval / 1000 / 1000
-                            in_bits = max(0, (curr_in - last_in)) * 8
-                            out_bits = max(0, (curr_out - last_out)) * 8
-                            in_mbps = round(in_bits / interval / 1000000, 2)
-                            out_mbps = round(out_bits / interval / 1000000, 2)
-                    else:
-                        # 首次采集，标记但仍缓存数据供下次使用
-                        is_first_collection = True
-
-                    # 更新缓存
-                    if cache_key not in self._interface_traffic_cache:
-                        self._interface_traffic_cache[cache_key] = {}
-                    self._interface_traffic_cache[cache_key][idx] = {
-                        'in_octets': curr_in,
-                        'out_octets': curr_out,
-                        'timestamp': current_time
-                    }
-
-                # 计算丢包率 (个/分钟)
-                if last_data and idx in last_data:
-                    last_time = last_data[idx].get('timestamp', current_time)
-                    if timezone.is_naive(last_time):
-                        from django.utils.timezone import make_aware
-                        last_time = make_aware(last_time)
-                    interval_min = (current_time - last_time).total_seconds() / 60
-                    if interval_min > 0:
-                        curr_in_drop = int(if_in_drops.get(idx, 0))
-                        curr_out_drop = int(if_out_drops.get(idx, 0))
-                        last_in_drop = last_data[idx].get('in_drops', 0)
-                        last_out_drop = last_data[idx].get('out_drops', 0)
-
-                        in_drop_rate = round((curr_in_drop - last_in_drop) / interval_min)
-                        out_drop_rate = round((curr_out_drop - last_out_drop) / interval_min)
-
-                        self._interface_traffic_cache[cache_key][idx]['in_drops'] = curr_in_drop
-                        self._interface_traffic_cache[cache_key][idx]['out_drops'] = curr_out_drop
-
-                # 计算带宽利用率
-                bandwidth_usage = 0.0
-                if speed_bps > 0 and in_mbps is not None and out_mbps is not None:
-                    max_mbps = speed_bps / 1000000
-                    bandwidth_usage = round((in_mbps + out_mbps) / max_mbps * 100, 2)
-
-                interface_data = {
-                    'index': idx,
-                    'name': iface_name,
-                    'status': status,  # 1=up, 2=down
-                    'speed_bps': speed_bps,
-                    'in_mbps': in_mbps,
-                    'out_mbps': out_mbps,
-                    'in_drop_rate': in_drop_rate,
-                    'out_drop_rate': out_drop_rate,
-                    'bandwidth_usage': bandwidth_usage,
-                    'is_first_collection': is_first_collection,  # 标记首次采集
-                }
-
-                metrics['interfaces'].append(interface_data)
-
-                # 保持旧版本兼容性的流量数据 (仅在非首次采集时包含有效Mbps)
-                metrics['traffic'].append({
-                    'interface': iface_name,
-                    'in_octets': int(if_hc_in.get(idx, 0)),
-                    'out_octets': int(if_hc_out.get(idx, 0)),
-                    'is_first_collection': is_first_collection,
-                })
-
-            # 清理过期缓存（保留最近30分钟）
-            self._cleanup_traffic_cache()
-
-        except Exception as e:
-            logger.error(f"接口指标采集失败: {e}")
-
-    def _collect_ospf_neighbors(self, community: str, target: tuple, metrics: Dict) -> None:
-        """
-        采集OSPF邻居状态
-        
-        Args:
-            community: SNMP团体名
-            target: 目标设备 (ip, port)
-            metrics: 指标数据字典
-        """
-        try:
-            ospf_states = self._snmp_walk(community, target, self.SNMP_OIDS['ospfNbrState'])
-            ospf_ips = self._snmp_walk(community, target, self.SNMP_OIDS['ospfNbrIpAddr'])
-            
-            # OSPF邻居状态映射
-            state_map = {
-                '1': 'down',
-                '2': 'attempt',
-                '3': 'init',
-                '4': 'twoWay',
-                '5': 'exchangeStart',
-                '6': 'exchange',
-                '7': 'loading',
-                '8': 'full',
-            }
-            
-            for idx, state_value in ospf_states.items():
-                neighbor_ip = ospf_ips.get(idx, 'unknown')
-                state_num = state_value
-                state_name = state_map.get(state_value, f'unknown({state_value})')
-                
-                metrics['ospf_neighbors'].append({
-                    'neighbor_ip': neighbor_ip,
-                    'state': state_num,
-                    'state_name': state_name,
-                    'is_full': state_value == '8',
-                })
-                
-        except Exception as e:
-            logger.debug(f"OSPF邻居采集失败（可能未启用OSPF）: {e}")
 
     def _cleanup_traffic_cache(self):
         """清理过期的流量缓存数据"""
@@ -460,103 +311,6 @@ class MonitoringService:
             logger.debug(f"SSH连接数采集失败 [{device.name}]: {e}")
             return None
 
-    def _snmp_get(self, community: str, target: tuple, oid: str) -> Optional[str]:
-        """
-        执行SNMP GET操作
-
-        Args:
-            community: SNMP团体名
-            target: 目标设备 (ip, port)
-            oid: OID
-
-        Returns:
-            获取的值
-        """
-        try:
-            from pysnmp.hlapi import (
-                SnmpEngine, CommunityData, UdpTransportTarget,
-                ContextData, ObjectType, ObjectIdentity,
-                getCmd
-            )
-
-            iterator = getCmd(
-                SnmpEngine(),
-                CommunityData(community),
-                UdpTransportTarget(target),
-                ContextData(),
-                ObjectType(ObjectIdentity(oid))
-            )
-
-            errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
-
-            if errorIndication:
-                logger.warning(f"SNMP error: {errorIndication}")
-                return None
-
-            for varBind in varBinds:
-                return str(varBind[1])
-
-        except Exception as e:
-            logger.error(f"SNMP GET error: {e}")
-
-        return None
-
-    def _snmp_walk(self, community: str, target: tuple, oid: str) -> Dict[str, str]:
-        """
-        执行SNMP WALK操作
-
-        Args:
-            community: SNMP团体名
-            target: 目标设备 (ip, port)
-            oid: OID
-
-        Returns:
-            OID -> 值 的字典
-        """
-        result = {}
-
-        try:
-            from pysnmp.hlapi import (
-                SnmpEngine, CommunityData, UdpTransportTarget,
-                ContextData, ObjectType, ObjectIdentity,
-                nextCmd
-            )
-
-            iterator = nextCmd(
-                SnmpEngine(),
-                CommunityData(community),
-                UdpTransportTarget(target),
-                ContextData(),
-                ObjectType(ObjectIdentity(oid)),
-                lexicographicMode=False
-            )
-
-            for errorIndication, errorStatus, errorIndex, varBinds in iterator:
-                if errorIndication:
-                    break
-
-                for varBind in varBinds:
-                    oid_str = str(varBind[0])
-                    raw_value = varBind[1]
-                    value = raw_value.prettyPrint() if hasattr(raw_value, 'prettyPrint') else str(raw_value)
-
-                    # OSPF 邻居 IP 表项的值在部分设备上可能为空，需要从 OID 索引尾部提取真实邻居 IP。
-                    if oid == self.SNMP_OIDS['ospfNbrIpAddr']:
-                        oid_parts = oid_str.split('.')
-                        index = oid_parts[-1]
-                        derived_ip = '.'.join(oid_parts[-4:]) if len(oid_parts) >= 4 else value
-                        result[index] = value or derived_ip
-                        continue
-
-                    # 提取索引
-                    index = oid_str.rsplit('.', 1)[-1]
-                    result[index] = value
-
-        except Exception as e:
-            logger.error(f"SNMP WALK error: {e}")
-
-        return result
-
     def store_metrics(self, device, metrics: Dict[str, Any]) -> int:
         """
         存储监控数据到 Redis（TTL 10 分钟）
@@ -569,6 +323,10 @@ class MonitoringService:
             存储的记录数
 
         """
+        latest_snapshot = self.get_latest_metrics_from_redis(device.id)
+        previous_metrics = latest_snapshot.get('metrics', {}) if latest_snapshot else {}
+        metrics = self._merge_metrics_payload(previous_metrics, metrics)
+
         stored_count = 0
 
         # 计算记录数（与旧逻辑保持一致，用于任务返回值）
@@ -582,6 +340,12 @@ class MonitoringService:
             stored_count += 1
 
         if metrics.get('connections') is not None:
+            stored_count += 1
+
+        if metrics.get('cpu_usage') is not None:
+            stored_count += 1
+
+        if metrics.get('memory_usage') is not None:
             stored_count += 1
 
         for interface in metrics.get('interfaces', []):
@@ -811,6 +575,26 @@ class MonitoringService:
                     'timestamp': ts,
                 })
 
+            cpu_usage = metrics.get('cpu_usage')
+            if cpu_usage is not None:
+                rows.append({
+                    'metric_type': 'cpu',
+                    'metric_name': 'cpu_usage',
+                    'value': cpu_usage,
+                    'unit': '%',
+                    'timestamp': ts,
+                })
+
+            memory_usage = metrics.get('memory_usage')
+            if memory_usage is not None:
+                rows.append({
+                    'metric_type': 'memory',
+                    'metric_name': 'memory_usage',
+                    'value': memory_usage,
+                    'unit': '%',
+                    'timestamp': ts,
+                })
+
             for neighbor in metrics.get('ospf_neighbors', []):
                 neighbor_ip = neighbor.get('neighbor_ip', 'unknown')
                 rows.append({
@@ -904,6 +688,10 @@ class MonitoringService:
                     value = metrics['packet_loss']
                 elif metric_name == 'active_connections' and metrics.get('connections') is not None:
                     value = metrics['connections']
+                elif metric_name == 'cpu_usage' and metrics.get('cpu_usage') is not None:
+                    value = metrics['cpu_usage']
+                elif metric_name == 'memory_usage' and metrics.get('memory_usage') is not None:
+                    value = metrics['memory_usage']
 
             # ospf neighbors
             if value is None:

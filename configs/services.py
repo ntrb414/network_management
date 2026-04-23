@@ -262,16 +262,7 @@ class ConfigManagementService:
         return cleaned_config
 
     def _get_config_via_paramiko(self, device, config_type='running') -> str:
-        """
-        通过 Paramiko 直接获取设备配置（备用方法）
-
-        Args:
-            device: 设备对象
-            config_type: 配置类型 ('running' 或 'startup')
-
-        Returns:
-            配置内容
-        """
+        
         try:
             import paramiko
             from paramiko import SSHClient, AutoAddPolicy
@@ -467,16 +458,7 @@ class ConfigManagementService:
         }
 
     def deploy_config(self, device, config: str) -> Dict[str, Any]:
-        """
-        通过 Nornir 下发配置到设备
-
-        Args:
-            device: 设备对象
-            config: 配置内容
-
-        Returns:
-            执行结果字典
-        """
+     
         batch_result = self.deploy_config_batch([device], config)
         if batch_result['results']:
             return batch_result['results'][0]
@@ -535,16 +517,7 @@ class ConfigManagementService:
             }
 
     def deploy_config_batch(self, devices: List, config: str) -> Dict[str, Any]:
-        """
-        批量下发配置到多个设备
-
-        Args:
-            devices: 设备列表
-            config: 配置内容
-
-        Returns:
-            执行结果字典
-        """
+       
         start_time = time.perf_counter()
         devices = list(devices)
         if not devices:
