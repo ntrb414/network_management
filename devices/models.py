@@ -64,7 +64,7 @@ class Device(models.Model):
     gnmi_insecure = models.BooleanField('跳过 TLS 验证', default=True)
 
     # Syslog 配置
-    syslog_enabled = models.BooleanField('启用Syslog', default=False)
+    syslog_enabled = models.BooleanField('启用Syslog', default=True)
     syslog_server_ip = models.GenericIPAddressField('Syslog服务器IP', null=True, blank=True)
     syslog_server_port = models.IntegerField('Syslog服务器端口', default=10514)
     syslog_protocol = models.CharField('Syslog协议', max_length=10, choices=SYSLOG_PROTOCOL_CHOICES, default='udp')

@@ -1,20 +1,14 @@
-"""
-日志 Celery 异步任务
-
-包含日志清理、日志采集等任务。
-"""
-
+# 日志Celery异步任务
 from celery import shared_task
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    queue='low',
+)
 def cleanup_old_logs(self, days: int = 7):
-    """
-    清理老旧日志任务
-
-    清理指定天数前的日志
-
-    """
+    # 清理指定天数前的日志
     from .services import LogService
 
     service = LogService()
@@ -24,14 +18,14 @@ def cleanup_old_logs(self, days: int = 7):
     return result
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    queue='low',
+)
 def generate_log_report(self, days: int = 7):
-    """
-    生成日志报告任务
-
-    Args:
-        days: 报告天数
-    """
+    # 生成日志统计报告
+    # 参数: days-统计天数
     from .services import LogService
 
     service = LogService()
@@ -45,15 +39,16 @@ def generate_log_report(self, days: int = 7):
     }
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=120,
+    soft_time_limit=100,
+    queue='default',
+)
 def collect_device_logs(self, device_id: int):
-    """
-    采集单个设备日志任务
-
-    Args:
-        device_id: 设备ID
-
-    """
+    # 采集单个设备日志
+    # 参数: device_id-设备ID
     from devices.models import Device
     from .services import LogService
 
@@ -71,14 +66,15 @@ def collect_device_logs(self, device_id: int):
     return result
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=300,
+    soft_time_limit=270,
+    queue='default',
+)
 def collect_all_online_devices_logs(self):
-    """
-    采集所有在线设备日志任务
-
-    遍历所有在线设备，通过SSH采集日志并存储到数据库
-
-    """
+    # 采集所有在线设备日志
     from devices.models import Device
     from .services import LogService
 

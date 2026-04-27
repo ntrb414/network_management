@@ -7,61 +7,7 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/global.css' %}">
     <style>
-        /* Terminal - 保持不变 */
-        #terminal-container {
-            position: fixed; inset: 0;
-            background: #0d0d0d;
-            z-index: 2000;
-            display: none;
-            flex-direction: column;
-        }
-        #terminal-container.active { display: flex; }
-        .terminal-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0.625rem 1rem;
-            background: #161616;
-            border-bottom: 1px solid #2a2a2a;
-            flex-shrink: 0;
-        }
-        .terminal-title { color: #a1a1aa; font-size: 0.8125rem; font-family: monospace; }
-        .terminal-title strong { color: #e4e4e7; }
-        .terminal-btn {
-            padding: 0.25rem 0.625rem; font-size: 0.75rem; border-radius: 0.25rem;
-            border: none; cursor: pointer; font-weight: 500;
-        }
-        .terminal-close { background: #3f1212; color: #fca5a5; }
-        .terminal-close:hover { background: #7f1d1d; }
-        .terminal-reconnect { background: #052e16; color: #86efac; }
-        .terminal-reconnect:hover { background: #14532d; }
-        .terminal-reconnect:disabled { opacity: 0.4; cursor: not-allowed; }
-        #terminal { 
-            flex: 1; 
-            padding: 0.375rem; 
-            overflow: hidden; 
-            position: relative; 
-            min-height: 0;
-            background: #0d0d0d;
-        }
-        #term-container { 
-            position: absolute; 
-            inset: 0.375rem;
-            background: #0d0d0d;
-        }
-        /* xterm.js 内部容器样式修复 */
-        .xterm {
-            height: 100% !important;
-            background: #0d0d0d !important;
-        }
-        .xterm-screen {
-            height: 100% !important;
-            background: #0d0d0d !important;
-        }
-        .xterm-viewport {
-            background: #0d0d0d !important;
-        }
-        .terminal-loading { color: #71717a; padding: 1rem; text-align: center; font-size: 0.875rem; }
-        .terminal-error { color: #f87171; padding: 1rem; text-align: center; font-size: 0.875rem; }
-        .terminal-error a { color: #60a5fa; text-decoration: underline; cursor: pointer; }
+        /* Terminal - 已移至独立页面 ssh_terminal.html */
 
         /* 新增：内联搜索框（Filter Panel 内） */
         #toast-container { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
@@ -134,49 +80,131 @@
             margin-bottom: 0.25rem;
         }
 
-        /* ── NW Layout (inline to bypass cache) ── */
-        .nw-layout { display: flex; min-height: 100vh; }
-        .nw-sidebar {
+        /* ── NB Layout (inline to bypass cache) ── */
+        /* Top navbar */
+        .nb-topbar {
+            background: #1a2332;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid #0d1520;
+        }
+        .nb-topbar-brand {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nb-topbar-brand svg { color: #4dabf7; }
+        .nb-topbar-spacer { flex: 1; }
+        .nb-topbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .nb-topbar-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: #8ba3bc;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.12s;
+        }
+        .nb-topbar-btn:hover { background: rgba(255,255,255,0.1); color: #c9d8e8; border-color: rgba(255,255,255,0.15); }
+        .nb-topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #c9d8e8;
+            font-size: 0.875rem;
+        }
+        .nb-topbar-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #4dabf7;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8125rem;
+        }
+        .nb-logout-btn {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: #f87171;
+            background: rgba(248,113,113,0.1);
+            border: 1px solid rgba(248,113,113,0.2);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+        .nb-logout-btn:hover { background: rgba(248,113,113,0.2); border-color: rgba(248,113,113,0.3); }
+
+        .nb-layout { display: flex; min-height: 100vh; }
+        .nb-sidebar {
             width: 220px; min-width: 220px;
             background: #1e2d3d;
+            border-right: 1px solid #162030;
+            padding: 1rem 0;
             display: flex; flex-direction: column;
-            position: fixed; top: 0; left: 0; height: 100vh;
+            position: fixed; top: 48px; left: 0; height: calc(100vh - 48px);
             z-index: 100;
+            overflow-y: auto;
         }
-        .nw-sidebar.collapsed { width: 56px; min-width: 56px; }
-        .nw-sidebar.collapsed .nw-sidebar-section-title,
-        .nw-sidebar.collapsed .nw-sidebar-link span,
-        .nw-sidebar.collapsed .nw-sidebar-user-info,
-        .nw-sidebar.collapsed .nw-sidebar-brand { display: none; }
-        .nw-sidebar-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0.875rem 1rem; border-bottom: 1px solid #162030; min-height: 48px;
+        .nb-sidebar-section {
+            padding: 0.5rem 1rem 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #4a6080;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
         }
-        .nw-sidebar-brand { font-size: 0.9375rem; font-weight: 700; color: #fff; text-decoration: none; white-space: nowrap; overflow: hidden; }
-        .nw-sidebar-toggle { background: none; border: none; color: #4a6080; cursor: pointer; padding: 0.25rem; border-radius: 4px; display: flex; align-items: center; flex-shrink: 0; }
-        .nw-sidebar-toggle:hover { color: #8ba3bc; background: rgba(255,255,255,0.05); }
-        .nw-sidebar-nav { flex: 1; padding: 0.5rem 0; overflow-y: auto; }
-        .nw-sidebar-section { margin-bottom: 0.25rem; }
-        .nw-sidebar-section-title { padding: 0.5rem 1rem 0.25rem; font-size: 0.6875rem; font-weight: 700; color: #4a6080; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
-        .nw-sidebar-link { display: flex; align-items: center; gap: 0.625rem; padding: 0.4375rem 1rem; color: #8ba3bc; text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: background 0.12s, color 0.12s; border-left: 3px solid transparent; white-space: nowrap; }
-        .nw-sidebar-link svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
-        .nw-sidebar-link:hover { background: rgba(255,255,255,0.05); color: #c9d8e8; border-left-color: #4dabf7; }
-        .nw-sidebar-link.active { background: rgba(77,171,247,0.1); color: #74c0fc; border-left-color: #4dabf7; }
-        .nw-sidebar-group { margin: 0; }
-        .nw-sidebar-group summary { list-style: none; }
-        .nw-sidebar-group summary::-webkit-details-marker { display: none; }
-        .nw-sidebar-drawer-toggle { justify-content: space-between; cursor: pointer; }
-        .nw-sidebar-drawer-label { display: inline-flex; align-items: center; gap: 0.625rem; }
-        .nw-sidebar-drawer-chevron { width: 14px; height: 14px; margin-left: auto; opacity: 0.7; transition: transform 0.15s ease; }
-        .nw-sidebar-group[open] .nw-sidebar-drawer-chevron { transform: rotate(180deg); }
-        .nw-sidebar-submenu { display: grid; gap: 0.125rem; padding: 0.25rem 0 0.5rem; }
-        .nw-sidebar-sublink { display: block; margin-left: 2.5rem; margin-right: 0.75rem; padding: 0.375rem 0.75rem; border-radius: 0.375rem; color: #8ba3bc; text-decoration: none; font-size: 0.8125rem; font-weight: 500; transition: background 0.12s, color 0.12s; }
-        .nw-sidebar-sublink:hover { background: rgba(255,255,255,0.05); color: #c9d8e8; }
-        .nw-sidebar-sublink.active { background: rgba(77,171,247,0.14); color: #74c0fc; }
+        .nb-sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.4375rem 1rem;
+            color: #8ba3bc;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.12s, color 0.12s;
+            border-left: 3px solid transparent;
+            white-space: nowrap;
+        }
+        .nb-sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+        .nb-sidebar-item:hover { background: rgba(255,255,255,0.05); color: #c9d8e8; border-left-color: #4dabf7; }
+        .nb-sidebar-item.active { background: rgba(77,171,247,0.1); color: #74c0fc; border-left-color: #4dabf7; }
+        .nb-sidebar-divider { height: 1px; background: #162030; margin: 0.5rem 0; }
+        .nb-sidebar-drawer { margin: 0; }
+        .nb-sidebar-drawer summary { list-style: none; }
+        .nb-sidebar-drawer summary::-webkit-details-marker { display: none; }
+        .nb-sidebar-drawer-toggle { cursor: pointer; justify-content: space-between; }
+        .nb-sidebar-drawer-label { display: inline-flex; align-items: center; gap: 0.625rem; }
+        .nb-sidebar-drawer-icon { width: 14px; height: 14px; margin-left: auto; opacity: 0.7; transition: transform 0.15s ease; }
+        .nb-sidebar-drawer[open] .nb-sidebar-drawer-icon { transform: rotate(180deg); }
+        .nb-sidebar-submenu { display: grid; gap: 0.125rem; padding: 0.25rem 0 0.5rem; }
+        .nb-sidebar-subitem { display: block; margin-left: 2.5rem; margin-right: 0.75rem; padding: 0.375rem 0.75rem; border-radius: 0.375rem; color: #8ba3bc; text-decoration: none; font-size: 0.8125rem; font-weight: 500; transition: background 0.12s, color 0.12s; }
+        .nb-sidebar-subitem:hover { background: rgba(255,255,255,0.05); color: #c9d8e8; }
+        .nb-sidebar-subitem.active { background: rgba(77,171,247,0.14); color: #74c0fc; }
 
         /* Alert badge dot */
-        .nw-sidebar-link { position: relative; }
-        .nw-sidebar-alert-dot {
+        .nb-sidebar-item { position: relative; }
+        .nb-sidebar-alert-dot {
             position: absolute;
             top: 6px;
             right: 8px;
@@ -187,32 +215,18 @@
             display: none;
             animation: pulse-dot 2s infinite;
         }
-        .nw-sidebar-alert-dot.has-alerts { display: block; }
+        .nb-sidebar-alert-dot.has-alerts { display: block; }
         @keyframes pulse-dot {
             0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
             70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
             100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
-        .nw-sidebar-footer { padding: 0.875rem 1rem; border-top: 1px solid #162030; }
-        .nw-sidebar-user { display: flex; align-items: center; gap: 0.625rem; }
-        .nw-sidebar-user-info { overflow: hidden; }
-        .nw-sidebar-username { font-size: 0.875rem; font-weight: 600; color: #c9d8e8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .nw-sidebar-role { font-size: 0.75rem; color: #4a6080; }
-        .nw-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #f8f9fa; margin-left: 220px; }
-        .nw-header { background: #fff; border-bottom: 1px solid var(--border); padding: 0 1.5rem; height: 48px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; flex-shrink: 0; }
-        .nw-breadcrumb { display: flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; color: var(--muted-foreground); }
-        .nw-breadcrumb a { color: var(--muted-foreground); text-decoration: none; }
-        .nw-breadcrumb a:hover { color: var(--foreground); }
-        .nw-breadcrumb .separator { color: var(--border); }
-        .nw-breadcrumb .current { color: var(--foreground); font-weight: 500; }
-        .nw-header-actions { display: flex; align-items: center; gap: 0.5rem; }
-        .nw-content { padding: 1.5rem; flex: 1; }
-        .nw-page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; gap: 1rem; }
-        .nw-page-title { font-size: 1.25rem; font-weight: 700; color: #1a2332; letter-spacing: -0.02em; }
-        .nw-page-subtitle { font-size: 0.875rem; color: var(--muted-foreground); margin-top: 0.125rem; }
-        .nw-page-header-left {}
-        .nw-page-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-        .nw-list-view { display: flex; gap: 1rem; align-items: flex-start; }
+        .nb-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #f8f9fa; margin-left: 220px; }
+        .nb-page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; gap: 1rem; padding: 1.25rem 1.5rem 0; }
+        .nb-page-title { font-size: 1.25rem; font-weight: 700; color: #1a2332; letter-spacing: -0.02em; }
+        .nb-page-subtitle { font-size: 0.875rem; color: var(--muted-foreground); margin-top: 0.125rem; }
+        .nb-page-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .nw-list-view { display: flex; gap: 1rem; align-items: flex-start; padding: 0 1.5rem 1.5rem; }
         .nw-list-view-main { flex: 1; min-width: 0; }
         .nw-list-view-sidebar { width: 220px; min-width: 220px; flex-shrink: 0; }
         .nw-list-card { background: #fff; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
@@ -262,128 +276,86 @@
     </style>
 </head>
 <body>
+
+<!-- Top navbar -->
+<nav class="nb-topbar">
+    <a href="{% url 'homepage:homepage' %}" class="nb-topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        网络管理系统
+    </a>
+    <div class="nb-topbar-spacer"></div>
+    <div class="nb-topbar-actions">
+        <div class="nb-topbar-user">
+            <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
+            <span>{{ user.username }}</span>
+            {% if user.is_superuser %}<span style="color:#4dabf7;font-size:0.75rem;">(管理员)</span>{% endif %}
+        </div>
+        <form method="post" action="{% url 'homepage:logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="nb-logout-btn">退出</button>
+        </form>
+    </div>
+</nav>
     <!-- =========================================
          NETBOX-STYLE LAYOUT: 侧边栏 + 主工作区
          ========================================= -->
-    <div class="nw-layout">
+    <div class="nb-layout">
 
-        <!-- 侧边栏 -->
-        <aside class="nw-sidebar" id="sidebar">
-            <div class="nw-sidebar-header">
-                <a href="{% url 'homepage:homepage' %}" class="nw-sidebar-brand">网络管理系统</a>
-                <button class="nw-sidebar-toggle" onclick="toggleSidebar()" title="收起/展开">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-                        <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
-                    </svg>
-                </button>
-            </div>
+        <!-- Sidebar -->
+        <aside class="nb-sidebar">
+            <div class="nb-sidebar-section">导航</div>
+            <a href="{% url 'homepage:homepage' %}" class="nb-sidebar-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                仪表盘
+            </a>
+            <div class="nb-sidebar-divider"></div>
+            <div class="nb-sidebar-section">功能模块</div>
+            <a href="{% url 'devices:device_list' %}" class="nb-sidebar-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                设备管理
+            </a>
+            {% include 'includes/device_config_sidebar_item.html' %}
+            <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nb-sidebar-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                性能监控
+            </a>
+            <a href="{% url 'ipmanagement:subnet_list' %}" class="nb-sidebar-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                IP管理
+            </a>
+            <a href="{% url 'alerts:alert_list' %}" class="nb-sidebar-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                告警管理
+                <span class="nb-sidebar-alert-dot" id="sidebarAlertDot"></span>
+            </a>
+            <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                系统日志
+            </a>
+            <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                账户管理
+            </a>
+        <div class="nb-sidebar-divider"></div>
+        <div class="nb-sidebar-section">系统</div>
+        <a href="{% url 'admin_panel:scheduled_tasks' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            定时任务
+        </a>
 
-            <nav class="nw-sidebar-nav">
-                <div class="nw-sidebar-section">
-                    <div class="nw-sidebar-section-title">概览</div>
-                    <a href="{% url 'homepage:homepage' %}" class="nw-sidebar-link {% if request.path == '/' %}active{% endif %}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                        <span>首页</span>
-                    </a>
-                </div>
-
-                <div class="nw-sidebar-section">
-                    <div class="nw-sidebar-section-title">资源管理</div>
-                    <a href="{% url 'devices:device_list' %}" class="nw-sidebar-link {% if '/devices/' in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                        <span>设备管理</span>
-                    </a>
-                    <details class="nw-sidebar-group" {% if '/configs/' in request.path %}open{% endif %}>
-                        <summary class="nw-sidebar-link nw-sidebar-drawer-toggle {% if '/configs/' in request.path %}active{% endif %}">
-                            <span class="nw-sidebar-drawer-label">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                                <span>设备配置</span>
-                            </span>
-                            <svg class="nw-sidebar-drawer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                        </summary>
-                        <div class="nw-sidebar-submenu">
-                            <a href="{% url 'configs:config_list' %}" class="nw-sidebar-sublink {% if '/configs/' in request.path and '/configs/backup/' not in request.path %}active{% endif %}">配置模板与任务</a>
-                            <a href="{% url 'configs:config_backup' %}" class="nw-sidebar-sublink {% if '/configs/backup/' in request.path %}active{% endif %}">配置备份</a>
-                        </div>
-                    </details>
-                </div>
-
-                <div class="nw-sidebar-section">
-                    <div class="nw-sidebar-section-title">监控告警</div>
-                    <a href="{% url 'monitoring:monitoring_dashboard' %}" class="nw-sidebar-link {% if '/monitoring/' in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                        <span>性能监控</span>
-                    </a>
-                    <a href="{% url 'ipmanagement:subnet_list' %}" class="nw-sidebar-link {% if '/ipmanagement/' in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                        <span>IP管理</span>
-                    </a>
-                    <a href="{% url 'alerts:alert_list' %}" class="nw-sidebar-link {% if '/alerts/' in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                        <span>告警管理</span>
-                        <span class="nw-sidebar-alert-dot" id="sidebarAlertDot"></span>
-                    </a>
-                    <a href="{% url 'logs:log_list' %}" class="nw-sidebar-link {% if '/logs/' in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                        <span>设备日志</span>
-                    </a>
-                </div>
-
-                <div class="nw-sidebar-section">
-                    <div class="nw-sidebar-section-title">系统</div>
-                    <a href="{% url 'accounts:account_list' %}" class="nw-sidebar-link {% if '/accounts/' in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        <span>账户管理</span>
-                    </a>
-                </div>
-            </nav>
-
-            <div class="nw-sidebar-footer">
-                <div class="nw-sidebar-user">
-                    <div class="avatar">{{ user.username|make_list|first|upper }}</div>
-                    <div class="nw-sidebar-user-info">
-                        <div class="nw-sidebar-username">{{ user.username }}</div>
-                        <div class="nw-sidebar-role">{% if user.is_superuser %}管理员{% else %}用户{% endif %}</div>
-                    </div>
-                </div>
-                <form method="post" action="{% url 'homepage:logout' %}" style="margin-top:0.75rem;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;gap:0.5rem;color:var(--gray-400);">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        <span>退出登录</span>
-                    </button>
-                </form>
-            </div>
         </aside>
 
         <!-- 主工作区 -->
-        <main class="nw-main">
-            <!-- 顶部工具栏 -->
-            <header class="nw-header">
-                <div class="nw-breadcrumb">
-                    <a href="{% url 'homepage:homepage' %}">首页</a>
-                    <span class="separator">/</span>
-                    <span class="current">设备管理</span>
+        <main class="nb-main">
+            <!-- Page header -->
+            <div class="nb-page-header">
+                <div>
+                    <div class="nb-page-title">设备管理</div>
+                    <div class="nb-page-subtitle">管理网络设备列表</div>
                 </div>
-                <div class="nw-header-actions">
-                    {% if can_manage_devices %}
-                    <a href="{% url 'monitoring:monitoring_dashboard' %}" class="btn btn-ghost btn-sm">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                        监控
-                    </a>
-                    {% endif %}
-                </div>
-            </header>
-
-            <!-- 页面内容 -->
-            <div class="nw-content">
-                <!-- 页面标题 -->
-                <div class="nw-page-header">
-                    <div class="nw-page-header-left">
-                        <h1 class="nw-page-title">设备管理</h1>
-                        <p class="nw-page-subtitle">管理网络设备列表</p>
-                    </div>
-                    <div class="nw-page-header-actions">
+                <div class="nb-page-header-actions">
                         {% if can_manage_devices %}
                         <button class="btn btn-secondary" onclick="refreshAllDevicesStatus()" id="refreshStatusBtn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -694,17 +666,7 @@
         </div>
     </div>
 
-    <!-- Terminal -->
-    <div id="terminal-container">
-        <div class="terminal-header">
-            <div class="terminal-title">终端 — <strong id="terminalDeviceInfo"></strong></div>
-            <div style="display:flex;gap:.375rem;">
-                <button class="terminal-btn terminal-reconnect" onclick="reconnectSSH()" id="reconnectBtn" style="display:none;">重新连接</button>
-                <button class="terminal-btn terminal-close" onclick="closeTerminal()">关闭</button>
-            </div>
-        </div>
-        <div id="terminal"><div class="terminal-loading">正在连接...</div></div>
-    </div>
+    <!-- Terminal - 已移至独立页面 ssh_terminal.html -->
 
     <!-- =========================================
          JavaScript: 所有原有业务逻辑完整保留
@@ -764,13 +726,10 @@
         function closeModal() { document.getElementById('deviceModal').classList.remove('active'); }
 
         /* ── 原有 SSH 逻辑 ── */
-        let currentSSHDeviceId = null, currentSSHDeviceIP = null;
-        let currentSSHUsername = null, currentSSHPassword = null, currentSSHPort = null;
-        let idleWarningTimeout = null;
+        let currentSSHDeviceId = null;
 
         function openSSHModal(deviceId, deviceName, deviceIP, sshPort, sshUsername, sshPassword) {
             currentSSHDeviceId = deviceId;
-            currentSSHDeviceIP = deviceIP;
             document.getElementById('sshDeviceName').textContent = deviceName;
             document.getElementById('sshDeviceIP').textContent = deviceIP + ':' + (sshPort || 22);
             document.getElementById('ssh_connect_username').value = sshUsername || '';
@@ -838,346 +797,15 @@
             const password = document.getElementById('ssh_connect_password').value;
             const port = document.getElementById('ssh_connect_port').value || 22;
             if (!username || !password) { showAlert('请输入用户名和密码', 'error'); return; }
-            currentSSHUsername = username;
-            currentSSHPassword = password;
-            currentSSHPort = port;
             closeSSHModal();
-            openTerminal(currentSSHDeviceIP, port, username, password);
-        }
 
-        function openTerminal(ip, port, username, password) {
-            const terminalContainer = document.getElementById('terminal-container');
-            const terminalDiv = document.getElementById('terminal');
-            document.getElementById('terminalDeviceInfo').textContent = `${username}@${ip}:${port}`;
-            terminalContainer.classList.add('active');
-            terminalDiv.innerHTML = '<div class="terminal-loading">正在建立 SSH 连接...</div>';
+            // 在新窗口打开SSH终端页面
+            const sshUrl = `/devices/${currentSSHDeviceId}/ssh-terminal/?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&port=${port}`;
+            const sshWindow = window.open(sshUrl, `ssh_terminal_${currentSSHDeviceId}`, 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no');
 
-            // 清理旧的 WebSocket
-            if (window.sshWs) {
-                window.sshWs.close();
-                window.sshWs = null;
+            if (!sshWindow) {
+                showAlert('无法打开新窗口，请检查浏览器弹窗设置', 'error');
             }
-            // 清理旧终端
-            if (window.term) {
-                window.term.dispose();
-                window.term = null;
-            }
-
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${window.location.host}${DEVICE_WEBSSH_URL(currentSSHDeviceId)}`;
-            
-            let ws;
-            try {
-                ws = new WebSocket(wsUrl);
-            } catch (e) {
-                terminalDiv.innerHTML = `<div class="terminal-error">创建 WebSocket 失败: ${e.message}<br><a onclick="reconnectSSH()">点此重试</a></div>`;
-                document.getElementById('reconnectBtn').style.display = 'block';
-                return;
-            }
-
-            // 状态标记
-            let isConnected = false;
-            let isAuthenticated = false;
-            let hasReceivedOutput = false;
-            let errorMessage = null;
-
-            // WebSocket 连接超时处理（20秒）
-            const connectionTimeout = setTimeout(() => {
-                if (!isConnected) {
-                    ws.close();
-                    terminalDiv.innerHTML = '<div class="terminal-error">连接超时：无法建立到服务器的 WebSocket 连接<br>请检查：1. 网络连接 2. 服务器是否运行 3. WebSocket 代理设置<br><a onclick="reconnectSSH()">点此重试</a></div>';
-                    document.getElementById('reconnectBtn').style.display = 'block';
-                }
-            }, 20000);
-
-            // SSH 认证超时处理（15秒）
-            let authTimeout = null;
-
-            ws.onopen = function() {
-                clearTimeout(connectionTimeout);
-                isConnected = true;
-                terminalDiv.innerHTML = '<div class="terminal-loading">连接已建立，正在发送认证信息...</div>';
-                ws.send(JSON.stringify({ action: 'connect', username, password, port: parseInt(port) }));
-                
-                // 设置认证超时
-                authTimeout = setTimeout(() => {
-                    if (!isAuthenticated && !hasReceivedOutput) {
-                        terminalDiv.innerHTML = '<div class="terminal-error">认证超时：服务器没有响应<br>可能原因：1. 设备不可达 2. SSH服务未启动 3. 认证被拒绝<br><a onclick="reconnectSSH()">点此重试</a></div>';
-                        document.getElementById('reconnectBtn').style.display = 'block';
-                    }
-                }, 15000);
-            };
-
-            ws.onmessage = function(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    
-                    if (data.type === 'output') {
-                        hasReceivedOutput = true;
-                        isAuthenticated = true;
-                        clearTimeout(authTimeout);
-                        if (window.term) { 
-                            window.term.write(data.data); 
-                        } else { 
-                            // 第一次接收输出，初始化终端
-                            terminalDiv.innerHTML = '<div id="term-container"></div>'; 
-                            initTerminal(data.data); 
-                        }
-                        document.getElementById('reconnectBtn').style.display = 'block';
-                    } else if (data.type === 'error') {
-                        clearTimeout(authTimeout);
-                        errorMessage = data.message;
-                        // 分析错误类型并显示友好提示
-                        let errorHtml = '<div class="terminal-error">';
-                        errorHtml += `<strong>连接失败</strong><br>`;
-                        errorHtml += `${data.message}<br><br>`;
-                        
-                        // 优先使用 error_type 字段，后备到文本匹配
-                        const errorType = data.error_type || '';
-                        if (errorType === 'authentication' || data.message.includes('认证') || data.message.includes('密码')) {
-                            errorHtml += '<span style="color:#fbbf24">💡 提示：请检查用户名和密码是否正确</span><br>';
-                            errorHtml += '<span style="color:#94a3b8; font-size:0.75rem">详情：SSH 服务拒绝了认证，可能是密码错误或用户不存在</span><br>';
-                        } else if (errorType === 'eof' || data.message.includes('关闭') || data.message.includes('Shell')) {
-                            errorHtml += '<span style="color:#fbbf24">💡 提示：设备不支持交互式 SSH 或禁用了 PTY</span><br>';
-                            errorHtml += '<span style="color:#94a3b8; font-size:0.75rem">详情：认证成功但设备关闭了连接，某些网络设备只支持命令执行而不是交互式 Shell</span><br>';
-                        } else if (errorType === 'timeout' || data.message.includes('超时')) {
-                            errorHtml += '<span style="color:#fbbf24">💡 提示：设备网络不可达，请检查IP地址和网络连接</span><br>';
-                            errorHtml += '<span style="color:#94a3b8; font-size:0.75rem">详情：连接在规定时间内没有响应</span><br>';
-                        } else if (errorType === 'network' && data.message.includes('拒绝')) {
-                            errorHtml += '<span style="color:#fbbf24">💡 提示：SSH服务未启动或端口不正确</span><br>';
-                            errorHtml += '<span style="color:#94a3b8; font-size:0.75rem">详情：设备拒绝了 SSH 连接请求</span><br>';
-                        } else if (errorType === 'network' && data.message.includes('路由')) {
-                            errorHtml += '<span style="color:#fbbf24">💡 提示：无法访问该IP地址</span><br>';
-                            errorHtml += '<span style="color:#94a3b8; font-size:0.75rem">详情：网络路由不可达</span><br>';
-                        } else if (errorType === 'host_key') {
-                            errorHtml += '<span style="color:#fbbf24">💡 提示：主机密钥已变更，请联系管理员</span><br>';
-                        } else if (errorType === 'ssh') {
-                            errorHtml += '<span style="color:#fbbf24">💡 提示：SSH 协议错误，可能是设备不支持 SSH</span><br>';
-                        } else {
-                            errorHtml += '<span style="color:#fbbf24">💡 提示：请检查设备状态和连接配置</span><br>';
-                        }
-                        
-                        errorHtml += '<br><a onclick="reconnectSSH()">点此重试</a> 或 <a onclick="closeTerminal()">关闭终端</a>';
-                        errorHtml += '</div>';
-                        terminalDiv.innerHTML = errorHtml;
-                        document.getElementById('reconnectBtn').style.display = 'block';
-                    } else if (data.type === 'connected') {
-                        // 收到 connected 消息表示 SSH 连接已建立，等待认证结果
-                        isAuthenticated = true;
-                        clearTimeout(authTimeout);
-                        terminalDiv.innerHTML = '<div class="terminal-loading">SSH 连接已建立，等待设备响应...</div>';
-                    } else if (data.type === 'reconnecting') {
-                        if (window.term) window.term.write('\r\n\r\n[正在重新连接...]\r\n');
-                    } else if (data.type === 'timeout') {
-                        if (window.term) window.term.write(`\r\n\r\n[${data.message}]\r\n`);
-                        showAlert(data.message, 'info');
-                    } else if (data.type === 'idle_warning') {
-                        clearTimeout(idleWarningTimeout);
-                        idleWarningTimeout = setTimeout(() => showAlert(`空闲超时警告：连接将在 ${data.remaining} 秒后断开`, 'info'), 100);
-                    }
-                } catch (e) {
-                    console.error('处理 WebSocket 消息失败:', e);
-                }
-            };
-
-            ws.onerror = function(error) {
-                clearTimeout(connectionTimeout);
-                clearTimeout(authTimeout);
-                console.error('WebSocket 错误:', error);
-                // 如果已经连接成功并收到输出，不显示错误（可能是正常关闭）
-                if (!hasReceivedOutput) {
-                    terminalDiv.innerHTML = '<div class="terminal-error"><strong>WebSocket 连接错误</strong><br>无法建立到服务器的实时连接<br>请检查：1. 网络连接 2. 服务器状态<br><br><a onclick="reconnectSSH()">点此重试</a></div>';
-                    document.getElementById('reconnectBtn').style.display = 'block';
-                }
-            };
-
-            ws.onclose = function(event) {
-                clearTimeout(connectionTimeout);
-                clearTimeout(authTimeout);
-                if (window.term) {
-                    if (event.wasClean) {
-                        window.term.write('\r\n\r\n[连接已正常关闭]\r\n');
-                    } else if (hasReceivedOutput) {
-                        window.term.write('\r\n\r\n[连接已意外断开]\r\n');
-                        document.getElementById('reconnectBtn').style.display = 'block';
-                    }
-                }
-            };
-
-            window.sshWs = ws;
-        }
-
-        function initTerminal(initialData) {
-            const container = document.getElementById('term-container');
-            const terminalDiv = document.getElementById('terminal');
-            
-            // 检查是否已有终端实例，如果有则清理
-            if (window.term) {
-                window.term.dispose();
-                window.term = null;
-            }
-            
-            // 设置加载超时
-            const loadTimeout = setTimeout(() => {
-                container.innerHTML = '<div class="terminal-error">终端组件加载超时，请检查网络连接后<a onclick="retryInitTerminal()">点此重试</a></div>';
-            }, 30000);
-            
-            window.retryInitTerminal = function() {
-                clearTimeout(loadTimeout);
-                container.innerHTML = '';
-                initTerminal(initialData);
-            };
-
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css';
-            link.onerror = function() {
-                clearTimeout(loadTimeout);
-                container.innerHTML = '<div class="terminal-error">加载终端样式失败，请检查网络后<a onclick="retryInitTerminal()">点此重试</a></div>';
-            };
-            document.head.appendChild(link);
-
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js';
-            script.onerror = function() {
-                clearTimeout(loadTimeout);
-                container.innerHTML = '<div class="terminal-error">加载终端组件失败，请检查网络后<a onclick="retryInitTerminal()">点此重试</a></div>';
-            };
-            script.onload = function() {
-                clearTimeout(loadTimeout);
-                
-                // 确保容器有尺寸
-                const containerWidth = container.clientWidth || terminalDiv.clientWidth || 800;
-                const containerHeight = container.clientHeight || terminalDiv.clientHeight || 600;
-                
-                if (!containerWidth || !containerHeight) {
-                    container.innerHTML = '<div class="terminal-error">终端容器尺寸异常，请<a onclick="retryInitTerminal()">点此重试</a></div>';
-                    return;
-                }
-                
-                try {
-                    window.term = new Terminal({
-                        cursorBlink: true, 
-                        fontSize: 14,
-                        fontFamily: 'Menlo, Monaco, "Courier New", monospace, Consolas, "Liberation Mono", "DejaVu Sans Mono"',
-                        theme: { 
-                            background: '#0d0d0d', 
-                            foreground: '#e4e4e7', 
-                            cursor: '#e4e4e7', 
-                            selection: '#3f3f46',
-                            black: '#0d0d0d',
-                            brightBlack: '#262626',
-                            red: '#f87171',
-                            brightRed: '#fca5a5',
-                            green: '#4ade80',
-                            brightGreen: '#86efac',
-                            yellow: '#facc15',
-                            brightYellow: '#fde047',
-                            blue: '#60a5fa',
-                            brightBlue: '#93c5fd',
-                            magenta: '#c084fc',
-                            brightMagenta: '#d8b4fe',
-                            cyan: '#22d3ee',
-                            brightCyan: '#67e8f9',
-                            white: '#e4e4e7',
-                            brightWhite: '#fafafa'
-                        },
-                        rows: 30, 
-                        cols: 120, 
-                        allowProposedApi: true, 
-                        scrollback: 10000, 
-                        convertEol: true,
-                        cursorStyle: 'block',
-                        cursorWidth: 1
-                    });
-
-                    // 先打开终端
-                    window.term.open(container);
-                    
-                    if (initialData) {
-                        window.term.write(initialData);
-                    }
-
-                    // 加载并应用 FitAddon
-                    const fitAddonScript = document.createElement('script');
-                    fitAddonScript.src = 'https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js';
-                    fitAddonScript.onerror = function() {
-                        console.warn('FitAddon 加载失败，终端将使用默认尺寸');
-                    };
-                    fitAddonScript.onload = function() {
-                        if (typeof FitAddon !== 'undefined' && FitAddon.FitAddon) {
-                            const fitAddon = new FitAddon.FitAddon();
-                            window.term.loadAddon(fitAddon);
-                            
-                            // 延迟调用 fit 确保容器已渲染
-                            setTimeout(() => {
-                                try {
-                                    fitAddon.fit();
-                                    // 发送初始大小给服务器
-                                    const dims = window.term.rows + ',' + window.term.cols;
-                                    if (window.sshWs && window.sshWs.readyState === WebSocket.OPEN) {
-                                        window.sshWs.send(JSON.stringify({ type: 'resize', cols: window.term.cols, rows: window.term.rows }));
-                                    }
-                                } catch (e) {
-                                    console.warn('FitAddon fit 失败:', e);
-                                }
-                            }, 100);
-                            
-                            window.addEventListener('resize', () => {
-                                try {
-                                    fitAddon.fit();
-                                } catch (e) {
-                                    console.warn('Resize fit 失败:', e);
-                                }
-                            });
-                        }
-                    };
-                    document.head.appendChild(fitAddonScript);
-
-                    // 设置输入处理
-                    window.term.onData(function(data) {
-                        if (window.sshWs && window.sshWs.readyState === WebSocket.OPEN) {
-                            window.sshWs.send(JSON.stringify({ type: 'input', data: data.replace(/\x7F/g, '\x08') }));
-                        }
-                    });
-
-                    window.term.onResize(function(size) {
-                        if (window.sshWs && window.sshWs.readyState === WebSocket.OPEN) {
-                            window.sshWs.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }));
-                        }
-                    });
-                    
-                    // 焦点设置到终端
-                    setTimeout(() => {
-                        window.term.focus();
-                    }, 100);
-                    
-                } catch (e) {
-                    console.error('终端初始化失败:', e);
-                    container.innerHTML = '<div class="terminal-error">终端初始化失败: ' + e.message + '，请<a onclick="retryInitTerminal()">点此重试</a></div>';
-                }
-            };
-            document.head.appendChild(script);
-        }
-
-        function closeTerminal() {
-            if (window.sshWs) { window.sshWs.close(); window.sshWs = null; }
-            if (window.term) { window.term.dispose(); window.term = null; }
-            if (idleWarningTimeout) { clearTimeout(idleWarningTimeout); idleWarningTimeout = null; }
-            document.getElementById('reconnectBtn').style.display = 'none';
-            document.getElementById('terminal-container').classList.remove('active');
-        }
-
-        function reconnectSSH() {
-            if (!currentSSHUsername || !currentSSHPassword) { showAlert('无法重连：缺少连接参数', 'error'); return; }
-            const btn = document.getElementById('reconnectBtn');
-            btn.disabled = true; btn.textContent = '连接中...';
-            if (window.sshWs) { window.sshWs.close(); window.sshWs = null; }
-            if (window.term) window.term.clear();
-            setTimeout(() => {
-                openTerminal(currentSSHDeviceIP, currentSSHPort, currentSSHUsername, currentSSHPassword);
-                btn.disabled = false; btn.textContent = '重新连接';
-            }, 500);
         }
 
         /* ── 原有 Toast 提示 ── */
@@ -1330,7 +958,7 @@
         document.getElementById('sshModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeSSHModal(); });
         document.getElementById('ipInfoModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeIpInfoModal(); });
 
-        /* ── 设备状态自动轮询（每30秒刷新一次）── */
+        /* ── 设备状态自动轮询（每15秒刷新一次，更快响应状态变化）── */
         const STATUS_MAP = {
             'online':   { label: '在线',   cls: 'status-online' },
             'offline':  { label: '离线',  cls: 'status-offline' },
@@ -1359,9 +987,9 @@
             }
         }
 
-        // 页面加载后立即刷新一次，之后每30秒轮询
+        // 页面加载后立即刷新一次，之后每15秒轮询（更快响应状态变化）
         refreshDeviceStatuses();
-        setInterval(refreshDeviceStatuses, 30000);
+        setInterval(refreshDeviceStatuses, 15000);
 
         // 手动刷新所有设备状态
         async function refreshAllDevicesStatus() {

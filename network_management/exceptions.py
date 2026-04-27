@@ -1,9 +1,4 @@
-"""
-自定义异常处理
-
-统一处理Django和REST framework异常，返回JSON格式错误响应。
-"""
-
+# 自定义异常处理模块
 import logging
 import traceback
 from rest_framework.views import exception_handler
@@ -14,12 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def custom_exception_handler(exc, context):
-    """
-    自定义异常处理器
-
-    捕获异常，记录日志，返回统一的JSON格式错误响应
-    """
-    # 调用REST framework默认的异常处理器
+    # 自定义异常处理器，返回统一JSON格式错误响应
     response = exception_handler(exc, context)
 
     if response is not None:
@@ -52,7 +42,7 @@ def custom_exception_handler(exc, context):
 
 
 def _get_error_message(data):
-    """提取错误消息"""
+    # 提取错误消息
     if isinstance(data, dict):
         # 遍历字典找到第一个错误消息
         for key, value in data.items():
@@ -69,8 +59,7 @@ def _get_error_message(data):
 
 
 class APIException(Exception):
-    """自定义API异常基类"""
-
+    # 自定义API异常基类
     def __init__(self, message, code=400, details=None):
         self.message = message
         self.code = code
@@ -89,35 +78,30 @@ class APIException(Exception):
 
 
 class ValidationError(APIException):
-    """验证错误"""
-
+    # 验证错误
     def __init__(self, message, details=None):
         super().__init__(message, code=400, details=details)
 
 
 class AuthenticationFailed(APIException):
-    """认证失败"""
-
+    # 认证失败
     def __init__(self, message="Authentication failed"):
         super().__init__(message, code=401)
 
 
 class PermissionDenied(APIException):
-    """权限拒绝"""
-
+    # 权限拒绝
     def __init__(self, message="Permission denied"):
         super().__init__(message, code=403)
 
 
 class NotFound(APIException):
-    """资源不存在"""
-
+    # 资源不存在
     def __init__(self, message="Resource not found"):
         super().__init__(message, code=404)
 
 
 class ServiceUnavailable(APIException):
-    """服务不可用"""
-
+    # 服务不可用
     def __init__(self, message="Service unavailable"):
         super().__init__(message, code=503)

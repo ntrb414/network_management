@@ -1,8 +1,4 @@
-"""
-配置备份页面视图--BackupListView（备份列表页面）、BackupDetailView（备份详情页面）、
-ConfigBackupView（手动备份页面）和备份相关API。
-"""
-
+# 配置备份页面视图和API
 from django.views.generic import ListView, DetailView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
@@ -13,8 +9,7 @@ from .models import ConfigBackup
 
 
 class BackupListView(LoginRequiredMixin, ListView):
-    """Display list of all configuration backups."""
-
+    # 备份列表页面（重定向到配置列表）
     model = ConfigBackup
     template_name = 'backups/backup_list.html'
     context_object_name = 'backups'
@@ -22,14 +17,14 @@ class BackupListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get(self, request, *args, **kwargs):
-        return redirect('configs:config_backup')
+        return redirect('configs:config_list')
 
     def get_queryset(self):
-        """Return all backups ordered by backup time."""
+        # 返回按备份时间倒序的备份
         return ConfigBackup.objects.all().order_by('-backed_up_at')
 
     def get_context_data(self, **kwargs):
-        """Add user info and backup statistics to context."""
+        # 添加用户信息和备份统计到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context['total_backups'] = ConfigBackup.objects.count()
@@ -42,23 +37,21 @@ class BackupListView(LoginRequiredMixin, ListView):
 
 
 class BackupDetailView(LoginRequiredMixin, DetailView):
-    """Display details of a specific configuration backup."""
-
+    # 备份详情页面
     model = ConfigBackup
     template_name = 'backups/backup_detail.html'
     context_object_name = 'backup'
     login_url = 'homepage:login'
 
     def get_context_data(self, **kwargs):
-        """Add user info to context."""
+        # 添加用户信息到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         return context
 
 
 class ConfigBackupView(LoginRequiredMixin, TemplateView):
-    """手动选择设备并触发配置备份的页面。"""
-
+    # 手动配置备份页面
     template_name = 'backups/config_backup.html'
     login_url = 'homepage:login'
 
@@ -74,9 +67,7 @@ class ConfigBackupView(LoginRequiredMixin, TemplateView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_list_api(request):
-    """
-    备份列表API端点
-    """
+    # 备份列表API
     from .services import BackupService
 
     service = BackupService()
@@ -95,9 +86,8 @@ def backup_list_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def device_backup_list_api(request, device_id):
-    """
-    设备备份列表API端点
-    """
+    # 设备备份列表API
+    from .services import BackupService
     from .services import BackupService
 
     service = BackupService()
@@ -116,9 +106,7 @@ def device_backup_list_api(request, device_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_detail_api(request, pk):
-    """
-    备份详情API端点
-    """
+    # 备份详情API
     try:
         backup = ConfigBackup.objects.get(pk=pk)
     except ConfigBackup.DoesNotExist:
@@ -139,9 +127,7 @@ def backup_detail_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def backup_create_api(request):
-    """
-    创建设备配置备份API端点
-    """
+    # 创建设备配置备份API
     from devices.models import Device
     from .services import BackupService
 
@@ -201,12 +187,10 @@ def backup_compare_api(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def backup_trigger_api(request):
-    """
-    触发单个设备配置备份任务（异步）
-    将备份任务投入 Celery 队列异步执行。
-    """
+    # 触发单个设备配置保存任务（异步）
+    # 将保存任务投入 Celery 队列异步执行
     from devices.models import Device
-    from .tasks import backup_single_device
+    from configs.tasks import backup_single_device_config
 
     device_id = request.data.get('device_id')
     commit_message = request.data.get('commit_message', '')
@@ -220,13 +204,13 @@ def backup_trigger_api(request):
         return Response({'error': 'Device not found'}, status=404)
 
     # 异步提交到 Celery 队列
-    task = backup_single_device.delay(int(device_id), commit_message)
+    task = backup_single_device_config.delay(int(device_id))
 
     return Response({
         'success': True,
         'task_id': task.id,
         'device_id': device_id,
         'device_name': device.name,
-        'message': f'备份任务已提交，任务ID: {task.id}',
+        'message': '配置保存任务已提交，任务ID: ' + str(task.id),
     })
 

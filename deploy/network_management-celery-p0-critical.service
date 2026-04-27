@@ -1,0 +1,26 @@
+[Unit]
+Description=Network Management Celery Worker - P0 Critical (Device Check & Alerts)
+After=network.target redis.service
+Requires=redis.service
+
+[Service]
+Type=simple
+User=seth
+WorkingDirectory=/opt/network_management
+Environment="PATH=/opt/network_management/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+Environment="DJANGO_SETTINGS_MODULE=network_management.settings"
+ExecStart=/opt/network_management/venv/bin/celery \
+    -A network_management \
+    worker \
+    -Q critical \
+    -n p0-critical@%h \
+    --loglevel=info \
+    --concurrency=4 \
+    --prefetch-multiplier=1
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

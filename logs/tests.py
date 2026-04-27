@@ -153,6 +153,36 @@ class LogServiceTestCase(TestCase):
         self.assertEqual(result['total'], 1)
         self.assertIn('Error', result['logs'][0]['message'])
 
+    def test_query_logs_by_source_syslog(self):
+        """测试 source=syslog 过滤"""
+        self.service.collect_device_log(
+            device=self.device, log_type='system',
+            message='Syslog msg', details={'source': 'syslog'}
+        )
+        self.service.create_system_log('Operation msg')
+        result = self.service.query_logs(source='syslog')
+        self.assertEqual(result['total'], 1)
+        self.assertEqual(result['logs'][0]['message'], 'Syslog msg')
+
+    def test_query_logs_by_source_operation(self):
+        """测试 source=operation 过滤"""
+        self.service.collect_device_log(
+            device=self.device, log_type='system',
+            message='Syslog msg', details={'source': 'syslog'}
+        )
+        self.service.create_system_log('Operation msg')
+        result = self.service.query_logs(source='operation')
+        self.assertEqual(result['total'], 1)
+        self.assertEqual(result['logs'][0]['message'], 'Operation msg')
+
+    def test_query_logs_by_source_alert(self):
+        """测试 source=alert 过滤"""
+        self.service.create_alert_log(self.device, 'Alert msg')
+        self.service.create_system_log('System msg')
+        result = self.service.query_logs(source='alert')
+        self.assertEqual(result['total'], 1)
+        self.assertEqual(result['logs'][0]['message'], 'Alert msg')
+
     def test_get_statistics(self):
         """测试日志统计"""
         # 创建一些日志
@@ -251,6 +281,12 @@ class LogAPITestCase(TestCase):
         """测试日志API需要认证"""
         response = self.client.get('/logs/api/list/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_log_list_api_filter_by_source(self):
+        """测试API按source筛选"""
+        self.client.login(username='log_api_user', password='testpass123')
+        response = self.client.get('/logs/api/list/?source=syslog')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_runtime_log_list_api(self):
         """测试设备运行日志API"""

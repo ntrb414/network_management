@@ -73,73 +73,246 @@ class NetworkDiscoveryService:
 class IPScanService:
     """IP扫描服务 - 优先使用ICMP ping"""
 
-    def __init__(self, timeout: int = 2, max_workers: int = 20, common_ports: List[int] = None):
-        # 保守默认：超时2s，并发20
+    def __init__(self, timeout: int = 3, max_workers: int = 100, common_ports: List[int] = None):
+        # 默认超时3s，最大并发100
         self.timeout = timeout
         self.max_workers = max_workers
-        # 可配置的端口回退列表
-        self.common_ports = common_ports or [22, 80, 443, 161, 3389, 8080]
+        # 扩展的端口回退列表，覆盖更多常见服务
+        self.common_ports = common_ports or [21, 22, 23, 25, 53, 80, 110, 139, 443, 445, 161, 3389, 3306, 5432, 5900, 8080]
 
-    def icmp_ping(self, ip: str) -> Dict:
-        """使用ICMP ping检测主机是否存活"""
+    def icmp_ping(self, ip: str, retry: int = 1) -> Dict:
+        """使用ICMP ping检测主机是否存活，支持失败重试"""
         system = platform.system().lower()
-        try:
-            if system == 'windows':
-                cmd = ['ping', '-n', '1', '-w', str(self.timeout * 1000), ip]
-            else:
-                cmd = ['ping', '-c', '1', '-W', str(self.timeout), ip]
+        attempt = 0
+        last_exception = None
 
-            start_time = timezone.now()
-            result = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=self.timeout + 1,
-                shell=False
-            )
+        while attempt <= retry:
+            try:
+                if system == 'windows':
+                    cmd = ['ping', '-n', '1', '-w', str(self.timeout * 1000), ip]
+                else:
+                    cmd = ['ping', '-c', '1', '-W', str(self.timeout), ip]
 
-            is_alive = result.returncode == 0
-            response_time = None
+                start_time = timezone.now()
+                result = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=self.timeout + 1,
+                    shell=False
+                )
 
-            if is_alive:
-                response_time = self._parse_response_time(result.stdout)
-                if response_time is None:
-                    delta = (timezone.now() - start_time).total_seconds() * 1000
-                    response_time = round(delta, 2)
+                is_alive = result.returncode == 0
+                response_time = None
 
-            return {
-                'ip': ip,
-                'alive': is_alive,
-                'hostname': None,
-                'response_time': response_time,
-                'method': 'ICMP',
-            }
+                if is_alive:
+                    response_time = self._parse_response_time(result.stdout)
+                    if response_time is None:
+                        delta = (timezone.now() - start_time).total_seconds() * 1000
+                        response_time = round(delta, 2)
 
-        except subprocess.TimeoutExpired:
-            logger.debug(f"ICMP ping timeout for {ip}")
-            return {'ip': ip, 'alive': False, 'hostname': None, 'response_time': None, 'method': 'ICMP'}
-        except Exception as e:
-            logger.debug(f"ICMP ping failed for {ip}: {e}")
-            return {'ip': ip, 'alive': False, 'hostname': None, 'response_time': None, 'method': 'ICMP'}
+                    return {
+                        'ip': ip,
+                        'alive': True,
+                        'hostname': None,
+                        'response_time': response_time,
+                        'method': 'ICMP',
+                    }
+
+            except subprocess.TimeoutExpired:
+                logger.debug(f"ICMP ping timeout for {ip} (attempt {attempt + 1})")
+                last_exception = 'timeout'
+            except Exception as e:
+                logger.debug(f"ICMP ping failed for {ip} (attempt {attempt + 1}): {e}")
+                last_exception = str(e)
+
+            attempt += 1
+
+        return {
+            'ip': ip,
+            'alive': False,
+            'hostname': None,
+            'response_time': None,
+            'method': 'ICMP',
+            'error': last_exception,
+        }
 
     def _parse_response_time(self, output) -> Optional[float]:
-        """从ping输出中解析响应时间"""
+        """从ping输出中解析响应时间，兼容多语言locale"""
         try:
             output_str = output.decode('utf-8', errors='ignore') if isinstance(output, bytes) else str(output)
-            match = re.search(r'time[<=]([\d.]+)\s*ms', output_str, re.IGNORECASE)
+            # 匹配 time=1.23 ms / 时间=1.23 ms / temps=1.23 ms / tiempo=1.23 ms 等格式
+            match = re.search(r'(?:time|时间|temps|tiempo|zeit)[<=]([\d.]+)\s*ms', output_str, re.IGNORECASE)
+            if match:
+                return float(match.group(1))
+            # 备用：匹配 rtt min/avg/max/mdev = x/y/z/w ms 中的 avg
+            match = re.search(r'rtt\s+\S+\s*=\s*[\d.]+/([\d.]+)', output_str, re.IGNORECASE)
             if match:
                 return float(match.group(1))
         except Exception:
             pass
         return None
 
+    def arp_verify(self, ip: str) -> Dict:
+        """
+        通过 ARP 表验证 IP 是否真实存在
+
+        使用 arping 发送 ARP 请求，验证目标 IP 是否有真实的 MAC 地址响应。
+        这可以过滤掉虚拟网络、代理响应等误判情况。
+
+        返回:
+            {
+                'verified': bool,      # 是否验证通过
+                'mac_address': str,    # MAC 地址（如果验证通过）
+                'method': str          # 验证方法
+            }
+        """
+        system = platform.system().lower()
+
+        # 方法1: 使用 arping 发送 ARP 请求
+        try:
+            if system == 'linux':
+                # Linux: arping -c 1 -w 1 -I <interface> <ip>
+                # 先获取默认路由接口
+                try:
+                    route_result = subprocess.run(
+                        ['ip', 'route', 'get', ip],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=1
+                    )
+                    if route_result.returncode == 0:
+                        route_output = route_result.stdout.decode()
+                        # 解析接口名: "192.168.50.1 dev eth0 src ..."
+                        iface_match = re.search(r'dev\s+(\S+)', route_output)
+                        if iface_match:
+                            interface = iface_match.group(1)
+                            arping_result = subprocess.run(
+                                ['arping', '-c', '1', '-w', '1', '-I', interface, ip],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                timeout=2
+                            )
+                            if arping_result.returncode == 0:
+                                # arping 成功，解析 MAC 地址
+                                mac = self._parse_mac_from_arping(arping_result.stdout)
+                                return {
+                                    'verified': True,
+                                    'mac_address': mac,
+                                    'method': 'arping'
+                                }
+                except Exception as e:
+                    logger.debug(f"arping via interface failed: {e}")
+
+                # 备用：不带接口的 arping
+                try:
+                    arping_result = subprocess.run(
+                        ['arping', '-c', '1', '-w', '1', ip],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=2
+                    )
+                    if arping_result.returncode == 0:
+                        mac = self._parse_mac_from_arping(arping_result.stdout)
+                        return {
+                            'verified': True,
+                            'mac_address': mac,
+                            'method': 'arping'
+                        }
+                except Exception:
+                    pass
+
+        except Exception as e:
+            logger.debug(f"arping failed for {ip}: {e}")
+
+        # 方法2: 检查系统 ARP 缓存表
+        try:
+            arp_result = subprocess.run(
+                ['arp', '-n', ip],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=1
+            )
+            output = arp_result.stdout.decode()
+
+            # 检查是否包含有效的 MAC 地址
+            if 'incomplete' not in output.lower() and 'no entry' not in output.lower():
+                mac_match = re.search(
+                    r'([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})',
+                    output
+                )
+                if mac_match:
+                    return {
+                        'verified': True,
+                        'mac_address': mac_match.group(1),
+                        'method': 'arp_cache'
+                    }
+        except Exception as e:
+            logger.debug(f"arp cache check failed for {ip}: {e}")
+
+        # 方法3: 使用 ip neigh 命令（Linux）
+        if system == 'linux':
+            try:
+                neigh_result = subprocess.run(
+                    ['ip', 'neigh', 'show', ip],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=1
+                )
+                output = neigh_result.stdout.decode()
+
+                # 状态为 REACHABLE 或 STALE 表示有效
+                if 'REACHABLE' in output or 'STALE' in output or 'DELAY' in output:
+                    mac_match = re.search(
+                        r'lladdr\s+([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})',
+                        output
+                    )
+                    mac = mac_match.group(1) if mac_match else None
+                    return {
+                        'verified': True,
+                        'mac_address': mac,
+                        'method': 'ip_neigh'
+                    }
+            except Exception as e:
+                logger.debug(f"ip neigh check failed for {ip}: {e}")
+
+        # 所有验证方法都失败，无法确认 IP 真实存在
+        return {
+            'verified': False,
+            'mac_address': None,
+            'method': 'failed'
+        }
+
+    def _parse_mac_from_arping(self, output) -> Optional[str]:
+        """从 arping 输出中解析 MAC 地址"""
+        try:
+            output_str = output.decode('utf-8', errors='ignore') if isinstance(output, bytes) else str(output)
+            # arping 输出格式: "Unicast reply from 192.168.50.1 [00:11:22:33:44:55]"
+            mac_match = re.search(
+                r'\[([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})\]',
+                output_str
+            )
+            if mac_match:
+                return mac_match.group(1)
+            # 备用格式: "from 192.168.50.1 (00:11:22:33:44:55)"
+            mac_match = re.search(
+                r'\(([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})\)',
+                output_str
+            )
+            if mac_match:
+                return mac_match.group(1)
+        except Exception:
+            pass
+        return None
+
     def tcp_port_scan_fallback(self, ip: str, hostname: str = None) -> Dict:
         """TCP端口扫描后备方案，使用实例化时配置的端口列表"""
+        port_timeout = min(1.0, self.timeout)
         for port in self.common_ports:
             try:
                 start_time = timezone.now()
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(self.timeout)
+                sock.settimeout(port_timeout)
                 result = sock.connect_ex((ip, port))
                 sock.close()
 
@@ -163,16 +336,51 @@ class IPScanService:
         return {'ip': ip, 'alive': False, 'hostname': hostname, 'response_time': None, 'method': 'TCP'}
 
     def ping_host(self, ip: str) -> Dict:
-        """检测主机是否存活，优先使用ICMP ping"""
-        # 先尝试ICMP ping
+        """
+        检测主机是否存活，优先使用ICMP ping，并通过ARP验证确保IP真实存在
+
+        检测流程:
+        1. ICMP ping 检测
+        2. 如果 ICMP 成功，进行 ARP 验证
+        3. 如果 ICMP 失败，尝试 TCP 端口扫描
+        4. 如果 TCP 扫描成功，进行 ARP 验证
+        5. ARP 验证失败则判定为离线（可能是虚拟网络代理响应）
+        """
+        # 先尝试 ICMP ping
         result = self.icmp_ping(ip)
-        
-        # 如果ICMP失败，尝试TCP端口扫描
-        if not result['alive']:
-            tcp_result = self.tcp_port_scan_fallback(ip, result.get('hostname'))
-            if tcp_result['alive']:
-                return tcp_result
-        
+
+        # ICMP 成功，进行 ARP 验证
+        if result['alive']:
+            arp_result = self.arp_verify(ip)
+            if arp_result['verified']:
+                result['mac_address'] = arp_result.get('mac_address')
+                result['method'] = f"ICMP+ARP({arp_result['method']})"
+                logger.debug(f"IP {ip} verified via ARP: {arp_result.get('mac_address')}")
+            else:
+                # ARP 验证失败，可能是虚拟网络代理响应
+                logger.info(f"IP {ip} ICMP success but ARP verification failed, marking as offline")
+                result['alive'] = False
+                result['method'] = 'ICMP+ARP_FAIL'
+                result['arp_error'] = 'No MAC address found in ARP table'
+            return result
+
+        # ICMP 失败，尝试 TCP 端口扫描
+        tcp_result = self.tcp_port_scan_fallback(ip, result.get('hostname'))
+        if tcp_result['alive']:
+            # TCP 扫描成功，同样进行 ARP 验证
+            arp_result = self.arp_verify(ip)
+            if arp_result['verified']:
+                tcp_result['mac_address'] = arp_result.get('mac_address')
+                tcp_result['method'] = f"TCP+ARP({arp_result['method']})"
+                logger.debug(f"IP {ip} verified via TCP+ARP: {arp_result.get('mac_address')}")
+            else:
+                # ARP 验证失败
+                logger.info(f"IP {ip} TCP success but ARP verification failed, marking as offline")
+                tcp_result['alive'] = False
+                tcp_result['method'] = 'TCP+ARP_FAIL'
+                tcp_result['arp_error'] = 'No MAC address found in ARP table'
+            return tcp_result
+
         return result
 
     def calculate_ip_range(self, cidr: str) -> List[str]:
@@ -292,7 +500,12 @@ class IPScanService:
             logger.info(f"Starting scan for subnet {cidr}, total IPs: {total}")
             
             # 根据网段大小动态调整并发数
-            max_workers = min(self.max_workers, max(10, total // 100))
+            if total <= 256:
+                max_workers = min(self.max_workers, 50)
+            elif total <= 1024:
+                max_workers = min(self.max_workers, max(20, total // 20))
+            else:
+                max_workers = min(self.max_workers, max(50, total // 100))
             alive_hosts = []
             all_results = []
             scanned_count = 0
@@ -665,8 +878,16 @@ class IPAMService:
         }
 
     def sync_scan_results(self, subnet_id: int, scan_results: List[Dict]) -> Dict:
-        """将扫描结果同步到IPAM"""
+        """
+        将扫描结果同步到IPAM，自动根据存活状态设置IP使用状态
+
+        规则：
+        - 存活的 IP：自动标记为已分配（allocated）
+        - 离线的 IP：若无设备关联且无分配人，则标记为可用（available）
+        - 预留的 IP：不改变状态（预留状态不受扫描影响）
+        """
         from .models import IPAddress, AllocationLog, Subnet
+        from django.utils import timezone
 
         try:
             subnet = Subnet.objects.get(id=subnet_id)
@@ -674,56 +895,126 @@ class IPAMService:
             return {'success': False, 'error': 'Subnet不存在'}
 
         created_count = 0
+        allocated_count = 0
+        released_count = 0
         updated_count = 0
-        discovered_count = 0
 
         for result in scan_results:
             ip_str = result['ip']
             is_alive = result.get('alive', False)
             hostname = result.get('hostname', '')
+            mac_address = result.get('mac_address', '')
             response_time = result.get('response_time')
+            method = result.get('method', '')
 
+            # 获取或创建 IP 记录
             ip, created = IPAddress.objects.get_or_create(
                 ip_address=ip_str,
-                defaults={'subnet': subnet, 'status': 'allocated' if is_alive else 'available'}
+                defaults={
+                    'subnet': subnet,
+                    'status': 'available',
+                    'mac_address': mac_address if mac_address else '',
+                }
             )
 
             if created:
                 created_count += 1
-            else:
-                old_status = ip.status
-                old_hostname = ip.hostname
-                updated = False
 
-                if is_alive and ip.status == 'available':
+            old_status = ip.status
+            old_hostname = ip.hostname
+            old_mac = ip.mac_address
+            updated = False
+
+            # === 存活的 IP：自动标记为已分配 ===
+            if is_alive:
+                # 预留状态不改变
+                if ip.status == 'reserved':
+                    # 仅更新 MAC 地址和主机名
+                    if mac_address and ip.mac_address != mac_address:
+                        ip.mac_address = mac_address
+                        updated = True
+                    if hostname and ip.hostname != hostname:
+                        ip.hostname = hostname
+                        updated = True
+                    if updated:
+                        ip.save()
+
+                # 可用状态 -> 已分配
+                elif ip.status == 'available':
                     ip.status = 'allocated'
-                    ip.hostname = hostname or ip.hostname
+                    ip.mac_address = mac_address if mac_address else ip.mac_address
+                    ip.hostname = hostname if hostname else ip.hostname
+                    ip.allocated_at = timezone.now()
+                    # allocated_by 设为 None 表示系统自动分配（扫描发现）
                     ip.save()
+                    allocated_count += 1
                     updated = True
-                    discovered_count += 1
 
                     AllocationLog.objects.create(
                         ip_address=ip_str,
-                        hostname=hostname,
-                        action='scan_discover',
-                        old_value={'status': old_status, 'hostname': old_hostname},
-                        new_value={'status': 'allocated', 'hostname': ip.hostname},
-                        notes=f'扫描发现，响应时间: {response_time}ms' if response_time else '扫描发现'
+                        hostname=ip.hostname,
+                        action='scan_allocate',
+                        old_value={'status': old_status, 'hostname': old_hostname, 'mac_address': old_mac},
+                        new_value={'status': 'allocated', 'hostname': ip.hostname, 'mac_address': ip.mac_address},
+                        notes=f'扫描发现主机存活，自动分配 (检测方法: {method})'
                     )
-                elif is_alive and ip.status in ('allocated', 'reserved'):
-                    ip.hostname = hostname or ip.hostname
-                    if ip.hostname != old_hostname:
-                        ip.save()
-                        updated = True
 
-                if updated:
-                    updated_count += 1
+                # 已分配状态：更新信息
+                elif ip.status == 'allocated':
+                    # 更新 MAC 地址
+                    if mac_address and ip.mac_address != mac_address:
+                        ip.mac_address = mac_address
+                        updated = True
+                    # 更新主机名
+                    if hostname and ip.hostname != hostname:
+                        ip.hostname = hostname
+                        updated = True
+                    if updated:
+                        ip.save()
+
+            # === 离线的 IP：若无设备关联则标记为可用 ===
+            else:
+                # 预留状态不改变
+                if ip.status == 'reserved':
+                    pass
+
+                # 已分配且无设备关联、无分配人 -> 可用（清理历史数据）
+                elif ip.status == 'allocated' and ip.device is None and ip.allocated_by is None:
+                    ip.status = 'available'
+                    ip.hostname = ''
+                    ip.mac_address = ''
+                    ip.allocated_at = None
+                    ip.save()
+                    released_count += 1
+                    updated = True
+
+                    AllocationLog.objects.create(
+                        ip_address=ip_str,
+                        hostname='',
+                        action='scan_release',
+                        old_value={'status': old_status, 'hostname': old_hostname, 'mac_address': old_mac},
+                        new_value={'status': 'available', 'hostname': '', 'mac_address': ''},
+                        notes='扫描发现主机离线且无设备关联，自动释放'
+                    )
+
+                # 可用状态：无需处理
+                elif ip.status == 'available':
+                    pass
+
+            if updated and not created:
+                updated_count += 1
+
+        logger.info(
+            f"Sync scan results for subnet {subnet.cidr}: "
+            f"created={created_count}, allocated={allocated_count}, released={released_count}, updated={updated_count}"
+        )
 
         return {
             'success': True,
             'created': created_count,
+            'allocated': allocated_count,
+            'released': released_count,
             'updated': updated_count,
-            'discovered': discovered_count,
         }
 
     def get_allocation_history(self, ip_address: str = None, limit: int = 100) -> List[Dict]:

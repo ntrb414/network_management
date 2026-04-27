@@ -249,7 +249,8 @@ class AllocationLog(models.Model):
         ('release', '释放'),
         ('update', '更新'),
         ('reserve', '预留'),
-        ('scan_discover', '扫描发现'),
+        ('scan_allocate', '扫描分配'),
+        ('scan_release', '扫描释放'),
     ]
 
     ip_address = models.GenericIPAddressField(

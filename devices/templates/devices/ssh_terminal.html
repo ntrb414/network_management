@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSH终端 - {{ device.name }}</title>
+    {% load static %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; background: #0d0d0d; }
+        body {
+            display: flex;
+            flex-direction: column;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #161616;
+            border-bottom: 1px solid #2a2a2a;
+            flex-shrink: 0;
+        }
+        .terminal-title {
+            color: #a1a1aa;
+            font-size: 0.8125rem;
+            font-family: monospace;
+        }
+        .terminal-title strong { color: #e4e4e7; }
+        .terminal-btn {
+            padding: 0.25rem 0.625rem;
+            font-size: 0.75rem;
+            border-radius: 0.25rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .terminal-close {
+            background: #3f1212;
+            color: #fca5a5;
+        }
+        .terminal-close:hover { background: #7f1d1d; }
+        .terminal-reconnect {
+            background: #052e16;
+            color: #86efac;
+        }
+        .terminal-reconnect:hover { background: #14532d; }
+        .terminal-reconnect:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        #terminal {
+            flex: 1;
+            padding: 0.375rem;
+            overflow: hidden;
+            position: relative;
+            min-height: 0;
+            background: #0d0d0d;
+        }
+        #term-container {
+            position: absolute;
+            inset: 0.375rem;
+            background: #0d0d0d;
+        }
+        .xterm {
+            height: 100% !important;
+            background: #0d0d0d !important;
+        }
+        .xterm-screen {
+            height: 100% !important;
+            background: #0d0d0d !important;
+        }
+        .xterm-viewport { background: #0d0d0d !important; }
+        .terminal-loading {
+            color: #71717a;
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .terminal-error {
+            color: #f87171;
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .terminal-error a {
+            color: #60a5fa;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+        .toast {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            opacity: 1;
+            transition: opacity 0.2s;
+            pointer-events: auto;
+        }
+        .toast-success { background: #052e16; color: #86efac; border: 1px solid #14532d; }
+        .toast-error { background: #3f1212; color: #fca5a5; border: 1px solid #7f1d1d; }
+        .toast-info { background: #1e3a5f; color: #93c5fd; border: 1px solid #1e4976; }
+    </style>
+</head>
+<body>
+    <div class="terminal-header">
+        <div class="terminal-title">终端 — <strong id="terminalDeviceInfo">{{ username }}@{{ device.ip_address }}:{{ port }}</strong></div>
+        <div style="display:flex;gap:.375rem;">
+            <button class="terminal-btn terminal-reconnect" onclick="reconnectSSH()" id="reconnectBtn" style="display:none;">重新连接</button>
+            <button class="terminal-btn terminal-close" onclick="closeTerminal()">关闭</button>
+        </div>
+    </div>
+    <div id="terminal">
+        <div class="terminal-loading">正在建立 SSH 连接...</div>
+    </div>
+    <div id="toast-container"></div>
+
+    <script>
+        const DEVICE_ID = {{ device.id }};
+        const DEVICE_IP = "{{ device.ip_address }}";
+        const DEVICE_NAME = "{{ device.name }}";
+        const SSH_PORT = {{ port }};
+        const SSH_USERNAME = "{{ username }}";
+        const SSH_PASSWORD = "{{ password|default:'' }}";
+
+        const DEVICE_WEBSSH_URL = `/devices/webssh/${DEVICE_ID}/`;
+
+        let currentSSHDeviceId = DEVICE_ID;
+        let currentSSHDeviceIP = DEVICE_IP;
+        let currentSSHUsername = SSH_USERNAME;
+        let currentSSHPassword = SSH_PASSWORD;
+        let currentSSHPort = SSH_PORT;
+        let idleWarningTimeout = null;
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 5000);
+        }
+
+        function openTerminal(ip, port, username, password) {
+            const terminalDiv = document.getElementById('terminal');
+
+            // 清理旧的 WebSocket
+            if (window.sshWs) {
+                window.sshWs.close();
+                window.sshWs = null;
+            }
+            // 清理旧终端
+            if (window.term) {
+                window.term.dispose();
+                window.term = null;
+            }
+
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}${DEVICE_WEBSSH_URL}`;
+
+            let ws;
+            try {
+                ws = new WebSocket(wsUrl);
+            } catch (e) {
+                terminalDiv.innerHTML = `<div class="terminal-error">创建 WebSocket 失败: ${e.message}<br><a onclick="reconnectSSH()">点此重试</a></div>`;
+                document.getElementById('reconnectBtn').style.display = 'block';
+                return;
+            }
+
+            // 状态标记
+            let isConnected = false;
+            let isAuthenticated = false;
+            let hasReceivedOutput = false;
+            let errorMessage = null;
+
+            // WebSocket 连接超时处理（20秒）
+            const connectionTimeout = setTimeout(() => {
+                if (!isConnected) {
+                    ws.close();
+                    terminalDiv.innerHTML = '<div class="terminal-error">连接超时：无法建立到服务器的 WebSocket 连接<br>请检查：1. 网络连接 2. 服务器是否运行 3. WebSocket 代理设置<br><a onclick="reconnectSSH()">点此重试</a></div>';
+                    document.getElementById('reconnectBtn').style.display = 'block';
+                }
+            }, 20000);
+
+            // SSH 认证超时处理（15秒）
+            let authTimeout = null;
+
+            ws.onopen = function() {
+                clearTimeout(connectionTimeout);
+                isConnected = true;
+                terminalDiv.innerHTML = '<div class="terminal-loading">连接已建立，正在发送认证信息...</div>';
+                ws.send(JSON.stringify({ action: 'connect', username, password, port: parseInt(port) }));
+
+                authTimeout = setTimeout(() => {
+                    if (!isAuthenticated && !hasReceivedOutput) {
+                        terminalDiv.innerHTML = '<div class="terminal-error">认证超时：服务器没有响应<br>可能原因：1. 设备不可达 2. SSH服务未启动 3. 认证被拒绝<br><a onclick="reconnectSSH()">点此重试</a></div>';
+                        document.getElementById('reconnectBtn').style.display = 'block';
+                    }
+                }, 15000);
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'output') {
+                        hasReceivedOutput = true;
+                        isAuthenticated = true;
+                        clearTimeout(authTimeout);
+                        if (window.term) {
+                            window.term.write(data.data);
+                        } else {
+                            terminalDiv.innerHTML = '<div id="term-container"></div>';
+                            initTerminal(data.data);
+                        }
+                        document.getElementById('reconnectBtn').style.display = 'block';
+                    } else if (data.type === 'error') {
+                        clearTimeout(authTimeout);
+                        errorMessage = data.message;
+                        let errorHtml = '<div class="terminal-error">';
+                        errorHtml += `<strong>连接失败</strong><br>`;
+                        errorHtml += `${data.message}<br><br>`;
+
+                        const errorType = data.error_type || '';
+                        if (errorType === 'authentication' || data.message.includes('认证') || data.message.includes('密码')) {
+                            errorHtml += '<span style="color:#fbbf24">提示：请检查用户名和密码是否正确</span><br>';
+                        } else if (errorType === 'eof' || data.message.includes('关闭') || data.message.includes('Shell')) {
+                            errorHtml += '<span style="color:#fbbf24">提示：设备不支持交互式 SSH 或禁用了 PTY</span><br>';
+                        } else if (errorType === 'timeout' || data.message.includes('超时')) {
+                            errorHtml += '<span style="color:#fbbf24">提示：设备网络不可达，请检查IP地址和网络连接</span><br>';
+                        } else if (errorType === 'network' && data.message.includes('拒绝')) {
+                            errorHtml += '<span style="color:#fbbf24">提示：SSH服务未启动或端口不正确</span><br>';
+                        } else if (errorType === 'network' && data.message.includes('路由')) {
+                            errorHtml += '<span style="color:#fbbf24">提示：无法访问该IP地址</span><br>';
+                        } else {
+                            errorHtml += '<span style="color:#fbbf24">提示：请检查设备状态和连接配置</span><br>';
+                        }
+
+                        errorHtml += '<br><a onclick="reconnectSSH()">点此重试</a> 或 <a onclick="closeTerminal()">关闭终端</a>';
+                        errorHtml += '</div>';
+                        terminalDiv.innerHTML = errorHtml;
+                        document.getElementById('reconnectBtn').style.display = 'block';
+                    } else if (data.type === 'connected') {
+                        isAuthenticated = true;
+                        clearTimeout(authTimeout);
+                        terminalDiv.innerHTML = '<div class="terminal-loading">SSH 连接已建立，等待设备响应...</div>';
+                    } else if (data.type === 'reconnecting') {
+                        if (window.term) window.term.write('\r\n\r\n[正在重新连接...]\r\n');
+                    } else if (data.type === 'timeout') {
+                        if (window.term) window.term.write(`\r\n\r\n[${data.message}]\r\n`);
+                        showAlert(data.message, 'info');
+                    } else if (data.type === 'idle_warning') {
+                        clearTimeout(idleWarningTimeout);
+                        idleWarningTimeout = setTimeout(() => showAlert(`空闲超时警告：连接将在 ${data.remaining} 秒后断开`, 'info'), 100);
+                    }
+                } catch (e) {
+                    console.error('处理 WebSocket 消息失败:', e);
+                }
+            };
+
+            ws.onerror = function(error) {
+                clearTimeout(connectionTimeout);
+                clearTimeout(authTimeout);
+                console.error('WebSocket 错误:', error);
+                if (!hasReceivedOutput) {
+                    terminalDiv.innerHTML = '<div class="terminal-error"><strong>WebSocket 连接错误</strong><br>无法建立到服务器的实时连接<br>请检查：1. 网络连接 2. 服务器状态<br><br><a onclick="reconnectSSH()">点此重试</a></div>';
+                    document.getElementById('reconnectBtn').style.display = 'block';
+                }
+            };
+
+            ws.onclose = function(event) {
+                clearTimeout(connectionTimeout);
+                clearTimeout(authTimeout);
+                if (window.term) {
+                    if (event.wasClean) {
+                        window.term.write('\r\n\r\n[连接已正常关闭]\r\n');
+                    } else if (hasReceivedOutput) {
+                        window.term.write('\r\n\r\n[连接已意外断开]\r\n');
+                        document.getElementById('reconnectBtn').style.display = 'block';
+                    }
+                }
+            };
+
+            window.sshWs = ws;
+        }
+
+        function initTerminal(initialData) {
+            const container = document.getElementById('term-container');
+            const terminalDiv = document.getElementById('terminal');
+
+            if (window.term) {
+                window.term.dispose();
+                window.term = null;
+            }
+
+            const loadTimeout = setTimeout(() => {
+                container.innerHTML = '<div class="terminal-error">终端组件加载超时，请检查网络连接后<a onclick="retryInitTerminal()">点此重试</a></div>';
+            }, 30000);
+
+            window.retryInitTerminal = function() {
+                clearTimeout(loadTimeout);
+                container.innerHTML = '';
+                initTerminal(initialData);
+            };
+
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css';
+            link.onerror = function() {
+                clearTimeout(loadTimeout);
+                container.innerHTML = '<div class="terminal-error">加载终端样式失败，请检查网络后<a onclick="retryInitTerminal()">点此重试</a></div>';
+            };
+            document.head.appendChild(link);
+
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js';
+            script.onerror = function() {
+                clearTimeout(loadTimeout);
+                container.innerHTML = '<div class="terminal-error">加载终端组件失败，请检查网络后<a onclick="retryInitTerminal()">点此重试</a></div>';
+            };
+            script.onload = function() {
+                clearTimeout(loadTimeout);
+
+                const containerWidth = container.clientWidth || terminalDiv.clientWidth || 800;
+                const containerHeight = container.clientHeight || terminalDiv.clientHeight || 600;
+
+                if (!containerWidth || !containerHeight) {
+                    container.innerHTML = '<div class="terminal-error">终端容器尺寸异常，请<a onclick="retryInitTerminal()">点此重试</a></div>';
+                    return;
+                }
+
+                try {
+                    window.term = new Terminal({
+                        cursorBlink: true,
+                        fontSize: 14,
+                        fontFamily: 'Menlo, Monaco, "Courier New", monospace, Consolas, "Liberation Mono", "DejaVu Sans Mono"',
+                        theme: {
+                            background: '#0d0d0d',
+                            foreground: '#e4e4e7',
+                            cursor: '#e4e4e7',
+                            selection: '#3f3f46',
+                            black: '#0d0d0d',
+                            brightBlack: '#262626',
+                            red: '#f87171',
+                            brightRed: '#fca5a5',
+                            green: '#4ade80',
+                            brightGreen: '#86efac',
+                            yellow: '#facc15',
+                            brightYellow: '#fde047',
+                            blue: '#60a5fa',
+                            brightBlue: '#93c5fd',
+                            magenta: '#c084fc',
+                            brightMagenta: '#d8b4fe',
+                            cyan: '#22d3ee',
+                            brightCyan: '#67e8f9',
+                            white: '#e4e4e7',
+                            brightWhite: '#fafafa'
+                        },
+                        rows: 30,
+                        cols: 120,
+                        allowProposedApi: true,
+                        scrollback: 10000,
+                        convertEol: true,
+                        cursorStyle: 'block',
+                        cursorWidth: 1
+                    });
+
+                    window.term.open(container);
+
+                    if (initialData) {
+                        window.term.write(initialData);
+                    }
+
+                    const fitAddonScript = document.createElement('script');
+                    fitAddonScript.src = 'https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js';
+                    fitAddonScript.onerror = function() {
+                        console.warn('FitAddon 加载失败，终端将使用默认尺寸');
+                    };
+                    fitAddonScript.onload = function() {
+                        if (typeof FitAddon !== 'undefined' && FitAddon.FitAddon) {
+                            const fitAddon = new FitAddon.FitAddon();
+                            window.term.loadAddon(fitAddon);
+
+                            setTimeout(() => {
+                                try {
+                                    fitAddon.fit();
+                                    const dims = window.term.rows + ',' + window.term.cols;
+                                    if (window.sshWs && window.sshWs.readyState === WebSocket.OPEN) {
+                                        window.sshWs.send(JSON.stringify({ type: 'resize', cols: window.term.cols, rows: window.term.rows }));
+                                    }
+                                } catch (e) {
+                                    console.warn('FitAddon fit 失败:', e);
+                                }
+                            }, 100);
+
+                            window.addEventListener('resize', () => {
+                                try {
+                                    fitAddon.fit();
+                                } catch (e) {
+                                    console.warn('Resize fit 失败:', e);
+                                }
+                            });
+                        }
+                    };
+                    document.head.appendChild(fitAddonScript);
+
+                    window.term.onData(function(data) {
+                        if (window.sshWs && window.sshWs.readyState === WebSocket.OPEN) {
+                            window.sshWs.send(JSON.stringify({ type: 'input', data: data.replace(/\x7F/g, '\x08') }));
+                        }
+                    });
+
+                    window.term.onResize(function(size) {
+                        if (window.sshWs && window.sshWs.readyState === WebSocket.OPEN) {
+                            window.sshWs.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }));
+                        }
+                    });
+
+                    setTimeout(() => {
+                        window.term.focus();
+                    }, 100);
+
+                } catch (e) {
+                    console.error('终端初始化失败:', e);
+                    container.innerHTML = '<div class="terminal-error">终端初始化失败: ' + e.message + '，请<a onclick="retryInitTerminal()">点此重试</a></div>';
+                }
+            };
+            document.head.appendChild(script);
+        }
+
+        function closeTerminal() {
+            if (window.sshWs) {
+                window.sshWs.close();
+                window.sshWs = null;
+            }
+            if (window.term) {
+                window.term.dispose();
+                window.term = null;
+            }
+            if (idleWarningTimeout) {
+                clearTimeout(idleWarningTimeout);
+                idleWarningTimeout = null;
+            }
+            // 关闭浏览器窗口
+            window.close();
+        }
+
+        function reconnectSSH() {
+            if (!currentSSHUsername || !currentSSHPassword) {
+                showAlert('无法重连：缺少连接参数', 'error');
+                return;
+            }
+            const btn = document.getElementById('reconnectBtn');
+            btn.disabled = true;
+            btn.textContent = '连接中...';
+            if (window.sshWs) {
+                window.sshWs.close();
+                window.sshWs = null;
+            }
+            if (window.term) window.term.clear();
+            setTimeout(() => {
+                openTerminal(currentSSHDeviceIP, currentSSHPort, currentSSHUsername, currentSSHPassword);
+                btn.disabled = false;
+                btn.textContent = '重新连接';
+            }, 500);
+        }
+
+        // 页面加载后自动连接
+        document.addEventListener('DOMContentLoaded', function() {
+            if (SSH_USERNAME && SSH_PASSWORD) {
+                openTerminal(DEVICE_IP, SSH_PORT, SSH_USERNAME, SSH_PASSWORD);
+            } else {
+                document.getElementById('terminal').innerHTML = '<div class="terminal-error">缺少SSH连接参数，请从设备列表页面重新发起连接</div>';
+            }
+        });
+
+        // 页面关闭时清理资源
+        window.addEventListener('beforeunload', function() {
+            if (window.sshWs) {
+                window.sshWs.close();
+            }
+            if (window.term) {
+                window.term.dispose();
+            }
+        });
+    </script>
+</body>
+</html>

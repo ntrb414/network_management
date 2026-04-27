@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     DeviceListView, DeviceDetailView, DeviceConfigView,
+    DeviceSSHTerminalView,
     device_list_api, device_detail_api,
     device_statistics_api, device_discover_api,
     device_export_api, device_ping_api,
@@ -15,6 +16,7 @@ urlpatterns = [
     path('', DeviceListView.as_view(), name='device_list'),
     path('<int:pk>/', DeviceDetailView.as_view(), name='device_detail'),
     path('<int:pk>/config/', DeviceConfigView.as_view(), name='device_config'),
+    path('<int:pk>/ssh-terminal/', DeviceSSHTerminalView.as_view(), name='device_ssh_terminal'),
 
     # API views
     path('api/list/', device_list_api, name='device_list_api'),

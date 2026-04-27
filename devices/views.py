@@ -1,9 +1,4 @@
-"""
-设备管理页面视图和API
-
-包含 DeviceListView（设备列表页面）、DeviceDetailView（设备详情页面）和设备API视图。
-"""
-
+# 设备管理页面视图和API
 import logging
 from django.views.generic import ListView, DetailView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -26,8 +21,7 @@ from .utils import ping_host
 # ==================== 页面视图 ====================
 
 class DeviceListView(LoginRequiredMixin, ListView):
-    """Display list of all devices."""
-
+    # 设备列表页面
     model = Device
     template_name = 'devices/device_list.html'
     context_object_name = 'devices'
@@ -35,11 +29,11 @@ class DeviceListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Return all devices ordered by name."""
+        # 返回按名称排序的所有设备
         return Device.objects.all().order_by('name')
 
     def get_context_data(self, **kwargs):
-        """Add user info to context."""
+        # 添加用户权限信息到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context["can_manage_devices"] = has_module_permission(self.request.user, "devices", "edit")
@@ -49,15 +43,14 @@ class DeviceListView(LoginRequiredMixin, ListView):
 
 
 class DeviceDetailView(LoginRequiredMixin, DetailView):
-    """Display details of a specific device."""
-
+    # 设备详情页面
     model = Device
     template_name = 'devices/device_detail.html'
     context_object_name = 'device'
     login_url = 'homepage:login'
 
     def get_context_data(self, **kwargs):
-        """Add user info and ports to context."""
+        # 添加用户权限和端口信息到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context["can_manage_devices"] = has_module_permission(self.request.user, "devices", "edit")
@@ -67,16 +60,42 @@ class DeviceDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class DeviceConfigView(LoginRequiredMixin, DetailView):
-    """Display device running and startup configuration."""
+class DeviceSSHTerminalView(LoginRequiredMixin, TemplateView):
+    # SSH终端专用页面，在新窗口中打开
+    template_name = 'devices/ssh_terminal.html'
+    login_url = 'homepage:login'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        device_id = kwargs.get('pk')
+
+        try:
+            device = Device.objects.get(pk=device_id)
+            context['device'] = device
+
+            # 从URL参数获取连接信息
+            context['username'] = self.request.GET.get('username', device.ssh_username or '')
+            context['password'] = self.request.GET.get('password', device.ssh_password or '')
+            context['port'] = int(self.request.GET.get('port', device.ssh_port or 22))
+
+        except Device.DoesNotExist:
+            context['device'] = None
+            context['username'] = ''
+            context['password'] = ''
+            context['port'] = 22
+
+        return context
+
+
+class DeviceConfigView(LoginRequiredMixin, DetailView):
+    # 设备配置页面，显示运行配置和启动配置
     model = Device
     template_name = 'devices/device_config_view.html'
     context_object_name = 'device'
     login_url = 'homepage:login'
 
     def get_context_data(self, **kwargs):
-        """Add configuration data to context."""
+        # 添加配置数据到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context["can_manage_devices"] = has_module_permission(self.request.user, "devices", "edit")
@@ -134,13 +153,7 @@ class DeviceConfigView(LoginRequiredMixin, DetailView):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def device_list_api(request):
-    """
-    设备列表API端点
-
-    GET: 返回设备列表，支持分页、筛选、搜索
-    POST: 创建设备
-
-    """
+    # 设备列表API：GET返回设备列表（支持分页筛选），POST创建设备
     if request.method == 'GET':
         # 获取查询参数
         page = int(request.GET.get('page', 1))
@@ -224,14 +237,7 @@ def device_list_api(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def device_detail_api(request, pk):
-    """
-    设备详情API端点
-
-    GET: 获取设备详情
-    PUT: 更新设备信息
-    DELETE: 删除设备
-
-    """
+ 
     try:
         device = Device.objects.get(pk=pk)
     except Device.DoesNotExist:
@@ -285,12 +291,7 @@ def device_detail_api(request, pk):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def device_statistics_api(request):
-    """
-    设备统计API端点
-
-    返回设备统计信息（数量、比例、百分比）
-
-    """
+    # 设备统计API：返回按类型和状态的统计信息
     from django.db.models import Count
 
     # 按设备类型统计
@@ -341,12 +342,7 @@ def device_statistics_api(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def device_discover_api(request):
-    """
-    设备发现API端点
-
-    触发设备发现扫描
-
-    """
+    # 设备发现API：触发IP范围扫描
     start_ip = request.data.get('start_ip')
     end_ip = request.data.get('end_ip')
 
@@ -369,12 +365,8 @@ def device_discover_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def device_export_api(request):
-    """
-    设备导出API端点
-
-    导出设备清单为Excel或JSON格式
-
-    """
+    #导出设备清单为Excel或JSON格式
+   
     export_format = request.GET.get('format', 'json')
 
     # 获取所有设备
@@ -461,12 +453,7 @@ def device_export_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def device_config_api(request, pk):
-    """
-    设备配置API端点
-
-    GET: 获取设备的运行配置和启动配置
-
-    """
+    # 获取设备的运行配置和启动配置
     try:
         device = Device.objects.get(pk=pk)
     except Device.DoesNotExist:
@@ -507,12 +494,7 @@ def device_config_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def device_config_realtime_api(request, pk):
-    """
-    设备配置实时读取API端点
-
-    POST: 通过SSH实时从设备获取最新配置（不使用缓存）
-
-    """
+    # 通过SSH实时获取设备配置（不使用缓存）
     try:
         device = Device.objects.get(pk=pk)
     except Device.DoesNotExist:
@@ -572,12 +554,7 @@ def device_config_realtime_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def device_ping_api(request, pk):
-    """
-    设备Ping测试API端点
-
-    POST: 对指定设备执行Ping测试，根据结果更新设备状态
-
-    """
+    # 对指定设备执行Ping测试，更新设备状态
     try:
         device = Device.objects.get(pk=pk)
     except Device.DoesNotExist:
@@ -667,12 +644,7 @@ def device_ping_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def device_ping_all_api(request):
-    """
-    批量Ping测试API端点
-
-    POST: 对所有设备执行Ping测试，根据结果更新设备状态
-
-    """
+    # 对所有设备执行Ping测试，更新设备状态
     devices = Device.objects.all()
 
     results = []
@@ -751,7 +723,7 @@ def device_ping_all_api(request):
 
 
 def _create_device_fault_alert_if_needed(device, old_status):
-    """创建设备故障告警（如状态从非fault变为fault）"""
+    # 状态从非fault变为fault时创建故障告警
     if old_status == 'fault':
         return
     try:
@@ -762,7 +734,7 @@ def _create_device_fault_alert_if_needed(device, old_status):
 
 
 def _create_device_offline_alert_if_needed(device, old_status):
-    """创建设备离线告警（如状态从非offline变为offline）"""
+    # 状态从非offline变为offline时创建离线告警
     if old_status == 'offline':
         return
     try:
@@ -776,20 +748,7 @@ def _create_device_offline_alert_if_needed(device, old_status):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def check_all_devices_status_api(request):
-    """
-    立即检查所有设备状态API
-
-    同步执行设备状态检测，并返回结果
-
-    Returns:
-        {
-            'success': True/False,
-            'total_devices': 总设备数,
-            'online_count': 在线设备数,
-            'offline_count': 离线设备数,
-            'updated': [更新状态的设备列表]
-        }
-    """
+    # 同步检查所有设备状态，返回在线/离线统计
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from django.utils import timezone
     from .utils import DEVICE_CHECK_MAX_WORKERS
@@ -802,7 +761,7 @@ def check_all_devices_status_api(request):
         updated_devices = []
 
         def check_device(device):
-            """检查单个设备状态"""
+            # 检查单个设备状态
             result = ping_host(device.ip_address, count=1, timeout=2)
             return device, result.get('reachable', False), result.get('latency')
 

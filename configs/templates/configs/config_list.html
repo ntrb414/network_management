@@ -236,27 +236,16 @@
             font-size: 0.875rem;
         }
 
-        /* Data table */
-        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
-        .data-table th { background: var(--gray-50); padding: 1rem; text-align: left; border-bottom: 2px solid var(--gray-200); font-weight: 600; color: var(--gray-700); }
-        .data-table td { padding: 1rem; border-bottom: 1px solid var(--gray-100); }
-        .data-table tbody tr:hover { background: var(--gray-50); }
+        /* List table - 与其他模块保持一致 */
+        .list-table { width: 100%; border-collapse: collapse; }
+        .list-table th { background: var(--gray-50); padding: 0.625rem 0.875rem; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; color: var(--muted-foreground); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+        .list-table td { padding: 0.6875rem 0.875rem; border-bottom: 1px solid var(--border); font-size: 0.8125rem; color: var(--foreground); }
+        .list-table tbody tr:last-child td { border-bottom: none; }
+        .list-table tbody tr:hover { background: var(--muted); }
         .link-primary { color: var(--primary-color); text-decoration: none; }
         .link-primary:hover { text-decoration: underline; }
 
-        /* Action buttons */
-        .nb-action-btn {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-            border-radius: var(--radius);
-            border: none;
-            cursor: pointer;
-            margin-right: 0.25rem;
-        }
-        .nb-action-btn.edit { background: var(--primary-100); color: var(--primary-color); }
-        .nb-action-btn.delete { background: var(--danger-light); color: var(--danger); }
-        .nb-action-btn.apply { background: var(--success-light); color: var(--success); }
-        .nb-action-btn.approve { background: #dbeafe; color: #2563eb; }
+        /* Action buttons - 使用全局样式 action-btn */
 
         /* Status badges */
         .status-badge {
@@ -347,22 +336,26 @@
             background: var(--gray-50);
         }
 
+        /* Alert / Toast - 与其他模块保持一致 */
         .alert { padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.875rem; }
-        .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-        .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .floating-alerts {
+        .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+        .alert-error { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+        .alert-info { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        #toast-container {
             position: fixed;
-            top: 64px;
-            right: 16px;
-            z-index: 2200;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
-            width: min(360px, calc(100vw - 32px));
+            gap: 0.5rem;
+            pointer-events: none;
         }
-        .floating-alerts .alert {
+        #toast-container .alert {
             margin-bottom: 0;
-            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+            pointer-events: auto;
+            box-shadow: var(--shadow-lg);
         }
 
         /* Device list in modal */
@@ -492,7 +485,6 @@
     </a>
     <div class="nb-topbar-spacer"></div>
     <div class="nb-topbar-actions">
-        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
         <div class="nb-topbar-user">
             <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
             <span>{{ user.username }}</span>
@@ -532,11 +524,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             告警管理
         </a>
-                <a href="{% url 'logs:runtime_log_list' %}" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-            设备日志
-        </a>
-<a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+                <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             系统日志
         </a>
@@ -546,10 +534,12 @@
         </a>
         <div class="nb-sidebar-divider"></div>
         <div class="nb-sidebar-section">系统</div>
-        <a href="/admin/" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            管理后台
+        <a href="{% url 'admin_panel:scheduled_tasks' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            定时任务
         </a>
+
+        
     </aside>
 
     <!-- Main content -->
@@ -565,8 +555,9 @@
         <!-- Tab navigation -->
         <div class="tab-navigation">
             <button class="tab-btn active" onclick="switchTab('templates', this)">模板列表</button>
-            <button class="tab-btn" onclick="switchTab('tasks', this)">任务列表</button>
+            <button class="tab-btn" onclick="switchTab('tasks', this)">模板配置任务列表</button>
             <button class="tab-btn" onclick="switchTab('schedules', this)">定时任务</button>
+            <button class="tab-btn" onclick="switchTab('config-save', this)">配置保存</button>
         </div>
 
         <div id="tab-templates">
@@ -574,7 +565,6 @@
 
         <div class="nb-action-bar">
             <button class="btn btn-primary btn-sm" onclick="openAddModal()">创建模板</button>
-            <a href="{% url 'configs:config_backup' %}" class="btn btn-secondary btn-sm">配置备份管理</a>
             <div class="nb-search-box">
                 <input type="text" id="searchInput" placeholder="搜索模板名称..." onkeyup="searchTemplates()">
                 <button class="btn btn-secondary btn-sm" onclick="searchTemplates()">搜索</button>
@@ -586,7 +576,7 @@
         {% if configs %}
             <div class="card">
                 <div class="card-body" style="padding: 0;">
-                    <table class="data-table" id="templateTable">
+                    <table class="list-table" id="templateTable">
                         <thead>
                             <tr>
                                 <th>模板名称</th>
@@ -606,9 +596,9 @@
                                     <td>{{ config.created_by|default:"-" }}</td>
                                     <td>{{ config.updated_at|default:"-" }}</td>
                                     <td>
-                                        <button class="nb-action-btn edit" onclick="openEditModal({{ config.id }})">编辑</button>
-                                        <button class="nb-action-btn delete" onclick="deleteTemplate({{ config.id }}, '{{ config.name|escapejs }}')">删除</button>
-                                        <button class="nb-action-btn apply" onclick="openApplyModal({{ config.id }}, '{{ config.name|escapejs }}')">应用</button>
+                                        <button class="action-btn btn-edit" onclick="openEditModal({{ config.id }})">编辑</button>
+                                        <button class="action-btn btn-delete" onclick="deleteTemplate({{ config.id }}, '{{ config.name|escapejs }}')">删除</button>
+                                        <button class="action-btn btn-apply" onclick="openApplyModal({{ config.id }}, '{{ config.name|escapejs }}')">应用</button>
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -633,7 +623,7 @@
         {% if tasks %}
             <div class="card">
                 <div class="card-body" style="padding: 0;">
-                    <table class="data-table">
+                    <table class="list-table">
                         <thead>
                             <tr>
                                 <th>任务名称</th>
@@ -656,9 +646,9 @@
                                     <td>{{ task.created_at }}</td>
                                     <td>
                                         {% if task.status == 'pending' %}
-                                            <button class="nb-action-btn apply" onclick="executeTask({{ task.id }}, this)">执行</button>
+                                            <button class="action-btn btn-apply" onclick="executeTask({{ task.id }}, this)">执行</button>
                                         {% endif %}
-                                        <button class="nb-action-btn approve" onclick="openTaskResultModal({{ task.id }}, '{{ task.name|escapejs }}')">执行结果</button>
+                                        <button class="action-btn btn-approve" onclick="openTaskResultModal({{ task.id }}, '{{ task.name|escapejs }}')">执行结果</button>
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -685,7 +675,7 @@
                         <button class="btn btn-primary btn-sm" onclick="openScheduleModal()">新增定时备份</button>
                         <button class="btn btn-secondary btn-sm" onclick="loadSchedules()">刷新列表</button>
                     </div>
-                    <table class="data-table">
+                    <table class="list-table">
                         <thead>
                             <tr>
                                 <th>任务名称</th>
@@ -705,10 +695,59 @@
                 </div>
             </div>
         </div>
+
+        <div id="tab-config-save" style="display: none;">
+            <h2 class="nb-section-title">定时配置保存</h2>
+
+            <!-- 定时调度设置 -->
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <div class="card-title">保存调度设置</div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-primary btn-sm" onclick="saveSchedule()">保存设置</button>
+                        <button class="btn btn-sm" style="background:#f59e0b;color:white;" onclick="triggerSaveNow()">立即保存</button>
+                    </div>
+                </div>
+                <div style="margin-bottom:1rem; display:flex; align-items:center; gap:0.75rem;">
+                    <label for="backupTime" style="font-size:0.875rem; font-weight:500; color:var(--foreground);">执行时间:</label>
+                    <input type="time" id="backupTime" value="17:45" style="padding:0.375rem 0.625rem; font-size:0.875rem; border:1px solid var(--input); border-radius:var(--radius); background:var(--background); color:var(--foreground);">
+                    <span style="font-size:0.8125rem; color:var(--muted-foreground);">(每天执行一次)</span>
+                </div>
+                <div id="scheduleStatus" style="font-size:0.875rem; color:var(--gray-500);"></div>
+            </div>
+
+            <!-- 配置保存任务记录 -->
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <div class="card-title" style="margin-bottom:0;">配置保存任务记录</div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadSaveLogs()">刷新记录</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="list-table">
+                        <thead>
+                            <tr>
+                                <th>开始时间</th>
+                                <th>结束时间</th>
+                                <th>状态</th>
+                                <th>设备数</th>
+                                <th>成功</th>
+                                <th>失败</th>
+                                <th>详情</th>
+                            </tr>
+                        </thead>
+                        <tbody id="saveLogsBody">
+                            <tr>
+                                <td colspan="7" style="text-align:center; color:var(--gray-500); padding:2rem;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
-<div id="floatingAlertContainer" class="floating-alerts"></div>
+<div id="toast-container" class="floating-alerts"></div>
 
 <!-- Device selection modal -->
 <div class="modal-overlay" id="deviceModal">
@@ -966,27 +1005,36 @@
     }
 
     function switchTab(tabName, buttonEl = null) {
-        // Hide all tabs
+        // 隐藏所有 Tab 内容区域
         document.getElementById('tab-templates').style.display = 'none';
         document.getElementById('tab-tasks').style.display = 'none';
         document.getElementById('tab-schedules').style.display = 'none';
+        document.getElementById('tab-config-save').style.display = 'none';
 
-        // Remove active class from all buttons
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        // 移除所有 Tab 按钮的激活状态
+        document.querySelectorAll('.tab-btn').forEach(function(button) {
+            button.classList.remove('active');
+        });
 
-        // Show selected tab and activate button
+        // 显示选中的 Tab 内容并激活对应按钮
         document.getElementById('tab-' + tabName).style.display = 'block';
         if (buttonEl) {
             buttonEl.classList.add('active');
         }
 
+        // 如果切换到定时任务 Tab 且未加载过，则加载定时任务列表
         if (tabName === 'schedules' && !schedulesLoaded) {
             loadSchedules();
+        }
+
+        // 如果切换到配置保存 Tab 且未加载过，则加载保存任务记录
+        if (tabName === 'config-save' && !saveLogsLoaded) {
+            loadSaveLogs();
         }
     }
 
     function showAlert(message, type = 'success') {
-        const container = document.getElementById('floatingAlertContainer') || document.getElementById('alertContainer');
+        const container = document.getElementById('toast-container') || document.getElementById('alertContainer');
         const alert = document.createElement('div');
         alert.className = `alert alert-${type}`;
         alert.textContent = message;
@@ -1149,7 +1197,7 @@
             });
             const data = await parseApiResponse(response);
             if (response.ok) {
-                showAlert('配置任务创建成功！已转至任务列表。');
+                showAlert('配置任务创建成功！已转至模板配置任务列表。');
                 closeDeviceModal();
                 setTimeout(() => {
                     window.location.hash = 'tasks';
@@ -1347,9 +1395,9 @@
                         <td>${resultHtml}</td>
                         <td>${schedule.total_run_count || 0}</td>
                         <td>
-                            <button class="nb-action-btn apply" onclick="runSchedule(${schedule.id})">立即执行</button>
-                            <button class="nb-action-btn edit" onclick="openScheduleModal(${schedule.id})">编辑</button>
-                            <button class="nb-action-btn delete" data-schedule-name="${escapeHtml(schedule.name)}" onclick="deleteSchedule(${schedule.id}, getDatasetValue(this, 'scheduleName'))">删除</button>
+                            <button class="action-btn btn-apply" onclick="runSchedule(${schedule.id})">立即执行</button>
+                            <button class="action-btn btn-edit" onclick="openScheduleModal(${schedule.id})">编辑</button>
+                            <button class="action-btn btn-delete" data-schedule-name="${escapeHtml(schedule.name)}" onclick="deleteSchedule(${schedule.id}, getDatasetValue(this, 'scheduleName'))">删除</button>
                         </td>
                     </tr>
                 `;
@@ -1602,6 +1650,10 @@
         }
     }
 
+    // 任务状态轮询相关变量
+    let taskPollInterval = null;
+    let currentTaskModal = null;
+
     async function runSchedule(id) {
         try {
             const response = await fetch(`/configs/api/schedules/${id}/run/`, {
@@ -1613,18 +1665,156 @@
                 showAlert(data.error || '触发执行失败', 'error');
                 return;
             }
-            showAlert('定时备份任务已触发执行');
-            setTimeout(() => {
-                loadSchedules();
-                openScheduleLogModal(id);
-            }, 1200);
+
+            // 任务已提交，显示执行中状态
+            const jobId = data.job_id;
+            showAlert('任务已提交，正在执行中...', 'info');
+
+            // 打开任务状态弹窗
+            openTaskStatusModal(jobId, id);
         } catch (error) {
             showAlert('网络错误，请重试。', 'error');
         }
     }
 
+    function openTaskStatusModal(jobId, scheduleId) {
+        // 创建任务状态弹窗（如果不存在）
+        let modal = document.getElementById('taskStatusModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'taskStatusModal';
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `
+                <div class="modal" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h2 id="taskStatusTitle">任务执行状态</h2>
+                        <button class="modal-close" onclick="closeTaskStatusModal()">&times;</button>
+                    </div>
+                    <div class="modal-body" style="text-align: center; padding: 2rem;">
+                        <div id="taskStatusIcon" style="font-size: 3rem; margin-bottom: 1rem;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                        </div>
+                        <div id="taskStatusText" style="font-size: 1.125rem; color: #1a2332; margin-bottom: 0.5rem;">任务在队列中...</div>
+                        <div id="taskStatusSubtext" style="font-size: 0.875rem; color: #6c757d;">请稍候，正在查询任务状态</div>
+                        <div id="taskStatusProgress" style="margin-top: 1.5rem;">
+                            <div style="height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden;">
+                                <div id="taskProgressBar" style="height: 100%; background: #1971c2; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="display: none;" id="taskStatusFooter">
+                        <button type="button" class="btn btn-secondary" onclick="closeTaskStatusModal()">关闭</button>
+                        <button type="button" class="btn btn-primary" id="viewResultBtn">查看执行结果</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } else {
+            modal.classList.add('active');
+        }
+
+        currentTaskModal = { jobId, scheduleId };
+
+        // 重置弹窗状态
+        document.getElementById('taskStatusText').textContent = '任务在队列中...';
+        document.getElementById('taskStatusSubtext').textContent = '请稍候，正在查询任务状态';
+        document.getElementById('taskStatusIcon').innerHTML = `
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+            </svg>
+        `;
+        document.getElementById('taskProgressBar').style.width = '10%';
+        document.getElementById('taskStatusFooter').style.display = 'none';
+
+        // 开始轮询任务状态
+        pollTaskStatus(jobId, scheduleId);
+    }
+
+    async function pollTaskStatus(jobId, scheduleId) {
+        // 检查弹窗是否还打开
+        const modal = document.getElementById('taskStatusModal');
+        if (!modal || !modal.classList.contains('active')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/configs/api/task-status/${jobId}/`, {
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            const data = await parseApiResponse(response);
+
+            if (!response.ok) {
+                document.getElementById('taskStatusText').textContent = '查询状态失败';
+                document.getElementById('taskStatusSubtext').textContent = data.error || '请稍后手动刷新查看结果';
+                document.getElementById('taskStatusIcon').innerHTML = `
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                `;
+                document.getElementById('taskStatusFooter').style.display = 'flex';
+                return;
+            }
+
+            if (data.is_finish) {
+                // 任务完成
+                const success = data.success;
+                const result = data.result || {};
+
+                document.getElementById('taskStatusText').textContent = success ? '任务执行完成' : '任务执行失败';
+                document.getElementById('taskStatusSubtext').textContent = success
+                    ? `成功: ${result.success_count || 0} 台, 失败: ${result.failure_count || 0} 台`
+                    : (data.error || '请查看详细日志');
+                document.getElementById('taskStatusIcon').innerHTML = success
+                    ? `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 12 15 16 10"/></svg>`
+                    : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+                document.getElementById('taskProgressBar').style.width = '100%';
+                document.getElementById('taskStatusFooter').style.display = 'flex';
+
+                // 设置查看结果按钮
+                document.getElementById('viewResultBtn').onclick = function() {
+                    closeTaskStatusModal();
+                    loadSchedules();
+                    openScheduleLogModal(scheduleId);
+                };
+
+                showAlert(success ? '任务执行完成' : '任务执行失败', success ? 'success' : 'error');
+            } else {
+                // 任务还在执行中
+                const statusText = data.status === 'STARTED' ? '任务执行中...' : '任务在队列中...';
+                document.getElementById('taskStatusText').textContent = statusText;
+                document.getElementById('taskStatusSubtext').textContent = data.message || '请稍候';
+                document.getElementById('taskProgressBar').style.width = data.status === 'STARTED' ? '50%' : '30%';
+
+                // 继续轮询
+                taskPollInterval = setTimeout(() => pollTaskStatus(jobId, scheduleId), 2000);
+            }
+        } catch (error) {
+            document.getElementById('taskStatusText').textContent = '网络错误';
+            document.getElementById('taskStatusSubtext').textContent = '请稍后手动刷新查看结果';
+            document.getElementById('taskStatusFooter').style.display = 'flex';
+        }
+    }
+
+    function closeTaskStatusModal() {
+        const modal = document.getElementById('taskStatusModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        if (taskPollInterval) {
+            clearTimeout(taskPollInterval);
+            taskPollInterval = null;
+        }
+        currentTaskModal = null;
+    }
+
     async function deleteSchedule(id, name) {
-        if (!confirm(`确定要删除定时任务“${name}”吗？`)) {
+        if (!confirm(`确定要删除定时任务"${name}"吗？`)) {
             return;
         }
         try {
@@ -1720,6 +1910,148 @@
         return '执行中';
     }
 
+    // 配置保存相关变量
+    let backupScheduleId = null;
+    let saveLogsLoaded = false;
+
+    // 加载配置保存调度设置
+    async function loadSchedule() {
+        try {
+            const response = await fetch('/configs/api/backup/schedule/');
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+            }
+            const data = await response.json();
+            backupScheduleId = data.id;
+            const scheduleStatusElement = document.getElementById('scheduleStatus');
+            const backupTimeInput = document.getElementById('backupTime');
+            const backupTimeValue = data.backup_time || '17:45';
+            if (scheduleStatusElement) {
+                scheduleStatusElement.textContent = '当前设置: 每天 ' + backupTimeValue + ' 执行保存';
+            }
+            if (backupTimeInput) {
+                backupTimeInput.value = backupTimeValue;
+            }
+        } catch (error) {
+            console.error('加载保存设置失败:', error);
+            const scheduleStatusElement = document.getElementById('scheduleStatus');
+            if (scheduleStatusElement) {
+                scheduleStatusElement.textContent = '加载设置失败';
+            }
+        }
+    }
+
+    // 保存配置保存调度设置
+    async function saveSchedule() {
+        const backupTime = document.getElementById('backupTime').value;
+        try {
+            const response = await fetch('/configs/api/backup/schedule/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify({ backup_time: backupTime })
+            });
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+            }
+            const data = await response.json();
+            if (data.success) {
+                backupScheduleId = data.id;
+                showAlert('保存时间已设置为每天 ' + backupTime, 'success');
+                const scheduleStatusElement = document.getElementById('scheduleStatus');
+                if (scheduleStatusElement) {
+                    scheduleStatusElement.textContent = '当前设置: 每天 ' + backupTime + ' 执行保存';
+                }
+            } else {
+                showAlert('保存失败: ' + (data.error || '未知错误'), 'error');
+            }
+        } catch (error) {
+            console.error('保存设置失败:', error);
+            showAlert('保存失败: ' + error.message, 'error');
+        }
+    }
+
+    // 立即触发配置保存
+    async function triggerSaveNow() {
+        if (!confirm('确认立即对所有设备执行配置保存？')) {
+            return;
+        }
+        try {
+            const response = await fetch('/configs/api/backup/trigger/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+            }
+            const data = await response.json();
+            showAlert('保存任务已启动，请稍后刷新查看结果', 'success');
+            if (data.schedule_id) {
+                backupScheduleId = data.schedule_id;
+            }
+        } catch (error) {
+            console.error('触发保存失败:', error);
+            showAlert('触发保存失败: ' + error.message, 'error');
+        }
+    }
+
+    // 加载配置保存任务记录
+    async function loadSaveLogs() {
+        const tbody = document.getElementById('saveLogsBody');
+        if (!backupScheduleId) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--gray-500); padding:2rem;">暂无保存任务记录</td></tr>';
+            return;
+        }
+
+        try {
+            const response = await fetch('/configs/api/schedules/' + backupScheduleId + '/logs/');
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+            }
+            const data = await response.json();
+            const logs = data.logs || [];
+
+            if (!logs.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--gray-500); padding:2rem;">暂无保存任务记录</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = logs.map(function(log) {
+                const startTime = log.start_time ? new Date(log.start_time).toLocaleString('zh-CN') : '-';
+                const endTime = log.end_time ? new Date(log.end_time).toLocaleString('zh-CN') : '-';
+                const statusBadge = formatLogStatus(log.status);
+                return '<tr>' +
+                    '<td>' + startTime + '</td>' +
+                    '<td>' + endTime + '</td>' +
+                    '<td>' + statusBadge + '</td>' +
+                    '<td>' + (log.total_devices ?? '-') + '</td>' +
+                    '<td>' + (log.success_count ?? 0) + '</td>' +
+                    '<td>' + (log.failed_count ?? 0) + '</td>' +
+                    '<td>' + renderSaveLogDetail(log) + '</td>' +
+                '</tr>';
+            }).join('');
+            saveLogsLoaded = true;
+        } catch (error) {
+            console.error('加载保存任务记录失败:', error);
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--gray-500); padding:2rem;">加载失败</td></tr>';
+        }
+    }
+
+    // 渲染保存任务日志详情
+    function renderSaveLogDetail(log) {
+        const results = (log.result_detail && log.result_detail.results) || [];
+        if (!results.length && !log.error_message) {
+            return '<span style="color:var(--gray-400)">-</span>';
+        }
+
+        if (log.error_message) {
+            return '<span style="color:var(--danger); font-size:0.75rem;">' + escapeHtml(log.error_message) + '</span>';
+        }
+
+        const successCount = results.filter(function(r) { return r.success; }).length;
+        const failCount = results.length - successCount;
+        return '<span style="font-size:0.75rem;">成功 ' + successCount + ' / 失败 ' + failCount + '</span>';
+    }
+
     function searchTemplates() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         const rows = document.querySelectorAll('#templateTable tbody tr');
@@ -1729,12 +2061,14 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
         const hash = window.location.hash.replace('#', '');
-        if (['templates', 'tasks', 'schedules'].includes(hash)) {
-            const btn = document.querySelector(`.tab-btn[onclick*="${hash}"]`);
+        if (['templates', 'tasks', 'schedules', 'config-save'].includes(hash)) {
+            const btn = document.querySelector('.tab-btn[onclick*="' + hash + '"]');
             if (btn) switchTab(hash, btn);
         }
+        // 加载配置保存调度设置
+        loadSchedule();
     });
 
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });

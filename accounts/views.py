@@ -1,9 +1,4 @@
-"""
-用户账户管理页面视图
-
-包含 AccountListView（用户列表页面）和 AccountDetailView（用户详情页面）。
-"""
-
+# 用户账户管理页面视图和API
 import json
 
 from django.views.generic import ListView, DetailView
@@ -18,8 +13,7 @@ from .models import UserProfile
 
 
 class AccountListView(LoginRequiredMixin, ListView):
-    """Display list of all user accounts."""
-
+    # 用户列表页面
     model = User
     template_name = 'accounts/account_list.html'
     context_object_name = 'accounts'
@@ -27,8 +21,7 @@ class AccountListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Return all UserProfiles, auto-creating for users without one."""
-        # 批量获取所有用户和现有 profiles
+        # 返回所有UserProfile，自动创建缺失的
         all_users = User.objects.all()
         existing_profiles = UserProfile.objects.filter(user__in=all_users).values_list('user_id', flat=True)
 
@@ -47,7 +40,7 @@ class AccountListView(LoginRequiredMixin, ListView):
         return UserProfile.objects.select_related('user').order_by('user__username')
 
     def get_context_data(self, **kwargs):
-        """Add user info and account statistics to context."""
+        # 添加用户信息和统计到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context['total_users'] = User.objects.count()
@@ -56,15 +49,14 @@ class AccountListView(LoginRequiredMixin, ListView):
 
 
 class AccountDetailView(LoginRequiredMixin, DetailView):
-    """Display details of a specific user account."""
-
+    # 用户详情页面
     model = User
     template_name = 'accounts/account_detail.html'
     context_object_name = 'account'
     login_url = 'homepage:login'
 
     def get_context_data(self, **kwargs):
-        """Add user info and profile to context."""
+        # 添加用户信息和Profile到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         try:
@@ -81,7 +73,7 @@ class AccountDetailView(LoginRequiredMixin, DetailView):
 
 
 def _is_admin_user(request):
-    """检查是否为管理员用户"""
+    # 检查是否为管理员用户
     if not request.user.is_authenticated:
         return False
     # Django superuser 直接放行
@@ -96,14 +88,7 @@ def _is_admin_user(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def user_list_api(request):
-    """
-    用户列表API端点
-
-    GET: 获取用户列表
-    POST: 创建新用户
-
-    """
-    # 权限检查：仅管理员可访问
+    # 用户列表API：GET获取列表，POST创建用户
     if not _is_admin_user(request):
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -175,15 +160,7 @@ def user_list_api(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def user_detail_api(request, pk):
-    """
-    用户详情API端点
-
-    GET: 获取用户详情
-    PUT: 更新用户信息
-    DELETE: 删除用户
-
-    """
-    # 权限检查：仅管理员可访问
+    # 用户详情API：GET获取详情，PUT更新，DELETE删除
     if not _is_admin_user(request):
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -241,13 +218,7 @@ def user_detail_api(request, pk):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def user_permissions_api(request, pk):
-    """
-    用户权限设置API端点
-
-    为普通用户授予细粒度权限
-
-    """
-    # 权限检查：仅管理员可访问
+    # 用户权限设置API：为普通用户授予细粒度权限
     if not _is_admin_user(request):
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -273,12 +244,7 @@ def user_permissions_api(request, pk):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def audit_log_list_api(request):
-    """
-    审计日志查询API端点
-
-    筛选操作日志类型的SystemLog
-
-    """
+    # 审计日志查询API：筛选操作日志类型的SystemLog
     from logs.models import SystemLog
 
     # 获取查询参数

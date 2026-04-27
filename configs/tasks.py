@@ -1,11 +1,9 @@
-"""
-配置管理 Celery 异步任务
-
-包含配置下发、定时备份等异步任务。
-"""
-
+# 配置管理Celery异步任务
+import logging
 from celery import shared_task
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 def _get_schedule_devices(schedule):
@@ -73,15 +71,23 @@ def _is_schedule_due(schedule, now):
     return timezone.localtime(schedule.last_run_time) < scheduled_at
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=600,
+    soft_time_limit=540,
+    queue='low',
+)
 def backup_all_devices_configs(self, schedule_id: int = None):
-    """定时备份所有设备配置任务"""
+    # 定时配置保存任务：在设备上执行 save 命令，然后拉取配置并推送到 GitLab
     from devices.models import Device
     from .models import ConfigFetchSchedule, ConfigFetchLog
     from .services import ConfigManagementService
+    from .gitlab_service import ConfigGitlabService
     from logs.models import SystemLog
 
-    service = ConfigManagementService()
+    config_service = ConfigManagementService()
+    gitlab_service = ConfigGitlabService()
     schedule = None
     log = None
     devices = Device.objects.all()
@@ -102,27 +108,56 @@ def backup_all_devices_configs(self, schedule_id: int = None):
     success_count = 0
     failure_count = 0
     results = []
+    successful_device_configs = []
 
-    for device in devices:
+    for target_device in devices:
         try:
-            result = service.backup_device_configs(device)
-            if result['success']:
+            # 第一步：在设备上执行 save 命令并获取配置
+            save_result = config_service.save_device_configs(target_device)
+            if save_result['success']:
                 success_count += 1
+                # 收集成功获取的配置内容
+                successful_device_configs.append({
+                    'device_id': target_device.id,
+                    'device_name': target_device.name,
+                    'running_config': save_result.get('running_config', ''),
+                    'startup_config': save_result.get('startup_config', ''),
+                })
             else:
                 failure_count += 1
-            results.append(result)
-        except Exception as e:
+            results.append(save_result)
+        except Exception as error:
             failure_count += 1
             results.append({
-                'device_id': device.id,
-                'device_name': device.name,
+                'device_id': target_device.id,
+                'device_name': target_device.name,
                 'success': False,
-                'error': str(e)
+                'error': str(error)
             })
+
+    # 第二步：将所有成功获取的配置推送到 GitLab（只推送启动配置）
+    gitlab_push_success = False
+    gitlab_error = None
+    if successful_device_configs:
+        try:
+            gitlab_result = gitlab_service.push_configs(
+                successful_device_configs,
+                commit_message=f"Scheduled save at {timezone.now().strftime('%Y-%m-%d %H:%M')}",
+                startup_only=True
+            )
+            if gitlab_result.get('success'):
+                gitlab_push_success = True
+                logger.info(f"配置已推送到 GitLab, commit: {gitlab_result.get('commit_hash', '')}")
+            else:
+                gitlab_error = gitlab_result.get('error', '未知错误')
+                logger.error(f"推送到 GitLab 失败: {gitlab_error}")
+        except Exception as error:
+            gitlab_error = str(error)
+            logger.error(f"推送到 GitLab 异常: {error}")
 
     SystemLog.objects.create(
         log_type='system',
-        message=f"定时配置备份完成: 成功 {success_count} 台, 失败 {failure_count} 台",
+        message=f"定时配置保存完成: 成功 {success_count} 台, 失败 {failure_count} 台, GitLab推送: {'成功' if gitlab_push_success else '失败'}",
         details={'results': results}
     )
 
@@ -153,12 +188,19 @@ def backup_all_devices_configs(self, schedule_id: int = None):
     }
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    time_limit=300,
+    soft_time_limit=270,
+    queue='low',
+)
 def backup_single_device_config(self, device_id: int, schedule_id: int = None):
-    """备份单个设备配置任务"""
+    # 单个设备配置保存任务：执行 save 命令，拉取配置并推送到 GitLab
     from devices.models import Device
     from .models import ConfigFetchSchedule, ConfigFetchLog
     from .services import ConfigManagementService
+    from .gitlab_service import ConfigGitlabService
 
     schedule = None
     log = None
@@ -192,8 +234,32 @@ def backup_single_device_config(self, device_id: int, schedule_id: int = None):
             'error': f'Device with id {device_id} not found',
         }
 
-    service = ConfigManagementService()
-    result = service.backup_device_configs(device)
+    config_service = ConfigManagementService()
+    gitlab_service = ConfigGitlabService()
+
+    # 在设备上执行 save 命令并获取配置
+    result = config_service.save_device_configs(device)
+
+    # 如果 save 成功，将配置推送到 GitLab
+    gitlab_push_success = False
+    if result.get('success'):
+        try:
+            gitlab_result = gitlab_service.push_configs(
+                [{
+                    'device_id': device.id,
+                    'device_name': device.name,
+                    'running_config': result.get('running_config', ''),
+                    'startup_config': result.get('startup_config', ''),
+                }],
+                commit_message=f"Manual save for {device.name} at {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+            )
+            if gitlab_result.get('success'):
+                gitlab_push_success = True
+                logger.info(f"单设备配置已推送到 GitLab: {device.name}")
+            else:
+                logger.error(f"单设备配置推送到 GitLab 失败: {gitlab_result.get('error')}")
+        except Exception as error:
+            logger.error(f"单设备配置推送到 GitLab 异常: {error}")
 
     if log and schedule:
         log.end_time = timezone.now()
@@ -216,9 +282,15 @@ def backup_single_device_config(self, device_id: int, schedule_id: int = None):
     return result
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=300,
+    soft_time_limit=270,
+    queue='low',
+)
 def execute_config_task(self, task_id: int):
-    """执行配置任务"""
+    # 执行配置任务
     from .models import ConfigTask
     from .services import ConfigManagementService
 
@@ -255,9 +327,15 @@ def execute_config_task(self, task_id: int):
         }
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=300,
+    soft_time_limit=270,
+    queue='low',
+)
 def deploy_single_device_config(self, device_id: int, config: str):
-    """单设备配置下发任务"""
+    # 单设备配置下发任务
     from devices.models import Device
     from .services import ConfigManagementService
 
@@ -275,9 +353,15 @@ def deploy_single_device_config(self, device_id: int, config: str):
     return result
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=600,
+    soft_time_limit=540,
+    queue='low',
+)
 def deploy_batch_device_config(self, device_ids: list, config: str):
-    """批量设备配置下发任务（使用 Nornir）"""
+    # 批量设备配置下发任务（使用Nornir）
     from devices.models import Device
     from .services import ConfigManagementService
 
@@ -288,9 +372,15 @@ def deploy_batch_device_config(self, device_ids: list, config: str):
     return result
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=120,
+    soft_time_limit=100,
+    queue='low',
+)
 def execute_scheduled_backup(self):
-    """执行定时配置备份任务"""
+    # 执行定时配置备份任务，检查并触发到期的备份调度
     from .models import ConfigFetchSchedule
     import logging
     
@@ -327,9 +417,13 @@ def execute_scheduled_backup(self):
         return {'success': False, 'error': str(exc)}
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    queue='low',
+)
 def cleanup_old_config_results(self):
-    """清理旧的配置任务结果"""
+    # 清理30天前的配置任务结果
     from datetime import timedelta
     from .models import ConfigTaskResult
 
@@ -345,12 +439,15 @@ def cleanup_old_config_results(self):
     }
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=600,
+    soft_time_limit=540,
+    queue='low',
+)
 def preload_device_configs_task(self, schedule_id: int):
-    """预加载设备配置任务（供定时任务调用）"""
-    import logging
-    logger = logging.getLogger(__name__)
-
+    # 预加载设备配置任务，供定时任务调用
     from devices.models import Device
     from .models import ConfigFetchSchedule, ConfigFetchLog
     from .services import ConfigManagementService

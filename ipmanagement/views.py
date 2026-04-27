@@ -1,6 +1,4 @@
-"""
-IP Management Views
-"""
+# IP Management Views
 import ipaddress
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -25,7 +23,7 @@ from devices.models import Device
 # ============ 网段管理视图 ============
 
 class SubnetListView(LoginRequiredMixin, ListView):
-    """网段列表视图"""
+    # 网段列表视图
     model = Subnet
     template_name = 'ipmanagement/subnet_list.html'
     context_object_name = 'subnets'
@@ -38,7 +36,7 @@ class SubnetListView(LoginRequiredMixin, ListView):
 
 
 class SubnetCreateView(LoginRequiredMixin, CreateView):
-    """创建网段视图"""
+    # 创建网段视图
     model = Subnet
     template_name = 'ipmanagement/subnet_form.html'
     fields = ['cidr', 'name', 'vlan_id', 'description', 'is_active']
@@ -57,7 +55,7 @@ class SubnetCreateView(LoginRequiredMixin, CreateView):
 
 
 class SubnetUpdateView(LoginRequiredMixin, UpdateView):
-    """编辑网段视图"""
+    # 编辑网段视图
     model = Subnet
     template_name = 'ipmanagement/subnet_form.html'
     fields = ['cidr', 'name', 'vlan_id', 'description', 'is_active']
@@ -72,7 +70,7 @@ class SubnetUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class SubnetDetailView(LoginRequiredMixin, DetailView):
-    """网段详情视图 - 显示网段内所有IP地址"""
+    # 网段详情视图，显示网段内所有IP地址
     model = Subnet
     template_name = 'ipmanagement/subnet_detail.html'
     context_object_name = 'subnet'
@@ -119,7 +117,7 @@ class SubnetDetailView(LoginRequiredMixin, DetailView):
 
 
 class SubnetDeleteView(LoginRequiredMixin, DeleteView):
-    """删除网段视图"""
+    # 删除网段视图
     model = Subnet
     template_name = 'ipmanagement/subnet_confirm_delete.html'
     success_url = reverse_lazy('ipmanagement:subnet_list')
@@ -134,7 +132,7 @@ class SubnetDeleteView(LoginRequiredMixin, DeleteView):
 # ============ IP扫描视图 ============
 
 class IPScanView(LoginRequiredMixin, ListView):
-    """IP扫描页面视图"""
+    # IP扫描页面视图
     template_name = 'ipmanagement/ip_scan.html'
     model = IPScanTask
     context_object_name = 'scan_tasks'
@@ -154,7 +152,7 @@ class IPScanView(LoginRequiredMixin, ListView):
 # ============ 分配历史视图 ============
 
 class AllocationHistoryView(LoginRequiredMixin, ListView):
-    """IP分配历史视图"""
+    # IP分配历史视图
     model = AllocationLog
     template_name = 'ipmanagement/allocation_history.html'
     context_object_name = 'logs'
@@ -187,7 +185,7 @@ class AllocationHistoryView(LoginRequiredMixin, ListView):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def api_subnets(request):
-    """API: 列出所有子网 / 创建子网"""
+    # 子网API：GET列出所有子网，POST创建子网
     if request.method == 'GET':
         subnets = Subnet.objects.all().order_by('cidr')
         data = []
@@ -253,7 +251,7 @@ def api_subnets(request):
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def api_subnet_detail(request, subnet_id):
-    """API: 获取/删除子网详情"""
+    # 子网详情API：GET获取详情，DELETE删除
     try:
         subnet = Subnet.objects.get(id=subnet_id)
     except Subnet.DoesNotExist:
@@ -291,7 +289,7 @@ def api_subnet_detail(request, subnet_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_subnet_available(request, subnet_id):
-    """API: 获取网段内可用IP"""
+    # 获取网段内可用IP列表
     try:
         subnet = Subnet.objects.get(id=subnet_id)
     except Subnet.DoesNotExist:
@@ -314,7 +312,7 @@ def api_subnet_available(request, subnet_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_subnet_allocate(request, subnet_id):
-    """API: 批量分配IP"""
+    # 批量分配IP
     try:
         subnet = Subnet.objects.get(id=subnet_id)
     except Subnet.DoesNotExist:
@@ -354,7 +352,7 @@ def api_subnet_allocate(request, subnet_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_subnet_release(request, subnet_id):
-    """API: 批量释放IP"""
+    # 批量释放IP
     ip_list = request.data.get('ip_list', [])
     reason = request.data.get('reason', '')
 
@@ -373,7 +371,7 @@ def api_subnet_release(request, subnet_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_ips(request):
-    """API: IP列表（支持过滤）"""
+    # IP列表API，支持过滤
     subnet_id = request.GET.get('subnet_id')
     status = request.GET.get('status')
     search = request.GET.get('search', '')
@@ -419,7 +417,7 @@ def api_ips(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_ip_detail(request, ip_address):
-    """API: 获取IP详细信息"""
+    # 获取IP详细信息
     service = IPAMService()
     result = service.get_ip_info(ip_address)
 
@@ -432,7 +430,7 @@ def api_ip_detail(request, ip_address):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_ip_allocate(request, ip_address):
-    """API: 分配单个IP"""
+    # 分配单个IP
     device_id = request.data.get('device_id')
     hostname = request.data.get('hostname', '')
     description = request.data.get('description', '')
@@ -462,7 +460,7 @@ def api_ip_allocate(request, ip_address):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_ip_release(request, ip_address):
-    """API: 释放单个IP"""
+    # 释放单个IP
     reason = request.data.get('reason', '')
 
     service = IPAMService()
@@ -477,7 +475,7 @@ def api_ip_release(request, ip_address):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_ip_reserve(request, ip_address):
-    """API: 预留单个IP"""
+    # 预留单个IP
     description = request.data.get('description', '')
     device_id = request.data.get('device_id')
 
@@ -500,7 +498,7 @@ def api_ip_reserve(request, ip_address):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_ip_update_status(request, ip_address):
-    """API: 更新单个IP状态（仅支持可用/已分配/预留）"""
+    # 更新单个IP状态（仅支持available/allocated/reserved）
     new_status = request.data.get('status')
     allowed_status = {'available', 'allocated', 'reserved'}
 
@@ -552,7 +550,7 @@ def api_ip_update_status(request, ip_address):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_scan_subnet(request):
-    """API: 执行网段扫描（异步）"""
+    # 执行网段扫描（异步）
     cidr = request.data.get('cidr')
     subnet_id = request.data.get('subnet_id')
 
@@ -586,7 +584,7 @@ def api_scan_subnet(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_scan_status(request, task_id):
-    """API: 获取扫描任务状态"""
+    # 获取扫描任务状态
     try:
         task = IPScanTask.objects.get(id=task_id)
     except IPScanTask.DoesNotExist:
@@ -611,7 +609,7 @@ def api_scan_status(request, task_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_scan_result(request, task_id):
-    """API: 获取扫描任务结果（包含alive_hosts）"""
+    # 获取扫描任务结果（包含alive_hosts）
     try:
         task = IPScanTask.objects.get(id=task_id)
     except IPScanTask.DoesNotExist:
@@ -627,7 +625,7 @@ def api_scan_result(request, task_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_quick_scan(request):
-    """API: 快速扫描（同步返回结果，仅适用于小网段）"""
+    # 快速扫描（同步返回，仅适用于小网段）
     cidr = request.data.get('cidr')
     subnet_id = request.data.get('subnet_id')
 
@@ -679,7 +677,7 @@ def api_quick_scan(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_sync_scan(request, task_id):
-    """API: 将扫描结果同步到IPAM"""
+    # 将扫描结果同步到IPAM
     try:
         task = IPScanTask.objects.get(id=task_id)
     except IPScanTask.DoesNotExist:
@@ -699,7 +697,7 @@ def api_sync_scan(request, task_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_allocation_history(request):
-    """API: 获取IP分配历史"""
+    # 获取IP分配历史
     ip_address = request.GET.get('ip')
     limit = int(request.GET.get('limit', 100))
     limit = min(limit, 500)
@@ -717,7 +715,7 @@ def api_allocation_history(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_subnet_usage(request, subnet_id):
-    """API: 获取网段IP使用情况"""
+    # 获取网段IP使用情况
     try:
         subnet = Subnet.objects.get(id=subnet_id)
     except Subnet.DoesNotExist:
@@ -758,7 +756,7 @@ def api_subnet_usage(request, subnet_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_batch_ip_operations(request, subnet_id):
-    """API: 批量IP操作（分配/释放/预留）"""
+    # 批量IP操作（分配/释放/预留）
     try:
         subnet = Subnet.objects.get(id=subnet_id)
     except Subnet.DoesNotExist:
@@ -821,7 +819,7 @@ def api_batch_ip_operations(request, subnet_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_auto_subnets(request):
-    """API: 返回从设备表IP推导出的可添加网段"""
+    # 返回从设备表IP推导出的可添加网段
     discovery_service = NetworkDiscoveryService()
     subnets = [item for item in discovery_service.discover_network_subnet_details() if not item['exists']]
 
@@ -834,7 +832,7 @@ def api_auto_subnets(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_discover_subnets(request):
-    """API: 触发网段自动发现"""
+    # 触发网段自动发现
     from .tasks import discover_subnets
 
     discover_subnets.delay()

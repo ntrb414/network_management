@@ -147,7 +147,6 @@
     </a>
     <div class="nb-topbar-spacer"></div>
     <div class="nb-topbar-actions">
-        <a href="{% url 'admin:index' %}" class="nb-topbar-btn">Django管理后台</a>
         <div class="nb-topbar-user">
             <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
             <span>{{ user.username }}</span>
@@ -203,10 +202,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             定时任务
         </a>
-        <a href="{% url 'admin_panel:dashboard' %}" class="nb-sidebar-item active">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            管理后台
-        </a>
     </aside>
 
     <main class="nb-main">
@@ -221,10 +216,6 @@
                 <div class="nb-page-title">管理后台</div>
                 <div class="nb-page-subtitle">系统管理与权限维护</div>
             </div>
-            <a href="{% url 'admin:index' %}" class="btn btn-secondary">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                Django Admin
-            </a>
         </div>
 
         <!-- Stats row -->

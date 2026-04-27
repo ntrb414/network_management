@@ -261,6 +261,131 @@ def toggle_periodic_task(request, task_id):
     return redirect('admin_panel:scheduled_tasks')
 
 
+@staff_member_required
+def update_task_interval(request, task_id):
+    """
+    更新定时任务的执行间隔
+
+    仅支持 IntervalSchedule 类型任务。
+    请求体 JSON: {"every": int, "period": str}
+    """
+    import json
+    from django.http import JsonResponse
+    from django_celery_beat.models import PeriodicTask, IntervalSchedule
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': '仅支持 POST 请求'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        every = data.get('every')
+        period = data.get('period')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '无效的 JSON 数据'}, status=400)
+
+    # 验证输入
+    valid_periods = ['seconds', 'minutes', 'hours', 'days']
+    if not every or not isinstance(every, int) or every < 1:
+        return JsonResponse({'success': False, 'error': '间隔数值必须是大于 0 的整数'}, status=400)
+    if period not in valid_periods:
+        return JsonResponse({'success': False, 'error': '时间单位必须是 seconds/minutes/hours/days 之一'}, status=400)
+
+    # 最小间隔验证（至少 10 秒）
+    period_map = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400}
+    total_seconds = every * period_map[period]
+    if total_seconds < 10:
+        return JsonResponse({'success': False, 'error': '间隔时间不能小于 10 秒'}, status=400)
+
+    try:
+        task = PeriodicTask.objects.get(pk=task_id)
+    except PeriodicTask.DoesNotExist:
+        return JsonResponse({'success': False, 'error': '任务不存在'}, status=404)
+
+    if not task.interval:
+        return JsonResponse({'success': False, 'error': '该任务使用非间隔调度，无法通过此接口修改'}, status=400)
+
+    # 获取或创建 IntervalSchedule
+    interval, _ = IntervalSchedule.objects.get_or_create(every=every, period=period)
+    task.interval = interval
+    task.save()
+
+    period_names = {'seconds': '秒', 'minutes': '分钟', 'hours': '小时', 'days': '天'}
+    return JsonResponse({
+        'success': True,
+        'message': f'执行间隔已更新为每 {every} {period_names[period]}'
+    })
+
+
+@staff_member_required
+def get_task_detail(request, task_id):
+    """
+    获取定时任务详情
+
+    返回 JSON 格式的任务详细信息。
+    """
+    from django.http import JsonResponse
+    from django_celery_beat.models import PeriodicTask
+
+    if request.method != 'GET':
+        return JsonResponse({'error': '仅支持 GET 请求'}, status=405)
+
+    try:
+        task = PeriodicTask.objects.get(pk=task_id)
+    except PeriodicTask.DoesNotExist:
+        return JsonResponse({'error': '任务不存在'}, status=404)
+
+    # 获取任务元数据
+    from .templatetags.admin_panel_tags import get_task_metadata
+    task_info = get_task_metadata(task.task)
+
+    # 构建调度详情
+    schedule_detail = None
+    if task.interval:
+        period_names = {'seconds': '秒', 'minutes': '分钟', 'hours': '小时', 'days': '天'}
+        schedule_detail = {
+            'every': task.interval.every,
+            'period': task.interval.period,
+            'human_readable': f"每 {task.interval.every} {period_names.get(task.interval.period, task.interval.period)}"
+        }
+    elif task.crontab:
+        schedule_detail = {
+            'minute': str(task.crontab.minute),
+            'hour': str(task.crontab.hour),
+            'day_of_month': str(task.crontab.day_of_month),
+            'month_of_year': str(task.crontab.month_of_year),
+            'day_of_week': str(task.crontab.day_of_week),
+            'human_readable': f"Cron: {task.crontab.minute} {task.crontab.hour} {task.crontab.day_of_month} {task.crontab.month_of_year} {task.crontab.day_of_week}"
+        }
+
+    # 确定调度类型
+    schedule_type = 'unknown'
+    if task.interval:
+        schedule_type = 'interval'
+    elif task.crontab:
+        schedule_type = 'crontab'
+    elif task.solar:
+        schedule_type = 'solar'
+    elif task.clocked:
+        schedule_type = 'clocked'
+
+    data = {
+        'id': task.id,
+        'name': task_info.get('name', task.name),
+        'task': task.task,
+        'description': task_info.get('description', ''),
+        'category': task_info.get('category', '其他'),
+        'enabled': task.enabled,
+        'schedule_type': schedule_type,
+        'schedule_detail': schedule_detail,
+        'last_run_at': task.last_run_at.strftime('%Y-%m-%d %H:%M:%S') if task.last_run_at else None,
+        'total_run_count': task.total_run_count,
+        'date_changed': task.date_changed.strftime('%Y-%m-%d %H:%M:%S') if task.date_changed else None,
+        'kwargs': task.kwargs,
+    }
+
+    return JsonResponse(data)
+
+
 class AdminDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     """管理后台仪表盘"""
     template_name = 'admin_panel/dashboard.html'

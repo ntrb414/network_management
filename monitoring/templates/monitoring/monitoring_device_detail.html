@@ -247,7 +247,6 @@
     </a>
     <div class="nb-topbar-spacer"></div>
     <div class="nb-topbar-actions">
-        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
         <div class="nb-topbar-user">
             <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
             <span>{{ user.username }}</span>
@@ -287,11 +286,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             告警管理
         </a>
-                <a href="{% url 'logs:runtime_log_list' %}" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-            设备日志
-        </a>
-<a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
+                <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             系统日志
         </a>
@@ -301,10 +296,12 @@
         </a>
         <div class="nb-sidebar-divider"></div>
         <div class="nb-sidebar-section">系统</div>
-        <a href="/admin/" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            管理后台
+        <a href="{% url 'admin_panel:scheduled_tasks' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            定时任务
         </a>
+
+        
     </aside>
 
     <!-- Main content -->
@@ -338,21 +335,50 @@
                     <div class="card" style="margin-bottom: 0;">
                         <div class="card-header"><h3 class="card-title">CPU 利用率</h3></div>
                         <div class="card-body" style="display: flex; align-items: center; justify-content: center; height: 120px;">
-                            <div id="cpu-util" style="font-size: 2.5rem; font-weight: 700; color: #4dabf7;">--%</div>
+                            <div id="cpu-util" style="font-size: 2.5rem; font-weight: 700; color: #4dabf7;">{% if latest_cpu_usage %}{{ latest_cpu_usage|floatformat:1 }}%{% else %}--%{% endif %}</div>
                         </div>
                     </div>
                     <div class="card" style="margin-bottom: 0;">
                         <div class="card-header"><h3 class="card-title">内存利用率</h3></div>
                         <div class="card-body" style="display: flex; align-items: center; justify-content: center; height: 120px;">
-                            <div id="mem-util" style="font-size: 2.5rem; font-weight: 700; color: #4dabf7;">--%</div>
+                            <div id="mem-util" style="font-size: 2.5rem; font-weight: 700; color: #4dabf7;">{% if latest_memory_usage %}{{ latest_memory_usage|floatformat:1 }}%{% else %}--%{% endif %}</div>
                         </div>
                     </div>
                 </div>
                 <div class="card" style="display: flex; flex-direction: column; margin-bottom: 0;">
                     <div class="card-header"><h3 class="card-title">接口状态及流量</h3></div>
                     <div class="card-body" style="flex: 1; overflow-y: auto;">
-                        <div id="interfaces-data" style="font-size: 0.9rem; color: var(--gray-600); text-align: center; padding: 2rem 0;">
-                            正在加载实时数据...
+                        <div id="interfaces-data" style="font-size: 0.9rem;">
+                            {% if latest_interfaces %}
+                                <table class="history-table" style="width:100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>接口</th>
+                                            <th>状态</th>
+                                            <th>接收流量</th>
+                                            <th>发送流量</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for iface in latest_interfaces %}
+                                        {% if iface.status == 1 %}
+                                        <tr>
+                                            <td style="color:var(--gray-800); font-weight:500;">{{ iface.name|default:"--" }}</td>
+                                            <td>
+                                                <span class="status-badge" style="background:#dcfce7; color:#166534; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                                                    UP
+                                                </span>
+                                            </td>
+                                            <td>{% if iface.in_mbps %}{{ iface.in_mbps|floatformat:2 }} Mbps{% elif iface.in_octets %}{{ iface.in_octets }} octets{% else %}—{% endif %}</td>
+                                            <td>{% if iface.out_mbps %}{{ iface.out_mbps|floatformat:2 }} Mbps{% elif iface.out_octets %}{{ iface.out_octets }} octets{% else %}—{% endif %}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}
+                                <div style="color:var(--gray-400); text-align: center; padding: 2rem 0;">暂无接口数据</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

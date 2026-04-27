@@ -1,5 +1,4 @@
-"""权限检查中间件。"""
-
+# 权限检查中间件
 from django.http import JsonResponse
 from django.shortcuts import render
 
@@ -7,9 +6,7 @@ from .permissions import get_user_role
 
 
 class PermissionMiddleware:
-    """权限检查中间件类"""
-
-    # 不需要权限检查的路径
+    # 权限检查中间件类
     EXEMPT_URLS = [
         '/static/',  # 静态文件
         '/media/',   # 媒体文件
@@ -68,15 +65,14 @@ class PermissionMiddleware:
         return self.get_response(request)
 
     def _is_exempt(self, request):
-        """检查路径是否免于权限检查"""
+        # 检查路径是否免于权限检查
         for url in self.EXEMPT_URLS:
             if request.path.startswith(url):
                 return True
         return False
 
     def _is_api_path(self, path):
-        """检查路径是否为API请求"""
-        # 检查常见API路径模式
+        # 检查路径是否为API请求
         api_prefixes = [
             '/api/',
             '/devices/api/',
@@ -93,12 +89,11 @@ class PermissionMiddleware:
         return False
 
     def _get_user_role(self, user):
-        """获取用户角色"""
+        # 获取用户角色
         return get_user_role(user)
 
     def _get_module_from_path(self, path):
-        """从请求路径提取模块名"""
-        # 例如: /devices/api/ -> devices
+        # 从请求路径提取模块名
         parts = path.strip('/').split('/')
         if len(parts) >= 1:
             module = parts[0]
@@ -116,7 +111,7 @@ class PermissionMiddleware:
         return None
 
     def _has_permission(self, user, module, method):
-        """检查用户是否有权限"""
+        # 检查用户是否有权限
         try:
             permissions = user.profile.permissions
         except (AttributeError, Exception):
@@ -150,17 +145,8 @@ class PermissionMiddleware:
 
 
 def has_permission(user, module, action):
-    """
-    检查用户是否有特定权限的辅助函数
-
-    Args:
-        user: 用户对象
-        module: 模块名 (devices, configs, etc.)
-        action: 操作 (view, create, edit, delete)
-
-    Returns:
-        bool: 是否有权限
-    """
+    # 检查用户是否有特定权限
+    # 参数: user-用户对象, module-模块名, action-操作(view/create/edit/delete)
     if not user.is_authenticated:
         return False
 

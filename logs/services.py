@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Count, Q
+from django.db.models import Case, CharField, Count, Q, Value, When
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -258,7 +258,10 @@ class LogService:
         page: int = 1,
         page_size: int = 50,
     ) -> Dict[str, Any]:
-        """查询设备运行日志（Syslog来源）。"""
+        """查询设备运行日志（Syslog来源）。
+        DEPRECATED: 请改用 query_logs(source='syslog', ...) 统一入口。
+        保留本方法供外部存量调用兼容，内部逻辑建议逐步迁移。
+        """
         from .models import SystemLog
         from devices.models import Device
 
@@ -539,28 +542,50 @@ class LogService:
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
         page: int = 1,
-        page_size: int = 50
+        page_size: int = 50,
+        source: Optional[str] = None,
+        severity: Optional[str] = None,
+        source_ip: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        查询日志
+        查询日志（统一入口）
 
         Args:
             keyword: 关键字搜索
-            log_type: 日志类型筛选
+            log_type: 日志类型筛选（与 source 同时传入时，source 优先）
             device_id: 设备ID筛选
             user_id: 用户ID筛选
             start_time: 开始时间
             end_time: 结束时间
             page: 页码
             page_size: 每页数量
+            source: 日志分类来源 ('all'/'syslog'/'operation'/'alert')
+            severity: 级别筛选（仅 source='syslog' 时生效）
+            source_ip: 来源IP筛选（仅 source='syslog' 时生效）
 
         Returns:
             分页后的日志列表
 
         """
         from .models import SystemLog
+        from devices.models import Device
+        from django.contrib.auth import get_user_model
 
         queryset = SystemLog.objects.all()
+
+        # source 分类过滤
+        if source == 'syslog':
+            queryset = queryset.filter(log_type='system', details__source='syslog')
+            if severity:
+                queryset = queryset.filter(details__severity=severity)
+            if source_ip:
+                queryset = queryset.filter(details__source_ip=source_ip)
+        elif source == 'operation':
+            queryset = queryset.filter(
+                Q(log_type='system') & (Q(details__source__isnull=True) | ~Q(details__source='syslog'))
+            )
+        elif source == 'alert':
+            queryset = queryset.filter(log_type='alert')
 
         # 关键字搜索
         if keyword:
@@ -569,8 +594,8 @@ class LogService:
                 Q(details__icontains=keyword)
             )
 
-        # 日志类型筛选
-        if log_type:
+        # 日志类型筛选（仅当未传入 source 时生效，保持向后兼容）
+        if log_type and not source:
             queryset = queryset.filter(log_type=log_type)
 
         # 设备筛选
@@ -592,33 +617,51 @@ class LogService:
         offset = (page - 1) * page_size
         page_logs = queryset[offset:offset + page_size]
 
-        # 获取所有字段值（包括 id, device_id, user_id 等）
-        logs_values = list(page_logs.values(
-            'id', 'log_type', 'message', 'timestamp',
-            'device_id', 'user_id'
-        ))
+        # 构建结果
+        is_syslog_mode = (source == 'syslog')
 
-        # 构建结果，手动解析 device_name 和 user_name
-        from django.contrib.auth import get_user_model
-        from devices.models import Device
-        User = get_user_model()
-        device_ids = set(log['device_id'] for log in logs_values if log.get('device_id'))
-        user_ids = set(log['user_id'] for log in logs_values if log.get('user_id'))
+        if is_syslog_mode:
+            logs_values = list(page_logs.values('id', 'message', 'timestamp', 'device_id', 'details'))
+        else:
+            logs_values = list(page_logs.values('id', 'log_type', 'message', 'timestamp', 'device_id', 'user_id'))
+
+        device_ids = {log.get('device_id') for log in logs_values if log.get('device_id')}
         devices = {d.id: d.name for d in Device.objects.filter(id__in=device_ids)} if device_ids else {}
-        users = {u.id: u.username for u in User.objects.filter(id__in=user_ids)} if user_ids else {}
 
-        log_list = []
-        for log in logs_values:
-            log_list.append({
-                'id': log['id'],
-                'log_type': log['log_type'],
-                'message': log['message'],
-                'timestamp': log['timestamp'].isoformat() if log.get('timestamp') else None,
-                'device_id': log.get('device_id'),
-                'device_name': devices.get(log.get('device_id'), '-'),
-                'user_id': log.get('user_id'),
-                'user_name': users.get(log.get('user_id'), '-'),
-            })
+        if is_syslog_mode:
+            log_list = []
+            for item in logs_values:
+                details = item.get('details') or {}
+                log_list.append({
+                    'id': item['id'],
+                    'message': item.get('message'),
+                    'timestamp': item['timestamp'].isoformat() if item.get('timestamp') else None,
+                    'device_id': item.get('device_id'),
+                    'device_name': devices.get(item.get('device_id'), '-'),
+                    'source_ip': details.get('source_ip') or '',
+                    'hostname': details.get('hostname') or '',
+                    'severity': details.get('severity') or 'informational',
+                    'facility': details.get('facility') or '',
+                    'program': details.get('program') or '',
+                    'event_time': details.get('event_time') or None,
+                })
+        else:
+            User = get_user_model()
+            user_ids = {log.get('user_id') for log in logs_values if log.get('user_id')}
+            users = {u.id: u.username for u in User.objects.filter(id__in=user_ids)} if user_ids else {}
+
+            log_list = []
+            for log in logs_values:
+                log_list.append({
+                    'id': log['id'],
+                    'log_type': log['log_type'],
+                    'message': log['message'],
+                    'timestamp': log['timestamp'].isoformat() if log.get('timestamp') else None,
+                    'device_id': log.get('device_id'),
+                    'device_name': devices.get(log.get('device_id'), '-'),
+                    'user_id': log.get('user_id'),
+                    'user_name': users.get(log.get('user_id'), '-'),
+                })
 
         return {
             'total': total,
@@ -630,46 +673,128 @@ class LogService:
     def get_statistics(
         self,
         days: int = 7,
-        log_type: Optional[str] = None
+        log_type: Optional[str] = None,
+        source: Optional[str] = None,
+        device_id: Optional[int] = None,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        severity: Optional[str] = None,
+        source_ip: Optional[str] = None,
+        keyword: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         获取日志统计信息
 
         Args:
-            days: 统计天数
+            days: 统计天数（当 start_time/end_time 未提供时生效）
             log_type: 日志类型筛选
+            source: 日志分类来源 ('all'/'syslog'/'operation'/'alert')
+            device_id: 设备ID筛选
+            start_time: 开始时间
+            end_time: 结束时间
+            severity: 级别筛选（仅 source='syslog' 时生效）
+            source_ip: 来源IP筛选（仅 source='syslog' 时生效）
+            keyword: 关键字搜索
 
         Returns:
             统计信息
 
         """
         from .models import SystemLog
+        from collections import defaultdict
 
         # 计算时间范围
-        end_time = timezone.now()
-        start_time = end_time - timedelta(days=days)
+        if end_time is None:
+            end_time = timezone.now()
+        if start_time is None:
+            start_time = end_time - timedelta(days=days)
 
         # 基础查询集
-        queryset = SystemLog.objects.filter(timestamp__gte=start_time)
+        queryset = SystemLog.objects.filter(timestamp__gte=start_time, timestamp__lte=end_time)
 
-        if log_type:
+        # source 分类过滤（与 query_logs 保持一致）
+        if source == 'syslog':
+            queryset = queryset.filter(log_type='system', details__source='syslog')
+            if severity:
+                queryset = queryset.filter(details__severity=severity)
+            if source_ip:
+                queryset = queryset.filter(details__source_ip=source_ip)
+        elif source == 'operation':
+            queryset = queryset.filter(
+                Q(log_type='system') & (Q(details__source__isnull=True) | ~Q(details__source='syslog'))
+            )
+        elif source == 'alert':
+            queryset = queryset.filter(log_type='alert')
+
+        # 日志类型筛选（仅当未传入 source 时生效，保持向后兼容）
+        if log_type and not source:
             queryset = queryset.filter(log_type=log_type)
 
-        # 按类型统计
-        by_type = queryset.values('log_type').annotate(
-            count=Count('id')
-        )
+        if keyword:
+            queryset = queryset.filter(
+                Q(message__icontains=keyword) | Q(details__icontains=keyword)
+            )
 
-        # 按日期统计
+        if device_id:
+            queryset = queryset.filter(device_id=device_id)
+
+        # 按类型统计
+        by_type = queryset.values('log_type').annotate(count=Count('id'))
+
+        # 按日期统计（总数）
         from django.db.models.functions import TruncDate
         by_date = queryset.annotate(
             date=TruncDate('timestamp')
         ).values('date').annotate(count=Count('id')).order_by('date')
 
+        # 按 source 类型统计（用于概览卡片精确显示）
+        alert_count = queryset.filter(log_type='alert').count()
+        syslog_count = queryset.filter(log_type='system', details__source='syslog').count()
+        operation_count = queryset.filter(
+            Q(log_type='system') & (Q(details__source__isnull=True) | ~Q(details__source='syslog'))
+        ).count()
+
+        # 按日期和分类统计（用于堆叠图表）
+        category_expr = Case(
+            When(log_type='alert', then=Value('alert')),
+            When(Q(log_type='system') & Q(details__source='syslog'), then=Value('syslog')),
+            default=Value('operation'),
+            output_field=CharField(),
+        )
+
+        by_date_type_qs = (
+            queryset.annotate(date=TruncDate('timestamp'), category=category_expr)
+            .values('date', 'category')
+            .annotate(count=Count('id'))
+            .order_by('date', 'category')
+        )
+
+        by_date_by_type = defaultdict(lambda: {'alert': 0, 'syslog': 0, 'operation': 0})
+        for item in by_date_type_qs:
+            date_str = str(item['date'])
+            by_date_by_type[date_str][item['category']] = item['count']
+
+        # 生成完整日期范围，确保没有数据的日期也返回 0
+        current = start_time.date() if hasattr(start_time, 'date') else start_time
+        end_date_val = end_time.date() if hasattr(end_time, 'date') else end_time
+        all_dates = []
+        while current <= end_date_val:
+            all_dates.append(str(current))
+            current += timedelta(days=1)
+
+        by_date_detail = []
+        for d in all_dates:
+            by_date_detail.append({
+                'date': d,
+                'alert': by_date_by_type[d]['alert'],
+                'syslog': by_date_by_type[d]['syslog'],
+                'operation': by_date_by_type[d]['operation'],
+            })
+
         # 总数
         total = queryset.count()
 
-        # 今日数量
+        # 今日数量（若 end_time 不是今天，则指 end_time 所在自然日 0 点到 end_time 的数量）
         today_start = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
         today_count = queryset.filter(timestamp__gte=today_start).count()
 
@@ -677,7 +802,13 @@ class LogService:
             'total': total,
             'today_count': today_count,
             'by_type': list(by_type),
+            'by_source_type': {
+                'alert': alert_count,
+                'syslog': syslog_count,
+                'operation': operation_count,
+            },
             'by_date': list(by_date),
+            'by_date_detail': by_date_detail,
             'days': days,
         }
 

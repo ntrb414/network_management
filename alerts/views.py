@@ -1,8 +1,4 @@
-"""
-告警管理页面视图和API
-
-包含告警列表、详情页面和API视图。
-"""
+# 告警管理页面视图和API
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -19,8 +15,7 @@ from devices.models import Device
 # ==================== 页面视图 ====================
 
 class AlertListView(LoginRequiredMixin, ListView):
-    """Display list of all alerts."""
-
+    # 告警列表页面
     model = Alert
     template_name = 'alerts/alert_list.html'
     context_object_name = 'alerts'
@@ -28,26 +23,25 @@ class AlertListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Return all alerts ordered by creation time."""
+        # 返回按创建时间倒序的告警
         return Alert.objects.all().order_by('-created_at')
 
     def get_context_data(self, **kwargs):
-        """Add user info to context."""
+        # 添加用户信息到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         return context
 
 
 class AlertDetailView(LoginRequiredMixin, DetailView):
-    """Display details of a specific alert."""
-
+    # 告警详情页面
     model = Alert
     template_name = 'alerts/alert_detail.html'
     context_object_name = 'alert'
     login_url = 'homepage:login'
 
     def get_context_data(self, **kwargs):
-        """Add user info to context."""
+        # 添加用户信息到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         return context
@@ -58,10 +52,7 @@ class AlertDetailView(LoginRequiredMixin, DetailView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def alert_list_api(request):
-    """
-    告警列表API端点
-
-    """
+    # 告警列表API：支持状态、严重程度、类型筛选
     page = int(request.GET.get('page', 1))
     page_size = int(request.GET.get('page_size', 20))
     status = request.GET.get('status')
@@ -120,9 +111,7 @@ def alert_list_api(request):
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def alert_detail_api(request, pk):
-    """
-    告警详情API端点
-    """
+    # 告警详情API：GET获取详情，DELETE删除
     try:
         alert = Alert.objects.get(pk=pk)
     except Alert.DoesNotExist:
@@ -155,10 +144,7 @@ def alert_detail_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def alert_acknowledge_api(request, pk):
-    """
-    确认告警API端点
-
-    """
+    # 确认告警API
     try:
         alert = Alert.objects.get(pk=pk)
     except Alert.DoesNotExist:
@@ -185,10 +171,7 @@ def alert_acknowledge_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def alert_ignore_api(request, pk):
-    """
-    忽略告警API端点
-
-    """
+    # 忽略告警API
     try:
         alert = Alert.objects.get(pk=pk)
     except Alert.DoesNotExist:
@@ -215,7 +198,7 @@ def alert_ignore_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def alert_acknowledge_all_api(request):
-    """一键确认全部活动告警。"""
+    # 一键确认全部活动告警
     from .services import AlertService
 
     service = AlertService()
@@ -231,7 +214,7 @@ def alert_acknowledge_all_api(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def alert_bulk_delete_api(request):
-    """批量删除告警。"""
+    # 批量删除告警
     alert_ids = request.data.get('alert_ids', [])
     if not isinstance(alert_ids, list):
         return Response({'error': 'alert_ids must be a list'}, status=400)
@@ -260,7 +243,7 @@ def alert_bulk_delete_api(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def alert_delete_all_api(request):
-    """删除全部告警。"""
+    # 删除全部告警
     from .services import AlertService
 
     service = AlertService()
@@ -276,10 +259,7 @@ def alert_delete_all_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def alert_statistics_api(request):
-    """
-    告警统计API端点
-
-    """
+    # 告警统计API
     days = int(request.GET.get('days', 7))
 
     from .services import AlertService
@@ -293,10 +273,7 @@ def alert_statistics_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def alert_device_api(request, device_id):
-    """
-    设备告警列表API端点
-
-    """
+    # 获取指定设备的告警列表
     try:
         device = Device.objects.get(pk=device_id)
     except Device.DoesNotExist:
@@ -329,11 +306,7 @@ def alert_device_api(request, device_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def alert_counts_api(request):
-    """
-    告警计数 API（不受时间过滤影响）
-
-    返回活动/已处理/已忽略/总计数量，供前端轮询刷新统计卡片。
-    """
+    # 告警计数API：返回活动/已处理/已忽略/总计数量
     active = Alert.objects.filter(status='active').count()
     acknowledged = Alert.objects.filter(status='acknowledged').count()
     ignored = Alert.objects.filter(status='ignored').count()
@@ -349,10 +322,7 @@ def alert_counts_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def alert_active_api(request):
-    """
-    获取活动告警API端点
-
-    """
+    # 获取活动告警列表（限制50条）
     from .services import AlertService
     service = AlertService()
 

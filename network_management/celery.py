@@ -1,9 +1,4 @@
-"""
-Celery configuration for network_management project.
-
-This module configures Celery for asynchronous task processing.
-"""
-
+# Celery配置模块
 import os
 from celery import Celery
 
@@ -22,5 +17,5 @@ app.autodiscover_tasks()
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
-    """Debug task to test Celery connectivity."""
+    # 调试任务，测试Celery连接
     print(f'Request: {self.request!r}')

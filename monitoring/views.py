@@ -1,9 +1,4 @@
-"""
-性能监控页面视图和API
-
-包含监控数据列表、实时监控、历史监控等视图。
-"""
-
+# 性能监控页面视图和API
 from django.views.generic import ListView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
@@ -174,7 +169,7 @@ def _parse_snapshot_timestamp(timestamp):
 
 
 def _normalize_ospf_neighbors(neighbors):
-    """Normalize legacy H3C OSPF state values for display/API output."""
+    # Normalize legacy H3C OSPF state values for display/API output
     normalized_neighbors = []
 
     for neighbor in neighbors or []:
@@ -239,7 +234,7 @@ def _get_metric_display_value(metric_type, value, unit):
 # ==================== 页面视图 ====================
 
 class MonitoringListView(LoginRequiredMixin, ListView):
-    """Display list of all monitoring metrics."""
+    # Display list of all monitoring metrics
 
     model = MetricData
     template_name = 'monitoring/monitoring_list.html'
@@ -248,7 +243,7 @@ class MonitoringListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Return flattened Redis metrics ordered by timestamp, with optional type filter."""
+        # Return flattened Redis metrics ordered by timestamp, with optional type filter
         service = MonitoringService()
         rows = []
         metric_type = self.request.GET.get('metric_type')
@@ -288,7 +283,7 @@ class MonitoringListView(LoginRequiredMixin, ListView):
         return rows
 
     def get_context_data(self, **kwargs):
-        """Add user info and metric summary to context."""
+        # Add user info and metric summary to context
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context['metric_types'] = DISPLAY_METRIC_TYPES
@@ -296,13 +291,13 @@ class MonitoringListView(LoginRequiredMixin, ListView):
 
 
 class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
-    """Display monitoring dashboard with device list."""
+    # Display monitoring dashboard with device list
 
     template_name = 'monitoring/monitoring_dashboard.html'
     login_url = 'homepage:login'
 
     def get_context_data(self, **kwargs):
-        """Add user info and device list to context."""
+        # Add user info and device list to context
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context['metric_types'] = DISPLAY_METRIC_TYPES
@@ -380,7 +375,7 @@ class MonitoringDashboardView(LoginRequiredMixin, TemplateView):
 
 
 class MonitoringMetricTypesView(LoginRequiredMixin, TemplateView):
-    """Display list of currently monitored metric categories."""
+    # Display list of currently monitored metric categories
 
     template_name = 'monitoring/monitoring_metric_types.html'
     login_url = 'homepage:login'
@@ -405,7 +400,7 @@ class MonitoringMetricTypesView(LoginRequiredMixin, TemplateView):
 
 
 class MonitoringDeviceDetailView(LoginRequiredMixin, TemplateView):
-    """Display detailed monitoring data for a single device."""
+    # Display detailed monitoring data for a single device
 
     template_name = 'monitoring/monitoring_device_detail.html'
     login_url = 'homepage:login'
@@ -433,6 +428,8 @@ class MonitoringDeviceDetailView(LoginRequiredMixin, TemplateView):
         context['latest_ospf_neighbors'] = _normalize_ospf_neighbors(metrics.get('ospf_neighbors', []))
         context['latest_cpu_usage'] = metrics.get('cpu_usage')
         context['latest_memory_usage'] = metrics.get('memory_usage')
+        context['latest_interfaces'] = metrics.get('interfaces', [])
+        context['latest_traffic'] = metrics.get('traffic', [])
 
         context['metric_types'] = DISPLAY_METRIC_TYPES
         return context
@@ -443,9 +440,7 @@ class MonitoringDeviceDetailView(LoginRequiredMixin, TemplateView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def monitoring_device_realtime_api(request, device_id):
-    """
-    实时监控数据API端点
-    """
+    # 实时监控数据API端点
     try:
         device = Device.objects.get(pk=device_id)
     except Device.DoesNotExist:
@@ -487,7 +482,7 @@ def monitoring_device_realtime_api(request, device_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def monitoring_device_realtime_redis_api(request, device_id):
-    """从 Redis 获取设备实时监控数据。"""
+    # 从Redis获取设备实时监控数据
     try:
         device = Device.objects.get(pk=device_id)
     except Device.DoesNotExist:
@@ -529,10 +524,7 @@ def monitoring_device_realtime_redis_api(request, device_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def monitoring_device_metrics_api(request, device_id):
-    """
-    历史监控数据API端点
-
-    """
+    # 历史监控数据API端点
     try:
         device = Device.objects.get(pk=device_id)
     except Device.DoesNotExist:
@@ -611,9 +603,7 @@ def monitoring_device_metrics_api(request, device_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def monitoring_statistics_api(request):
-    """
-    监控统计API端点
-    """
+    # 监控统计API端点
     service = MonitoringService()
     devices = Device.objects.all()
 
@@ -644,10 +634,7 @@ def monitoring_statistics_api(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def monitoring_collect_api(request, device_id):
-    """
-    手动触发监控数据采集API端点
-
-    """
+    # 手动触发监控数据采集API端点
     try:
         device = Device.objects.get(pk=device_id)
     except Device.DoesNotExist:

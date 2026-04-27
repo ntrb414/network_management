@@ -5,7 +5,9 @@
 set -e
 
 WEB_SERVICE="network_management.service"
-WORKER_SERVICE="network_management-celery-worker.service"
+WORKER_SERVICE_P0="network_management-celery-p0-critical.service"
+WORKER_SERVICE_P1="network_management-celery-p1-monitor.service"
+WORKER_SERVICE_P2="network_management-celery-p2-batch.service"
 BEAT_SERVICE="network_management-celery-beat.service"
 FLOWER_SERVICE="network_management-flower.service"
 SYSLOG_SERVICE="network_management-syslog.service"
@@ -36,7 +38,7 @@ service_status_line() {
 }
 
 start_core() {
-    run_systemctl start "$WEB_SERVICE" "$WORKER_SERVICE" "$BEAT_SERVICE"
+    run_systemctl start "$WEB_SERVICE" "$WORKER_SERVICE_P0" "$WORKER_SERVICE_P1" "$WORKER_SERVICE_P2" "$BEAT_SERVICE"
     if service_exists "$FLOWER_SERVICE"; then
         run_systemctl start "$FLOWER_SERVICE"
     fi
@@ -52,13 +54,15 @@ stop_core() {
     if service_exists "$FLOWER_SERVICE"; then
         run_systemctl stop "$FLOWER_SERVICE"
     fi
-    run_systemctl stop "$BEAT_SERVICE" "$WORKER_SERVICE" "$WEB_SERVICE"
+    run_systemctl stop "$BEAT_SERVICE" "$WORKER_SERVICE_P0" "$WORKER_SERVICE_P1" "$WORKER_SERVICE_P2" "$WEB_SERVICE"
 }
 
 status_all() {
     echo "── systemd 服务状态 ─────────────────────────"
     service_status_line "$WEB_SERVICE"
-    service_status_line "$WORKER_SERVICE"
+    service_status_line "$WORKER_SERVICE_P0"
+    service_status_line "$WORKER_SERVICE_P1"
+    service_status_line "$WORKER_SERVICE_P2"
     service_status_line "$BEAT_SERVICE"
     service_status_line "$FLOWER_SERVICE"
     service_status_line "$SYSLOG_SERVICE"
@@ -75,7 +79,7 @@ case "${1:-status}" in
         status_all
         ;;
     restart)
-        run_systemctl restart "$WEB_SERVICE" "$WORKER_SERVICE" "$BEAT_SERVICE"
+        run_systemctl restart "$WEB_SERVICE" "$WORKER_SERVICE_P0" "$WORKER_SERVICE_P1" "$WORKER_SERVICE_P2" "$BEAT_SERVICE"
         if service_exists "$FLOWER_SERVICE"; then
             run_systemctl restart "$FLOWER_SERVICE"
         fi
@@ -92,7 +96,7 @@ case "${1:-status}" in
         status_all
         ;;
     worker)
-        run_systemctl restart "$WORKER_SERVICE"
+        run_systemctl restart "$WORKER_SERVICE_P0" "$WORKER_SERVICE_P1" "$WORKER_SERVICE_P2"
         status_all
         ;;
     beat)

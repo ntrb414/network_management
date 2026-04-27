@@ -116,7 +116,6 @@
     </a>
     <div class="nb-topbar-spacer"></div>
     <div class="nb-topbar-actions">
-        <a href="{% url 'admin:index' %}" class="nb-topbar-btn">Django管理后台</a>
         <div class="nb-topbar-user">
             <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
             <span>{{ user.username }}</span>
@@ -172,10 +171,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             定时任务
         </a>
-        <a href="{% url 'admin_panel:dashboard' %}" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            管理后台
-        </a>
     </aside>
 
     <main class="nb-main">
@@ -220,7 +215,6 @@
                         <th>调度类型</th>
                         <th>调度规则</th>
                         <th>最近执行</th>
-                        <th>执行次数</th>
                         <th>最后修改</th>
                         <th>操作</th>
                     </tr>
@@ -272,9 +266,6 @@
                             {% endif %}
                         </td>
                         <td>
-                            <span class="run-count">{{ task.total_run_count }} 次</span>
-                        </td>
-                        <td>
                             {% if task.date_changed %}
                             <span style="color: #6c757d; font-size: 0.8125rem;">{{ task.date_changed|date:"Y-m-d H:i" }}</span>
                             {% else %}
@@ -290,12 +281,18 @@
                                 <button type="submit" class="btn btn-sm btn-success">启用</button>
                                 {% endif %}
                             </form>
+                            {% if task.schedule_type == 'interval' and user.is_staff %}
+                            <button type="button" class="btn btn-sm" style="margin-left:0.375rem; background:#f3f0ff; color:#6741d9;"
+                                    onclick="openEditIntervalModal({{ task.id }}, '{{ task.task_name|escapejs }}', {{ task.interval.every|default:60 }}, '{{ task.interval.period|default:'seconds'|escapejs }}')">
+                                修改间隔
+                            </button>
+                            {% endif %}
                             <button
                                 type="button"
                                 class="btn btn-sm"
                                 style="margin-left: 0.375rem; background: #f1f3f5; color: #343a40;"
                                 onclick="showTaskResult('{{ task.task_name|escapejs }}', '{{ task.last_run_status|default:"unknown"|escapejs }}', '{{ task.last_run_result|default:"暂无结果"|escapejs }}', '{{ task.last_run_detail|default:"暂无详情"|escapejs }}', '{% if task.last_run_time %}{{ task.last_run_time|date:"Y-m-d H:i:s" }}{% else %}未执行{% endif %}')"
-                            >查看结果</button>
+                            >结果</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -335,6 +332,64 @@
     </div>
 </div>
 
+<!-- Edit Interval Modal -->
+<div id="editIntervalModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; align-items:center; justify-content:center;">
+    <div style="width:min(480px, 92vw); background:#fff; border-radius:8px; border:1px solid #dee2e6; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1rem; border-bottom:1px solid #e9ecef;">
+            <div style="font-size:1rem; font-weight:600; color:#1a2332;">修改执行间隔</div>
+            <button type="button" onclick="closeEditIntervalModal()" style="border:none; background:transparent; cursor:pointer; font-size:1.125rem; color:#6c757d;">×</button>
+        </div>
+        <form id="editIntervalForm" onsubmit="submitIntervalChange(event)">
+            <div style="padding:1rem;">
+                <input type="hidden" id="editTaskId" name="taskId">
+                <div style="margin-bottom:1rem;">
+                    <div style="font-size:0.8125rem; color:#6c757d; margin-bottom:0.5rem;">
+                        任务: <strong id="editTaskName"></strong>
+                    </div>
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:end;">
+                    <div style="flex:1;">
+                        <label for="intervalEvery" style="display:block; font-size:0.8125rem; font-weight:500; color:#495057; margin-bottom:0.25rem;">间隔数值</label>
+                        <input type="number" id="intervalEvery" name="every" min="1" required
+                               style="width:100%; padding:0.5rem; border:1px solid #dee2e6; border-radius:4px; font-size:0.875rem;">
+                    </div>
+                    <div style="flex:1;">
+                        <label for="intervalPeriod" style="display:block; font-size:0.8125rem; font-weight:500; color:#495057; margin-bottom:0.25rem;">时间单位</label>
+                        <select id="intervalPeriod" name="period" required
+                                style="width:100%; padding:0.5rem; border:1px solid #dee2e6; border-radius:4px; font-size:0.875rem; background:#fff;">
+                            <option value="seconds">秒</option>
+                            <option value="minutes">分钟</option>
+                            <option value="hours">小时</option>
+                            <option value="days">天</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="intervalWarning" style="display:none; margin-top:0.75rem; padding:0.5rem; background:#fff3bf; border-radius:4px; font-size:0.8125rem; color:#856404;">
+                    警告: 间隔过短可能导致系统负载过高
+                </div>
+                <div id="intervalError" style="display:none; margin-top:0.75rem; padding:0.5rem; background:#fff5f5; border-radius:4px; font-size:0.8125rem; color:#c92a2a;"></div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem; padding:0.875rem 1rem; border-top:1px solid #e9ecef;">
+                <button type="button" onclick="closeEditIntervalModal()" style="padding:0.375rem 0.75rem; font-size:0.8125rem; font-weight:500; border-radius:4px; border:1px solid #dee2e6; background:#fff; color:#495057; cursor:pointer;">取消</button>
+                <button type="submit" id="submitIntervalBtn" style="padding:0.375rem 0.75rem; font-size:0.8125rem; font-weight:500; border-radius:4px; border:none; background:#1971c2; color:#fff; cursor:pointer;">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div id="taskDetailModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; align-items:center; justify-content:center;">
+    <div style="width:min(680px, 92vw); background:#fff; border-radius:8px; border:1px solid #dee2e6; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1rem; border-bottom:1px solid #e9ecef;">
+            <div style="font-size:1rem; font-weight:600; color:#1a2332;">任务详情</div>
+            <button type="button" onclick="closeTaskDetailModal()" style="border:none; background:transparent; cursor:pointer; font-size:1.125rem; color:#6c757d;">×</button>
+        </div>
+        <div id="taskDetailContent" style="padding:1rem; max-height:70vh; overflow-y:auto;">
+            <div style="text-align:center; padding:2rem; color:#6c757d;">加载中...</div>
+        </div>
+    </div>
+</div>
+
 <script>
 function showTaskResult(taskName, status, summary, detail, runTime) {
     const statusMap = {
@@ -353,6 +408,186 @@ function showTaskResult(taskName, status, summary, detail, runTime) {
 function closeTaskResult() {
     document.getElementById('taskResultModal').style.display = 'none';
 }
+
+// ========== Edit Interval Modal ==========
+
+function openEditIntervalModal(taskId, taskName, currentEvery, currentPeriod) {
+    document.getElementById('editTaskId').value = taskId;
+    document.getElementById('editTaskName').textContent = taskName;
+    document.getElementById('intervalEvery').value = currentEvery;
+    document.getElementById('intervalPeriod').value = currentPeriod;
+    document.getElementById('intervalError').style.display = 'none';
+    document.getElementById('intervalWarning').style.display = 'none';
+    document.getElementById('editIntervalModal').style.display = 'flex';
+    checkIntervalWarning();
+}
+
+function closeEditIntervalModal() {
+    document.getElementById('editIntervalModal').style.display = 'none';
+}
+
+function checkIntervalWarning() {
+    const every = parseInt(document.getElementById('intervalEvery').value) || 0;
+    const period = document.getElementById('intervalPeriod').value;
+    const multipliers = {seconds: 1, minutes: 60, hours: 3600, days: 86400};
+    const totalSeconds = every * (multipliers[period] || 1);
+    const warning = document.getElementById('intervalWarning');
+    warning.style.display = totalSeconds < 60 ? 'block' : 'none';
+}
+
+document.getElementById('intervalEvery').addEventListener('input', checkIntervalWarning);
+document.getElementById('intervalPeriod').addEventListener('change', checkIntervalWarning);
+
+async function submitIntervalChange(event) {
+    event.preventDefault();
+    const taskId = document.getElementById('editTaskId').value;
+    const every = document.getElementById('intervalEvery').value;
+    const period = document.getElementById('intervalPeriod').value;
+    const errorDiv = document.getElementById('intervalError');
+    const submitBtn = document.getElementById('submitIntervalBtn');
+
+    if (parseInt(every) < 1) {
+        errorDiv.textContent = '间隔数值必须大于 0';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '保存中...';
+    errorDiv.style.display = 'none';
+
+    try {
+        const response = await fetch(`/admin/tasks/scheduled/${taskId}/interval/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({every: parseInt(every), period: period})
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+            closeEditIntervalModal();
+            showSuccessToast(data.message || '间隔已更新');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            errorDiv.textContent = data.error || '更新失败';
+            errorDiv.style.display = 'block';
+        }
+    } catch (error) {
+        errorDiv.textContent = '网络错误，请重试';
+        errorDiv.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '保存';
+    }
+}
+
+// ========== Task Detail Modal ==========
+
+async function openTaskDetailModal(taskId) {
+    const content = document.getElementById('taskDetailContent');
+    content.innerHTML = '<div style="text-align:center; padding:2rem; color:#6c757d;">加载中...</div>';
+    document.getElementById('taskDetailModal').style.display = 'flex';
+
+    try {
+        const response = await fetch(`/admin/tasks/scheduled/${taskId}/detail/`);
+        const data = await response.json();
+        if (response.ok) {
+            renderTaskDetail(data);
+        } else {
+            content.innerHTML = `<div style="color:#c92a2a; padding:1rem;">${data.error || '加载失败'}</div>`;
+        }
+    } catch (error) {
+        content.innerHTML = '<div style="color:#c92a2a; padding:1rem;">网络错误</div>';
+    }
+}
+
+function renderTaskDetail(data) {
+    const content = document.getElementById('taskDetailContent');
+    const statusBadge = data.enabled
+        ? '<span style="background:#ebfbee; color:#2f9e44; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.75rem;">已启用</span>'
+        : '<span style="background:#fff5f5; color:#c92a2a; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.75rem;">已禁用</span>';
+
+    content.innerHTML = `
+        <div style="display:grid; gap:1rem;">
+            <div style="display:grid; grid-template-columns:140px 1fr; gap:0.5rem; font-size:0.875rem;">
+                <div style="color:#6c757d;">任务名称</div>
+                <div style="font-weight:600; color:#1a2332;">${escapeHtml(data.name)}</div>
+
+                <div style="color:#6c757d;">任务函数</div>
+                <div style="font-family:monospace; font-size:0.8125rem; color:#495057;">${escapeHtml(data.task)}</div>
+
+                <div style="color:#6c757d;">任务描述</div>
+                <div style="color:#495057;">${escapeHtml(data.description || '无描述')}</div>
+
+                <div style="color:#6c757d;">所属分类</div>
+                <div>${escapeHtml(data.category || '其他')}</div>
+
+                <div style="color:#6c757d;">状态</div>
+                <div>${statusBadge}</div>
+
+                <div style="color:#6c757d;">调度类型</div>
+                <div>${escapeHtml(data.schedule_type || '未知')}</div>
+
+                <div style="color:#6c757d;">调度规则</div>
+                <div>${escapeHtml(data.schedule_detail ? data.schedule_detail.human_readable : '无')}</div>
+
+                <div style="color:#6c757d;">最近执行</div>
+                <div>${escapeHtml(data.last_run_at || '未执行')}</div>
+
+                <div style="color:#6c757d;">最后修改</div>
+                <div>${escapeHtml(data.date_changed || '未知')}</div>
+
+                <div style="color:#6c757d;">任务参数</div>
+                <div style="font-family:monospace; font-size:0.8125rem;">${escapeHtml(data.kwargs || '{}')}</div>
+            </div>
+        </div>
+    `;
+}
+
+function closeTaskDetailModal() {
+    document.getElementById('taskDetailModal').style.display = 'none';
+}
+
+// ========== Utility Functions ==========
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showSuccessToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed; top:20px; right:20px; background:#2f9e44; color:#fff; padding:0.75rem 1rem; border-radius:4px; font-size:0.875rem; z-index:400; box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Close modals on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditIntervalModal();
+        closeTaskDetailModal();
+        closeTaskResult();
+    }
+});
+
+// Close modals on backdrop click
+document.getElementById('editIntervalModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditIntervalModal();
+});
+document.getElementById('taskDetailModal').addEventListener('click', function(e) {
+    if (e.target === this) closeTaskDetailModal();
+});
 </script>
 
 </body>

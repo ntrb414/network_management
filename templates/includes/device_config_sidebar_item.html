@@ -1,24 +1,4 @@
-{% if '/configs/' in request.path %}
-<details class="nb-sidebar-drawer" open>
-    <summary class="nb-sidebar-item nb-sidebar-drawer-toggle active">
-        <span class="nb-sidebar-drawer-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            设备配置
-        </span>
-        <svg class="nb-sidebar-drawer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-    </summary>
-    <div class="nb-sidebar-submenu">
-        <a href="{% url 'configs:config_list' %}" class="nb-sidebar-subitem{% if '/configs/' in request.path and '/configs/backup/' not in request.path %} active{% endif %}">
-            配置模板与任务
-        </a>
-        <a href="{% url 'configs:config_backup' %}" class="nb-sidebar-subitem{% if '/configs/backup/' in request.path %} active{% endif %}">
-            配置备份管理
-        </a>
-    </div>
-</details>
-{% else %}
-<a href="{% url 'configs:config_list' %}" class="nb-sidebar-item">
+<a href="{% url 'configs:config_list' %}" class="nb-sidebar-item{% if '/configs/' in request.path %} active{% endif %}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-    设备配置
+    设备配置管理
 </a>
-{% endif %}

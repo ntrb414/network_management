@@ -12,8 +12,7 @@ from accounts.permissions import user_can_access_module
 
 
 class HomepageView(LoginRequiredMixin, TemplateView):
-    """Display the homepage with available feature modules."""
-    
+    # 首页视图，显示可用功能模块
     template_name = 'homepage/homepage.html'
     login_url = 'homepage:login'
     
@@ -71,14 +70,14 @@ class HomepageView(LoginRequiredMixin, TemplateView):
     ]
     
     def get_context_data(self, **kwargs):
-        """Return context with available modules and dashboard stats."""
+        # 返回可用模块和仪表盘统计
         context = super().get_context_data(**kwargs)
         context['modules'] = self.get_available_modules()
         context['stats'] = self.get_dashboard_stats()
         return context
 
     def get_available_modules(self):
-        """Return all modules with optional record counts."""
+        # 返回用户可访问的模块列表
         modules = []
         count_map = self._get_module_counts()
         for m in self.ALL_MODULES:
@@ -152,19 +151,17 @@ class HomepageView(LoginRequiredMixin, TemplateView):
 
 
 class LoginView(TemplateView):
-    """Display the login page and handle user authentication."""
-    
+    # 登录页面视图
     template_name = 'homepage/login.html'
-    
+
     def get(self, request, *args, **kwargs):
-        """Display login form."""
-        # If user is already authenticated, redirect to homepage
+        # 显示登录表单
         if request.user.is_authenticated:
             return redirect('homepage:homepage')
         return super().get(request, *args, **kwargs)
     
     def post(self, request, *args, **kwargs):
-        """Handle login form submission."""
+        # 处理登录表单提交
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         
@@ -188,21 +185,20 @@ class LoginView(TemplateView):
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(require_http_methods(["GET", "POST"]), name='dispatch')
 class LogoutView(View):
-    """Handle user logout and session clearing."""
-    
+    # 登出视图
     def get(self, request, *args, **kwargs):
-        """Handle logout via GET request."""
+        # GET请求登出
         logout(request)
         return redirect('homepage:login')
     
     def post(self, request, *args, **kwargs):
-        """Handle logout via POST request."""
+        # POST请求登出
         logout(request)
         return redirect('homepage:login')
 
 
 def permission_denied_view(request, exception=None):
-    """Handle 403 permission denied errors."""
+    # 处理403权限拒绝错误
     permission = request.GET.get('permission', 'view')
     return render(request, 'errors/permission_denied.html', {
         'permission': permission,
@@ -210,7 +206,7 @@ def permission_denied_view(request, exception=None):
 
 
 def page_not_found_view(request, exception=None):
-    """Handle 404 page not found errors."""
+    # 处理404页面未找到错误
     return render(request, 'errors/404.html', {
         'request_path': request.path,
     }, status=404)

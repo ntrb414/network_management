@@ -53,9 +53,7 @@ def flatten_metric_values(target: Dict[str, Any], value: Any):
                 flatten_metric_values(target, nested)
 
 def parse_gnmi_notification(notification: Dict[str, Any], interface_map: Dict[str, Dict[str, Any]]):
-    """
-    Parces a single notification dictionary and populates the interface_map.
-    """
+    # Parse a single notification dict and populate interface_map
     for update in notification.get('update', []):
         if not isinstance(update, dict):
             continue

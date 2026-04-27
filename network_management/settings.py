@@ -200,19 +200,89 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# Celery Worker 预取配置：关键队列设为 1，避免长任务阻塞后续任务
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+# Celery 任务队列配置（按优先级分级）
+# critical: 最高优先级 - 设备检测/告警（P0 Worker 消费）
+# metrics:  中等优先级 - 监控指标采集（P1 Worker 消费）
+# default:  普通后台任务（P2 Worker 消费）
+# low:      最低优先级 - 配置备份/数据清理（P2 Worker 消费）
+CELERY_TASK_ROUTES = {
+    # P0 - Critical（最高优先级，设备检测与告警）
+    'devices.tasks.check_device_online': {'queue': 'critical'},
+    'alerts.tasks.check_device_status': {'queue': 'critical'},
+
+    # P1 - Monitor（中等优先级，监控指标采集）
+    'monitoring.tasks.collect_device_metrics': {'queue': 'metrics'},
+    'monitoring.tasks.collect_all_online_devices_metrics': {'queue': 'metrics'},
+    'monitoring.tasks.collect_ap_devices_metrics': {'queue': 'metrics'},
+
+    # P2 - Batch（最低优先级，配置备份与后台任务）
+    'configs.tasks.backup_all_devices_configs': {'queue': 'low'},
+    'configs.tasks.backup_single_device_config': {'queue': 'low'},
+    'configs.tasks.execute_scheduled_backup': {'queue': 'low'},
+    'configs.tasks.preload_device_configs_task': {'queue': 'low'},
+    'configs.tasks.execute_config_task': {'queue': 'low'},
+    'configs.tasks.deploy_single_device_config': {'queue': 'low'},
+    'configs.tasks.deploy_batch_device_config': {'queue': 'low'},
+    'configs.tasks.cleanup_old_config_results': {'queue': 'low'},
+    'logs.tasks.cleanup_old_logs': {'queue': 'low'},
+    'alerts.tasks.cleanup_old_alerts': {'queue': 'low'},
+    'alerts.tasks.generate_alert_report': {'queue': 'low'},
+    'monitoring.tasks.cleanup_old_metrics': {'queue': 'low'},
+    'backups.tasks.cleanup_old_backups': {'queue': 'low'},
+    'ipmanagement.tasks.discover_subnets': {'queue': 'default'},
+    'ipmanagement.tasks.scan_all_subnets': {'queue': 'default'},
+}
+
+# ============================================================
+# 定时任务间隔配置（从环境变量读取）
+# ============================================================
+SCHEDULE_CHECK_DEVICES_ONLINE = int(os.environ.get('SCHEDULE_CHECK_DEVICES_ONLINE', 60))
+SCHEDULE_COLLECT_DEVICES_RUNNING_DATA = int(os.environ.get('SCHEDULE_COLLECT_DEVICES_RUNNING_DATA', 60))
+SCHEDULE_CONFIG_BACKUP_DAILY = int(os.environ.get('SCHEDULE_CONFIG_BACKUP_DAILY', 14400))
+SCHEDULE_SUBNETS_FIND = int(os.environ.get('SCHEDULE_SUBNETS_FIND', 600))
+SCHEDULE_ACTIVE_IP_FIND = int(os.environ.get('SCHEDULE_ACTIVE_IP_FIND', 300))
+
 # Celery Beat 定时任务配置
+# 核心定时任务已固化到代码中，避免依赖数据库动态调度
 CELERY_BEAT_SCHEDULE = {
-    'discover-subnets': {
+    # P0 - Critical: 设备在线状态检测（每60秒）
+    'check-devices-online': {
+        'task': 'devices.tasks.check_device_online',
+        'schedule': SCHEDULE_CHECK_DEVICES_ONLINE,
+        'options': {'queue': 'critical'},
+    },
+    # P0 - Critical: 告警状态检查（每60秒）
+    'check-device-status-alerts': {
+        'task': 'alerts.tasks.check_device_status',
+        'schedule': SCHEDULE_CHECK_DEVICES_ONLINE,
+        'options': {'queue': 'critical'},
+    },
+    # P1 - Monitor: 批量采集在线设备指标（每60秒）
+    'collect-all-online-devices-metrics': {
+        'task': 'monitoring.tasks.collect_all_online_devices_metrics',
+        'schedule': SCHEDULE_COLLECT_DEVICES_RUNNING_DATA,
+        'options': {'queue': 'metrics'},
+    },
+    # P2 - Batch / Default: 网段自动发现
+    'subnets-find': {
         'task': 'ipmanagement.tasks.discover_subnets',
-        'schedule': 3600.0,  # 每小时发现一次网段
+        'schedule': SCHEDULE_SUBNETS_FIND,
+        'options': {'queue': 'default'},
     },
-    'ip-scan-all-subnets': {
+    # P2 - Batch / Default: 活跃 IP 扫描
+    'active-ip-find': {
         'task': 'ipmanagement.tasks.scan_all_subnets',
-        'schedule': 500.0,  # 每500秒扫描一次所有网段
+        'schedule': SCHEDULE_ACTIVE_IP_FIND,
+        'options': {'queue': 'default'},
     },
+    # P2 - Batch: 定时配置备份调度触发器
     'config-backup-daily': {
         'task': 'configs.tasks.execute_scheduled_backup',
-        'schedule': 60.0,  # 每分钟检查一次到期的备份调度
+        'schedule': SCHEDULE_CONFIG_BACKUP_DAILY,
+        'options': {'queue': 'low'},
     },
 }
 
@@ -278,7 +348,7 @@ LOGGING = {
 
 # Network Management specific settings
 # 设备发现扫描间隔（秒）
-DEVICE_DISCOVERY_INTERVAL = 7200  # 2小时
+DEVICE_DISCOVERY_INTERVAL = 60 
 
 # 监控数据保留时间（小时）
 MONITORING_DATA_RETENTION_HOURS = 2
@@ -303,11 +373,23 @@ SSH_TIMEOUT = 30
 
 # SNMP 默认超时（秒）
 SNMP_TIMEOUT = 10
-
+# ============================================================
+# Gitlab 备份参数
+# ============================================================
 # 配置备份 Git 仓库路径
 CONFIG_BACKUP_REPO_PATH = os.environ.get(
     'CONFIG_BACKUP_REPO_PATH',
     str(BASE_DIR / 'config_backups')
+)
+
+# GitLab 配置
+GITLAB_URL = os.environ.get('GITLAB_URL', 'http://192.168.50.142')
+GITLAB_PROJECT_ID = os.environ.get('GITLAB_PROJECT_ID', '')
+GITLAB_ACCESS_TOKEN = os.environ.get('GITLAB_ACCESS_TOKEN', '')
+GITLAB_BRANCH = os.environ.get('GITLAB_BRANCH', 'main')
+GITLAB_CONFIG_REPO_PATH = os.environ.get(
+    'GITLAB_CONFIG_REPO_PATH',
+    str(BASE_DIR / 'gitlab_configs')
 )
 
 # ============================================================

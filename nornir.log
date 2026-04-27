@@ -85,3 +85,906 @@ Device settings: hp_comware 172.16.1.4:22
 
 
 2026-04-21 21:59:14,952 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['system-view', 'grpc enable', 'grpc port 57400', 'telemetry', 'sensor-group path', 'sensor-group test', 'sensor path device/cpus', 'sensor path diagnostic/memories', 'sensor path ifmgr/statistics', 'sensor path interfaces/interface/state', 'sensor path ospf/neighbours', 'destination-group test', 'ipv4-address 192.168.50.1 port 50000', 'ipv4-address 192.168.50.132 port 50000', 'subscription test', 'sensor-group test sample-interval 10', 'destination-group test', 'quit', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 1 hosts
+2026-04-24 14:04:42,220 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['system-view', 'info-center enable', 'info-center loghost 192.168.1.10 port 10514 facility local7', 'info-center source default channel loghost level informational', 'info-center source default channel logbuffer level informational', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 1 hosts
+2026-04-24 15:13:55,408 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 15:14:04,558 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 15:14:13,619 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 15:27:37,341 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 15:27:46,394 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 15:27:55,475 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 16:19:32,564 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 16:19:41,560 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 16:19:51,580 - nornir.core.task -    ERROR -      start() - Host 'device_3': task 'netmiko_send_command' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 384, in connect
+    sock.connect(addr)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_send_command.py", line 26, in netmiko_send_command
+    net_connect = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 10.20.2.2:22
+
+
+
+2026-04-24 16:21:13,806 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_command' with args {'command_string': 'save force'} on 1 hosts
+2026-04-24 16:21:23,842 - nornir.core.task -    ERROR -      start() - Host 'device_5': task 'netmiko_send_command' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 384, in connect
+    sock.connect(addr)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_send_command.py", line 26, in netmiko_send_command
+    net_connect = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 172.16.1.4:22
+
+
+
+2026-04-24 17:39:44,546 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:39:47,402 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:39:53,373 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:39:56,213 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:40:02,297 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:40:05,244 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:41:40,456 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:41:43,121 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:41:49,237 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:41:51,867 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:41:57,888 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:42:00,503 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:42:13,357 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:42:15,780 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:42:21,959 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:42:24,512 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:42:30,532 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:42:33,048 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:42:44,403 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:42:46,929 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:42:52,970 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:42:55,461 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:43:01,497 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:43:04,077 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:43:15,487 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:43:18,051 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:43:23,997 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:43:26,497 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 17:43:32,612 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 17:43:35,114 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:00,492 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:03,490 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:09,491 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:12,436 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:16,130 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:18,517 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:18,694 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:21,446 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:24,825 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:27,307 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:33,358 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:35,864 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:40,398 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:42,945 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:48,904 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:51,450 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 18:57:57,433 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 18:57:59,994 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:02:29,752 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:02:32,552 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:02:33,909 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:02:36,431 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:02:38,610 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:02:41,427 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:02:42,355 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:02:44,961 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:02:47,647 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:02:50,472 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:02:51,021 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:02:53,918 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:09:43,770 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:09:46,569 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:09:52,612 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:09:55,505 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:10:01,488 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:10:04,396 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:10:07,439 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:10:10,050 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:10:15,124 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:10:16,048 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:10:17,545 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:10:18,563 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:10:23,584 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:10:24,536 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:10:26,033 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:10:27,060 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:10:32,006 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:10:34,513 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:44:35,411 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:44:38,403 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:44:44,605 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:44:47,578 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 19:44:53,743 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 19:44:56,761 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:06:27,013 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:06:29,965 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:06:35,939 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:06:38,851 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:06:44,859 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:06:47,908 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:06,105 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:08,658 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:14,638 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:17,030 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:22,972 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:24,839 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:25,482 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:27,306 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:33,456 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:35,963 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:38,920 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:41,495 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:41,891 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:44,399 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:47,595 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:50,081 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:50,641 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:53,234 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:56,057 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:07:58,559 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:07:59,246 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:08:01,773 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:08:07,760 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:08:10,261 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:08:22,983 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:08:25,527 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:08:31,503 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:08:34,099 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:08:40,061 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:08:42,603 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:14:40,548 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:14:43,396 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:14:49,325 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:14:52,165 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:14:58,191 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:14:58,791 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:15:00,969 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:15:01,315 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:15:07,377 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:15:09,941 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 21:15:15,903 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 21:15:18,581 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:21:37,608 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:21:40,286 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:21:43,098 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:21:45,799 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:21:46,493 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:21:49,404 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:21:51,700 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:21:54,210 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:21:55,508 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:21:58,335 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:22:00,289 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:22:02,988 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:28:15,094 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:28:17,890 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:28:23,915 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:28:26,798 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:28:32,877 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:28:35,686 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:28:47,172 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:28:49,680 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:28:55,697 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:28:58,160 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:29:04,104 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:29:06,611 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:29:17,929 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:29:20,411 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:29:26,374 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:29:28,881 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:29:34,821 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:29:37,412 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:29:48,694 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:29:51,132 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:29:57,105 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:29:59,593 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:30:05,613 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:30:08,104 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:30:19,439 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:30:21,934 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:30:27,940 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:30:30,446 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:30:36,424 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:30:38,979 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:06,182 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:09,006 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:15,095 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:17,818 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:23,804 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:26,602 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:30,428 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:32,987 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:37,970 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:39,005 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:40,416 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:41,484 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:46,440 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:47,454 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:48,907 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:49,946 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:37:54,905 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:37:57,503 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:38:01,189 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:38:03,699 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:38:08,915 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:38:09,626 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:38:11,412 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:38:12,140 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:38:17,375 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:38:18,105 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:38:19,835 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:38:20,576 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:38:25,771 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:38:28,263 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:44:39,404 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:44:42,305 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:44:48,294 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:44:51,153 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:44:57,197 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:00,026 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:08,402 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:11,001 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:16,572 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:16,994 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:19,070 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:19,487 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:25,165 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:25,483 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:27,638 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:27,999 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:33,610 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:36,121 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:39,378 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:41,892 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:47,364 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:47,979 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:49,875 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:50,460 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:55,886 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:56,470 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:45:58,348 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:45:58,993 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:46:04,379 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:46:06,871 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:52:18,165 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:52:20,993 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:52:27,075 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:52:29,990 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:52:36,157 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:52:39,083 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:52:50,567 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:52:53,112 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:52:59,138 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:53:01,643 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:53:07,691 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:53:10,225 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:53:21,638 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:53:24,154 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:53:30,191 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:53:32,682 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:53:38,702 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:53:41,324 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:53:49,309 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:53:51,927 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:53:57,954 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:54:00,414 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:54:00,798 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:54:03,446 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:54:06,414 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:54:08,922 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:54:09,482 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:54:12,136 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 22:54:18,224 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 22:54:20,776 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:01:56,655 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:01:56,953 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:01:59,511 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:01:59,775 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:01,706 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:04,617 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:05,728 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:06,237 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:08,576 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:08,915 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:10,621 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:11,717 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:13,511 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:14,322 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:14,893 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:15,211 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:17,754 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:17,982 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:19,413 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:20,358 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:22,277 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:23,157 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:02:29,107 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:02:31,605 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:08:29,903 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:08:32,833 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:08:35,282 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:08:37,810 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:08:38,913 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:08:41,801 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:08:43,796 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:08:43,829 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:08:46,386 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:08:46,582 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:08:48,112 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:08:50,968 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:08:52,493 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:08:52,608 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:08:55,056 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:08:55,233 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:09:01,151 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:09:01,677 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:09:04,120 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:09:04,611 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:09:09,712 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:09:10,706 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:09:12,238 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:09:13,624 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:09:18,734 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:09:19,793 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:09:21,296 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:09:22,574 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:09:27,399 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:09:29,978 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:15:33,800 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:15:36,634 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:15:42,655 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:15:45,514 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:15:46,210 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:15:48,750 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:15:51,579 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:15:54,439 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:15:54,816 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:15:57,325 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:03,383 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:05,767 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:05,889 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:08,288 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:14,377 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:16,874 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:17,297 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:19,854 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:22,964 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:25,488 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:25,898 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:28,410 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:34,457 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:36,859 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:36,958 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:39,361 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:45,376 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:47,808 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-24 23:16:53,791 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-24 23:16:56,397 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 00:06:17,647 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:06:20,475 - nornir.core.task -    ERROR -      start() - Host 'device_1': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 407, in connect
+    raise NoValidConnectionsError(errors)
+paramiko.ssh_exception.NoValidConnectionsError: [Errno None] Unable to connect to port 22 on 192.168.50.100
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 192.168.50.100:22
+
+
+
+2026-04-25 00:06:20,476 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 00:06:20,514 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:06:23,530 - nornir.core.task -    ERROR -      start() - Host 'device_3': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 407, in connect
+    raise NoValidConnectionsError(errors)
+paramiko.ssh_exception.NoValidConnectionsError: [Errno None] Unable to connect to port 22 on 10.20.2.2
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 10.20.2.2:22
+
+
+
+2026-04-25 00:06:23,531 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 00:06:23,575 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:06:26,602 - nornir.core.task -    ERROR -      start() - Host 'device_5': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 407, in connect
+    raise NoValidConnectionsError(errors)
+paramiko.ssh_exception.NoValidConnectionsError: [Errno None] Unable to connect to port 22 on 172.16.1.4
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 172.16.1.4:22
+
+
+
+2026-04-25 00:06:26,604 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 00:06:26,990 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:06:29,674 - nornir.core.task -    ERROR -      start() - Host 'device_1': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 407, in connect
+    raise NoValidConnectionsError(errors)
+paramiko.ssh_exception.NoValidConnectionsError: [Errno None] Unable to connect to port 22 on 192.168.50.100
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 192.168.50.100:22
+
+
+
+2026-04-25 00:06:29,675 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 00:06:29,721 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:06:32,746 - nornir.core.task -    ERROR -      start() - Host 'device_3': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 407, in connect
+    raise NoValidConnectionsError(errors)
+paramiko.ssh_exception.NoValidConnectionsError: [Errno None] Unable to connect to port 22 on 10.20.2.2
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 10.20.2.2:22
+
+
+
+2026-04-25 00:06:32,747 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 00:06:32,782 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:06:35,817 - nornir.core.task -    ERROR -      start() - Host 'device_5': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 407, in connect
+    raise NoValidConnectionsError(errors)
+paramiko.ssh_exception.NoValidConnectionsError: [Errno None] Unable to connect to port 22 on 172.16.1.4
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 172.16.1.4:22
+
+
+
+2026-04-25 00:06:35,818 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 00:15:11,215 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:15:14,269 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 00:15:20,441 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:15:23,424 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 00:15:29,516 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:15:39,530 - nornir.core.task -    ERROR -      start() - Host 'device_5': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 384, in connect
+    sock.connect(addr)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 172.16.1.4:22
+
+
+
+2026-04-25 00:15:39,531 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 00:15:44,963 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:15:47,581 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 00:15:53,729 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:15:56,376 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 00:16:02,480 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:16:12,490 - nornir.core.task -    ERROR -      start() - Host 'device_5': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 384, in connect
+    sock.connect(addr)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 172.16.1.4:22
+
+
+
+2026-04-25 00:16:12,491 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 00:16:17,501 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:16:20,123 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 00:16:26,621 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:16:29,508 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 00:16:35,627 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 00:16:45,639 - nornir.core.task -    ERROR -      start() - Host 'device_5': task 'netmiko_save_config' failed with traceback:
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1146, in establish_connection
+    self.remote_conn_pre.connect(**ssh_connect_params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/paramiko/client.py", line 384, in connect
+    sock.connect(addr)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/task.py", line 98, in start
+    r = self.task(self, **self.params)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/tasks/netmiko_save_config.py", line 20, in netmiko_save_config
+    conn = task.host.get_connection(CONNECTION_NAME, task.nornir.config)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 476, in get_connection
+    self.open_connection(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir/core/inventory.py", line 528, in open_connection
+    conn_obj.open(
+  File "/opt/network_management/venv/lib/python3.10/site-packages/nornir_netmiko/connections/netmiko.py", line 59, in open
+    connection = ConnectHandler(**parameters)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/ssh_dispatcher.py", line 460, in ConnectHandler
+    return ConnectionClass(*args, **kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/hp/hp_comware.py", line 13, in __init__
+    super().__init__(**kwargs)
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 495, in __init__
+    self._open()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 500, in _open
+    self.establish_connection()
+  File "/opt/network_management/venv/lib/python3.10/site-packages/netmiko/base_connection.py", line 1168, in establish_connection
+    raise NetmikoTimeoutException(msg)
+netmiko.exceptions.NetmikoTimeoutException: TCP connection to device failed.
+
+Common causes of this problem are:
+1. Incorrect hostname or IP address.
+2. Wrong TCP port.
+3. Intermediate firewall blocking access.
+
+Device settings: hp_comware 172.16.1.4:22
+
+
+
+2026-04-25 00:16:45,640 -  nornir.core -  WARNING -        run() - Task 'close_connections_task' has not been run – 0 hosts selected
+2026-04-25 16:49:29,103 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 16:49:32,209 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 16:49:38,316 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 16:49:41,355 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 16:49:47,478 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 16:49:50,435 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 19:25:07,927 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['system-view', 'info-center enable', 'info-center loghost 192.168.1.10 port 10514 facility local7', 'info-center source default channel loghost level informational', 'info-center source default channel logbuffer level informational', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 3 hosts
+2026-04-25 19:25:20,781 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 19:25:23,384 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 19:25:29,744 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 19:25:32,345 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 19:25:38,360 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 19:25:41,030 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 19:26:30,941 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['system-view', 'info-center enable', 'info-center loghost 192.168.50.132 port 10514 facility local7', 'info-center source default channel loghost level informational', 'info-center source default channel logbuffer level informational', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 3 hosts
+2026-04-25 20:38:19,945 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['system-view', 'info-center enable', 'info-center loghost 192.168.50.132 port 10514 facility local7', 'info-center source default channel loghost level informational', 'info-center source default channel logbuffer level informational', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 3 hosts
+2026-04-25 20:42:13,042 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['info-center enable', 'info-center loghost 192.168.50.132 port 10514 facility local7', 'info-center source default channel loghost level informational', 'info-center source default channel logbuffer level informational', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 2 hosts
+2026-04-25 20:47:10,032 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['info-center enable', 'info-center timestamp loghost iso', 'info-center loghost 192.168.50.132 port 10514 facility local7', 'info-center source default channel loghost level informational', 'info-center source default channel logbuffer level informational', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 2 hosts
+2026-04-25 20:49:28,877 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 20:49:31,792 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 20:49:37,888 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 20:49:40,902 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 20:49:47,045 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 20:49:50,008 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 21:02:17,772 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['info-center enable', 'info-center timestamp loghost iso', 'info-center loghost 192.168.50.132 port 10514 facility local7', 'info-center source default channel loghost level informational', 'info-center source default channel logbuffer level informational', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 1 hosts
+2026-04-25 21:06:12,019 -  nornir.core -     INFO -        run() - Running task 'netmiko_send_config' with args {'config_commands': ['info-center enable', 'info-center timestamp loghost iso', 'info-center loghost 192.168.50.132 port 10514 facility local7', 'info-center source default channel loghost level informational', 'info-center source default channel logbuffer level informational', 'save force'], 'read_timeout': 20, 'cmd_verify': False} on 3 hosts
+2026-04-25 21:57:08,667 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 21:57:11,655 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 21:57:17,909 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 21:57:20,954 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 21:57:27,167 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 21:57:30,306 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 22:17:46,855 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 22:17:49,828 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 22:17:55,941 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 22:17:58,947 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-25 22:18:05,114 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-25 22:18:07,981 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-26 16:16:16,036 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-26 16:16:19,104 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-26 16:16:25,163 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-26 16:16:28,232 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-26 16:16:34,389 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-26 16:16:37,493 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-26 16:42:35,128 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-26 16:42:37,967 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-26 16:42:44,351 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-26 16:42:47,282 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-26 16:42:53,295 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-26 16:42:56,111 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-26 20:16:16,348 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-26 20:16:19,492 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts
+2026-04-27 21:28:56,027 -  nornir.core -     INFO -        run() - Running task 'netmiko_save_config' with args {'cmd': 'save force'} on 1 hosts
+2026-04-27 21:28:58,985 -  nornir.core -     INFO -        run() - Running task 'close_connections_task' with args {} on 1 hosts

@@ -29,6 +29,7 @@ class Alert(models.Model):
         ('active', '待处理'),
         ('acknowledged', '已处理'),
         ('ignored', '已忽略'),
+        ('resolved', '已恢复'),
     ]
 
     device = models.ForeignKey(
@@ -45,6 +46,7 @@ class Alert(models.Model):
         verbose_name='处理人', related_name='handled_alerts'
     )
     handled_at = models.DateTimeField('处理时间', null=True, blank=True)
+    resolved_at = models.DateTimeField('恢复时间', null=True, blank=True)
 
     class Meta:
         verbose_name = '告警'

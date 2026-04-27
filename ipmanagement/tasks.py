@@ -1,6 +1,4 @@
-"""
-IP Management Celery 异步任务
-"""
+# IP管理Celery异步任务
 import json
 import logging
 
@@ -13,9 +11,15 @@ from .services import IPScanService, IPAMService, NetworkDiscoveryService
 
 logger = logging.getLogger(__name__)
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=300,
+    soft_time_limit=270,
+    queue='default',
+)
 def scan_subnet_task(self, task_id: int):
-    """异步扫描网段任务"""
+    # 异步扫描网段，结果写入Redis
     try:
         task = IPScanTask.objects.get(id=task_id)
     except IPScanTask.DoesNotExist:
@@ -28,8 +32,17 @@ def scan_subnet_task(self, task_id: int):
 
     scanner = IPScanService()
 
+    # 批量更新进度的阈值，避免每扫一个IP都写DB
+    _last_reported = [0]
+    report_interval = max(10, task.total_ips // 20)
+
+    def progress_callback(scanned, total, result):
+        if scanned - _last_reported[0] >= report_interval or scanned == total:
+            _last_reported[0] = scanned
+            IPScanTask.objects.filter(id=task_id).update(scanned_ips=scanned)
+
     try:
-        all_results = scanner.scan_subnet(task.cidr, return_all=True)
+        all_results = scanner.scan_subnet(task.cidr, return_all=True, progress_callback=progress_callback)
         alive_hosts = [result for result in all_results if result.get('alive')]
 
         if task.subnet:
@@ -73,9 +86,13 @@ def scan_subnet_task(self, task_id: int):
         raise
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    queue='default',
+)
 def enqueue_scan_task(self, cidr: str, subnet_id: int = None) -> int:
-    """将扫描任务加入队列"""
+    # 将扫描任务加入队列
     import ipaddress
 
     network = ipaddress.ip_network(cidr, strict=False)
@@ -94,9 +111,13 @@ def enqueue_scan_task(self, cidr: str, subnet_id: int = None) -> int:
     return task.id
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    queue='default',
+)
 def discover_subnets(self):
-    """自动发现网段任务"""
+    # 自动发现网段并创建Subnet记录
     discovery_service = NetworkDiscoveryService()
     discovered_subnets = discovery_service.discover_network_subnets()
     
@@ -136,9 +157,12 @@ def discover_subnets(self):
     }
 
 
-@shared_task(bind=True)
+@shared_task(
+    bind=True,
+    queue='default',
+)
 def scan_all_subnets(self):
-    """定时扫描所有启用的网段"""
+    # 定时扫描所有启用的网段
     subnets = Subnet.objects.filter(is_active=True)
     scanner = IPScanService()
     
@@ -158,9 +182,12 @@ def scan_all_subnets(self):
     }
 
 
-@shared_task(bind=True)
+@shared_task(
+    bind=True,
+    queue='default',
+)
 def sync_scan_results_to_ipam(self, task_id: int):
-    """将扫描结果同步到IPAM注册表"""
+    # 将扫描结果同步到IPAM注册表
     try:
         task = IPScanTask.objects.get(id=task_id)
     except IPScanTask.DoesNotExist:
@@ -190,9 +217,12 @@ def sync_scan_results_to_ipam(self, task_id: int):
     return result
 
 
-@shared_task(bind=True)
+@shared_task(
+    bind=True,
+    queue='default',
+)
 def auto_discover_unmanaged_ips(self, subnet_id: int):
-    """自动发现未管理的IP"""
+    # 自动发现未管理的IP并同步到IPAM
     from .models import Subnet
 
     try:

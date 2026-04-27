@@ -55,7 +55,7 @@ class BackupPageNavigationTestCase(TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.redirect_chain)
-        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_backup'))
+        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_list'))
         content = response.content.decode()
         
         # Check for back to homepage link
@@ -68,7 +68,7 @@ class BackupPageNavigationTestCase(TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.redirect_chain)
-        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_backup'))
+        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_list'))
         content = response.content.decode()
         
         # Check for user info
@@ -81,7 +81,7 @@ class BackupPageNavigationTestCase(TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.redirect_chain)
-        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_backup'))
+        self.assertEqual(response.redirect_chain[-1][0], reverse('configs:config_list'))
         content = response.content.decode()
         
         # Check for logout button

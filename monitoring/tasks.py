@@ -1,22 +1,18 @@
-"""
-性能监控 Celery 异步任务
-
-包含监控数据采集、清理等任务。
-"""
-
+# 性能监控Celery异步任务
 from celery import shared_task
 from django.utils import timezone
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    time_limit=120,
+    soft_time_limit=100,
+    queue='metrics',
+)
 def collect_device_metrics(self, device_id: int):
-    """
-    采集设备监控数据任务
-
-    Args:
-        device_id: 设备ID
-
-    """
+    # 采集设备监控数据并检查阈值
+    # 参数: device_id-设备ID
     from devices.models import Device
     from .services import MonitoringService
 
@@ -54,16 +50,15 @@ def collect_device_metrics(self, device_id: int):
         }
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=300,
+    soft_time_limit=270,
+    queue='metrics',
+)
 def collect_all_online_devices_metrics(self):
-    """
-    采集所有在线设备的监控数据
-
-    根据设备类型使用不同的采集策略:
-    - AP: 实时采集 (实际上会更频繁)
-    - 其他: 每5分钟采集一次
-
-    """
+    # 采集所有在线设备监控数据，排除dial_out模式设备
     from devices.models import Device
 
     # Exclude devices that use 'dial_out' mode, as they push their data to the gRPC receiver
@@ -86,12 +81,15 @@ def collect_all_online_devices_metrics(self):
     }
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=300,
+    soft_time_limit=270,
+    queue='metrics',
+)
 def collect_ap_devices_metrics(self):
-    """
-    采集AP设备监控数据 (实时采集)
-
-    """
+    # 采集AP设备监控数据
     from devices.models import Device
 
     ap_devices = Device.objects.filter(
@@ -114,14 +112,13 @@ def collect_ap_devices_metrics(self):
     }
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    queue='low',
+)
 def cleanup_old_metrics(self):
-    """
-    清理过期的监控数据
-
-    保留24小时的数据
-
-    """
+    # 清理过期监控数据，保留24小时
     from .services import MonitoringService
 
     service = MonitoringService()

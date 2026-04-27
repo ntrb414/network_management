@@ -1,0 +1,289 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+
+<div class="nb-page-header">
+    <div>
+        <div class="nb-page-title">{% if add %}添加定时任务{% else %}编辑定时任务{% endif %}</div>
+        <div class="nb-page-subtitle">Periodic Task</div>
+    </div>
+    <div class="object-tools">
+        {% if not add %}
+        <a href="{% url opts|admin_urlname:'history' original.pk|admin_urlquote %}" class="historylink">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            历史记录
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="admin-content">
+    <form method="post" enctype="multipart/form-data" class="admin-form periodic-task-form">
+        {% csrf_token %}
+
+        {% if adminform.form.non_field_errors %}
+        <div class="messagelist">
+            <div class="error">{{ adminform.form.non_field_errors }}</div>
+        </div>
+        {% endif %}
+
+        {# 基本信息 #}
+        <fieldset class="task-basic-info">
+            <h2>基本信息</h2>
+            <div class="form-row">
+                <label for="id_name" class="required">任务名称</label>
+                {{ adminform.form.name }}
+                {% if adminform.form.name.errors %}
+                <ul class="errors">{% for e in adminform.form.name.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+                {% endif %}
+            </div>
+            <div class="form-row">
+                <label>任务函数</label>
+                <div class="task-select-wrapper">
+                    {{ adminform.form.regtask }}
+                </div>
+                {% if adminform.form.regtask.errors %}
+                <ul class="errors">{% for e in adminform.form.regtask.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+                {% endif %}
+            </div>
+            <div class="form-row">
+                <label for="id_enabled">启用状态</label>
+                <div class="checkbox-row">
+                    {{ adminform.form.enabled }}
+                    <span>启用此定时任务</span>
+                </div>
+            </div>
+            <div class="form-row">
+                <label for="id_description">描述</label>
+                {{ adminform.form.description }}
+            </div>
+        </fieldset>
+
+        {# 调度设置 #}
+        <fieldset class="task-schedule">
+            <h2>调度设置</h2>
+            <p class="field-hint">选择间隔调度或 Crontab 调度（二选一）</p>
+
+            <div class="schedule-options">
+                <div class="schedule-option">
+                    <h3>间隔调度</h3>
+                    <div class="form-row">
+                        <label>间隔设置</label>
+                        {{ adminform.form.interval }}
+                    </div>
+                </div>
+
+                <div class="schedule-or">或</div>
+
+                <div class="schedule-option">
+                    <h3>Crontab 调度</h3>
+                    <div class="form-row">
+                        <label>Crontab</label>
+                        {{ adminform.form.crontab }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label for="id_start_time">开始时间</label>
+                {{ adminform.form.start_time }}
+            </div>
+            <div class="form-row">
+                <label for="id_one_off">一次性任务</label>
+                <div class="checkbox-row">
+                    {{ adminform.form.one_off }}
+                    <span>执行一次后自动禁用</span>
+                </div>
+            </div>
+        </fieldset>
+
+        {# 执行选项（折叠） #}
+        <details class="task-advanced-options">
+            <summary>高级选项</summary>
+            <div class="advanced-options-content">
+                <div class="form-row">
+                    <label for="id_queue">队列</label>
+                    {{ adminform.form.queue }}
+                </div>
+                <div class="form-row">
+                    <label for="id_priority">优先级</label>
+                    {{ adminform.form.priority }}
+                </div>
+            </div>
+        </details>
+
+        <div class="submit-row">
+            <input type="submit" name="_save" value="保存">
+            {% if not add %}
+            <input type="submit" name="_continue" value="保存并继续编辑">
+            {% endif %}
+            {% if has_add_permission %}
+            <input type="submit" name="_addanother" value="保存并添加另一个">
+            {% endif %}
+            {% if not add and has_delete_permission %}
+            <a href="{% url opts|admin_urlname:'delete' original.pk|admin_urlquote %}" class="deletelink">删除</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<style>
+.periodic-task-form {
+    padding: 1.5rem;
+}
+
+.periodic-task-form fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+}
+
+.periodic-task-form fieldset h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a2332;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+    margin: 0 0 1rem 0;
+}
+
+.periodic-task-form .field-hint {
+    font-size: 0.8125rem;
+    color: #6c757d;
+    margin: 0 0 1rem 0;
+}
+
+.periodic-task-form .form-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    align-items: start;
+}
+
+.periodic-task-form label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #495057;
+    padding-top: 0.375rem;
+}
+
+.periodic-task-form label.required::after {
+    content: " *";
+    color: #dc2626;
+}
+
+.periodic-task-form input[type="text"],
+.periodic-task-form input[type="number"],
+.periodic-task-form select,
+.periodic-task-form textarea {
+    width: 100%;
+    max-width: 400px;
+    padding: 0.4375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    outline: none;
+}
+
+.periodic-task-form input:focus,
+.periodic-task-form select:focus,
+.periodic-task-form textarea:focus {
+    border-color: #1971c2;
+    box-shadow: 0 0 0 2px rgba(25,113,194,0.15);
+}
+
+.periodic-task-form .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.375rem;
+}
+
+.periodic-task-form input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #1971c2;
+}
+
+.periodic-task-form .checkbox-row span {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.periodic-task-form .schedule-options {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.periodic-task-form .schedule-option {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1rem;
+}
+
+.periodic-task-form .schedule-option h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #495057;
+    margin: 0 0 0.75rem 0;
+}
+
+.periodic-task-form .schedule-or {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.periodic-task-form .task-advanced-options {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.periodic-task-form .task-advanced-options summary {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+.periodic-task-form .task-advanced-options summary:hover {
+    background: #f1f3f5;
+}
+
+.periodic-task-form .advanced-options-content {
+    padding: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.periodic-task-form .errors {
+    grid-column: 2;
+    color: #dc2626;
+    font-size: 0.8125rem;
+    margin: 0.25rem 0 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+@media (max-width: 768px) {
+    .periodic-task-form .schedule-options {
+        grid-template-columns: 1fr;
+    }
+
+    .periodic-task-form .schedule-or {
+        justify-content: center;
+        padding: 0.5rem 0;
+    }
+}
+</style>
+
+{% endblock %}

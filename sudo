@@ -1,0 +1,19 @@
+[Unit]
+  Description=Network Management Syslog Receiver (UDP)
+  After=network.target redis.service
+  Requires=redis.service
+
+  [Service]
+  Type=simple
+  User=seth
+  WorkingDirectory=/opt/network_management
+  Environment="PATH=/opt/network_management/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+  Environment="DJANGO_SETTINGS_MODULE=network_management.settings"
+  ExecStart=/opt/network_management/venv/bin/python manage.py run_syslog_receiver
+  Restart=always
+  RestartSec=5
+  StandardOutput=journal
+  StandardError=journal
+
+  [Install]
+  WantedBy=multi-user.target

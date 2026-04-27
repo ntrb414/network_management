@@ -56,12 +56,25 @@ class AlertService:
         """
         创建设备离线告警
 
+        如果该设备已存在未解决的离线告警（active 或 acknowledged），
+        则不再重复创建，直接返回已存在的告警。
+
         Args:
             device: 设备对象
 
         Returns:
             告警对象
         """
+        from alerts.models import Alert
+
+        existing = Alert.objects.filter(
+            device=device,
+            alert_type='device_offline',
+            status__in=['active', 'acknowledged'],
+        ).first()
+        if existing:
+            return existing
+
         return self.create_alert(
             device=device,
             alert_type='device_offline',
@@ -73,12 +86,25 @@ class AlertService:
         """
         创建设备故障告警
 
+        如果该设备已存在未解决的故障告警（active 或 acknowledged），
+        则不再重复创建，直接返回已存在的告警。
+
         Args:
             device: 设备对象
 
         Returns:
             告警对象
         """
+        from alerts.models import Alert
+
+        existing = Alert.objects.filter(
+            device=device,
+            alert_type='device_fault',
+            status__in=['active', 'acknowledged'],
+        ).first()
+        if existing:
+            return existing
+
         return self.create_alert(
             device=device,
             alert_type='device_fault',

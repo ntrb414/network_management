@@ -1,12 +1,13 @@
 from django.urls import path
 from .views import (
-    ConfigListView, ConfigDetailView, ConfigBackupView,
+    ConfigListView, ConfigDetailView,
     config_template_list_api, config_template_detail_api,
     validate_template_api,
     config_task_list_api, config_task_detail_api,
     config_task_execute_api,
     config_backup_trigger_api, config_backup_status_api, config_backup_schedule_api,
-    schedule_list_api, schedule_detail_api, schedule_run_api, schedule_logs_api
+    schedule_list_api, schedule_detail_api, schedule_run_api, schedule_logs_api,
+    task_status_api
 )
 
 app_name = 'configs'
@@ -15,7 +16,6 @@ urlpatterns = [
     # Page views
     path('', ConfigListView.as_view(), name='config_list'),
     path('<int:pk>/', ConfigDetailView.as_view(), name='config_detail'),
-    path('backup/', ConfigBackupView.as_view(), name='config_backup'),
 
     # Template API
     path('api/templates/', config_template_list_api, name='template_list_api'),
@@ -37,4 +37,7 @@ urlpatterns = [
     path('api/schedules/<int:pk>/', schedule_detail_api, name='schedule_detail_api'),
     path('api/schedules/<int:pk>/run/', schedule_run_api, name='schedule_run_api'),
     path('api/schedules/<int:pk>/logs/', schedule_logs_api, name='schedule_logs_api'),
+
+    # Task status API
+    path('api/task-status/<str:job_id>/', task_status_api, name='task_status_api'),
 ]

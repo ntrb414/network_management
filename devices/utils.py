@@ -6,27 +6,19 @@ import subprocess
 import re
 
 
-# Ping configuration constants
+# Ping配置常量
 PING_COUNT = 4
-PING_TIMEOUT = 2  # seconds per packet
-PING_COMMAND_TIMEOUT = PING_TIMEOUT * PING_COUNT + 5  # total timeout for subprocess
+PING_TIMEOUT = 2  # 每包超时秒数
+PING_COMMAND_TIMEOUT = PING_TIMEOUT * PING_COUNT + 5  # 子进程总超时
 
-# Device online check constants (used in scheduled tasks)
-DEVICE_CHECK_MAX_WORKERS = 50  # max concurrent ping workers
+# 设备在线检查常量
+DEVICE_CHECK_MAX_WORKERS = 20  # 最大并发ping数
 
 
 def ping_host(ip_address, count=4, timeout=2):
-    """
-    Ping主机并返回结果
-
-    Args:
-        ip_address: 目标IP地址或主机名
-        count: Ping包数量，默认4
-        timeout: 超时时间（秒），默认2
-
-    Returns:
-        dict: {'reachable': bool, 'latency': float or None, 'error': str or None}
-    """
+    # Ping主机并返回结果
+    # 参数: ip_address-目标IP, count-包数量, timeout-超时秒数
+    # 返回: {'reachable': bool, 'latency': float, 'error': str}
     try:
         cmd = ['/usr/bin/ping', '-c', str(count), '-W', str(timeout), ip_address]
         result = subprocess.run(

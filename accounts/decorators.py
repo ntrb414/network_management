@@ -1,10 +1,4 @@
-"""
-权限检查装饰器
-
-提供 permission_required 装饰器用于检查用户是否有权限访问视图。
-支持多个权限的 AND/OR 逻辑检查。
-"""
-
+# 权限检查装饰器
 from functools import wraps
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
@@ -13,27 +7,8 @@ from django.contrib.auth.decorators import login_required
 
 
 def permission_required(permissions, logic='AND', redirect_to_login=True):
-    """
-    装饰器：检查用户是否有权限访问视图。
-    
-    参数：
-        permissions (str or list): 权限字符串或列表，格式为 'app.action'，如 'devices.view'
-        logic (str): 多个权限的检查逻辑，'AND' 表示需要所有权限，'OR' 表示只需一个权限
-        redirect_to_login (bool): 未登录用户是否重定向到登录页
-    
-    返回：
-        装饰器函数
-    
-    示例：
-        @permission_required('devices.view')
-        def my_view(request):
-            pass
-        
-        @permission_required(['devices.view', 'devices.edit'], logic='OR')
-        def my_view(request):
-            pass
-    """
-    # 规范化权限为列表
+    # 装饰器：检查用户权限
+    # 参数: permissions-权限字符串或列表, logic-AND/OR逻辑
     if isinstance(permissions, str):
         permissions = [permissions]
     
@@ -62,18 +37,8 @@ def permission_required(permissions, logic='AND', redirect_to_login=True):
 
 
 def has_permission(user, permissions, logic='AND'):
-    """
-    检查用户是否有指定的权限。
-    
-    参数：
-        user: Django User 对象
-        permissions (list): 权限列表，格式为 'app.action'
-        logic (str): 检查逻辑，'AND' 或 'OR'
-    
-    返回：
-        bool: 用户是否有权限
-    """
-    # 管理员拥有所有权限
+    # 检查用户是否有指定权限
+    # 参数: user-用户对象, permissions-权限列表, logic-AND/OR逻辑
     try:
         if user.profile.is_admin:
             return True

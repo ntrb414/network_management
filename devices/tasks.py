@@ -1,9 +1,4 @@
-"""
-设备发现 Celery 异步任务
-
-包含设备发现的异步任务和定时任务。
-"""
-
+# 设备发现Celery异步任务
 from celery import shared_task
 from django.utils import timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -11,16 +6,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from .utils import ping_host, DEVICE_CHECK_MAX_WORKERS
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    time_limit=300,
+    soft_time_limit=270,
+    queue='default',
+)
 def scan_ip_range_task(self, start_ip: str, end_ip: str):
-    """
-    扫描IP地址范围任务
-
-    Args:
-        start_ip: 起始IP地址
-        end_ip: 结束IP地址
-
-    """
+    # 扫描IP地址范围，发现设备并保存到数据库
+    # 参数: start_ip-起始IP, end_ip-结束IP
     from .services import DeviceDiscoveryService
     from .models import Device
 
@@ -56,15 +51,16 @@ def scan_ip_range_task(self, start_ip: str, end_ip: str):
         }
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    time_limit=120,
+    soft_time_limit=100,
+    queue='default',
+)
 def scan_lldp_task(self, seed_device_id: int):
-    """
-    通过LLDP发现相邻设备任务
-
-    Args:
-        seed_device_id: 种子设备ID
-
-    """
+    # 通过LLDP协议发现相邻设备
+    # 参数: seed_device_id-种子设备ID
     from .services import DeviceDiscoveryService
     from .models import Device
 
@@ -105,12 +101,15 @@ def scan_lldp_task(self, seed_device_id: int):
         }
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    time_limit=120,
+    soft_time_limit=100,
+    queue='default',
+)
 def scheduled_device_discovery(self):
-    """
-    定时设备发现任务 - 每2小时执行一次
-
-    """
+    # 定时设备发现任务，每2小时执行，使用在线设备作为种子进行LLDP发现
     from .models import Device
 
     # 获取所有在线设备的IP范围
@@ -135,15 +134,16 @@ def scheduled_device_discovery(self):
     }
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    time_limit=120,
+    soft_time_limit=100,
+    queue='default',
+)
 def discover_device_details(self, device_id: int):
-    """
-    发现设备详细信息任务
-
-    Args:
-        device_id: 设备ID
-
-    """
+    # 发现设备详细信息并更新端口
+    # 参数: device_id-设备ID
     from .services import DeviceDiscoveryService
     from .models import Device, Port
 
@@ -193,23 +193,24 @@ def discover_device_details(self, device_id: int):
         }
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    time_limit=45,
+    soft_time_limit=40,
+    queue='critical',
+)
 def check_device_online(self):
-    """
-    定时检测设备在线状态任务
-
-    每60秒对所有设备进行ping测试，检查设备是否在线。
-    如果设备离线，同步更新设备状态并触发告警。
-    使用并发ping提高检测效率。
-
-    """
+    # 定时检测设备在线状态，每60秒执行并发ping测试
+    # 离线设备触发告警，恢复在线自动关闭告警
     from .models import Device
 
     offline_devices = []
     online_count = 0
+    recovered_count = 0
 
     def ping_device(device):
-        """对单个设备执行ping检测"""
+        # 对单个设备执行ping检测
         result = ping_host(device.ip_address, count=1, timeout=2)
         return device, result.get('reachable', False)
 
@@ -232,8 +233,20 @@ def check_device_online(self):
                 # 在线：更新状态和最后在线时间
                 device.last_seen = timezone.now()
                 if device.status != 'online':
+                    old_status = device.status
                     device.status = 'online'
-                device.save()
+                    device.save()
+                    # 设备从离线/故障恢复，自动关闭该设备的离线/故障告警
+                    if old_status in ['offline', 'fault']:
+                        recovered_count += 1
+                        from alerts.models import Alert
+                        Alert.objects.filter(
+                            device=device,
+                            alert_type__in=['device_offline', 'device_fault'],
+                            status__in=['active', 'acknowledged'],
+                        ).update(status='resolved', resolved_at=timezone.now())
+                else:
+                    device.save()
                 online_count += 1
             else:
                 # 离线：检查状态变化，触发告警
@@ -243,7 +256,7 @@ def check_device_online(self):
                     device.save()
                     offline_devices.append(device.ip_address)
 
-                    # 创建离线告警
+                    # 创建离线告警（带兜底去重）
                     from alerts.services import AlertService
                     alert_service = AlertService()
                     alert_service.create_device_offline_alert(device)
@@ -257,6 +270,7 @@ def check_device_online(self):
             'total_devices': total_devices,
             'online_count': online_count,
             'offline_devices': len(offline_devices),
+            'recovered_devices': recovered_count,
             'offline_ips': offline_devices,
         }
 

@@ -1,9 +1,4 @@
-"""
-配置管理页面视图和API
-
-包含配置模板、任务管理、备份、定时任务的页面视图和API视图。
-"""
-
+# 配置管理页面视图和API
 from django.views.generic import ListView, DetailView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -13,7 +8,6 @@ from rest_framework.response import Response
 from .models import ConfigTemplate, ConfigTask, ConfigTaskResult
 from .models import ConfigFetchSchedule, ConfigFetchLog
 from devices.models import Device
-from backups.models import ConfigBackup
 from django.core.cache import cache
 
 
@@ -166,8 +160,7 @@ def _save_schedule_from_request(schedule, request):
 # ==================== 页面视图 ====================
 
 class ConfigListView(LoginRequiredMixin, ListView):
-    """配置管理首页"""
-
+    # 配置管理首页
     template_name = 'configs/config_list.html'
     context_object_name = 'configs'
     login_url = 'homepage:login'
@@ -180,12 +173,14 @@ class ConfigListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context['tasks'] = ConfigTask.objects.all().order_by('-created_at')[:10]
+        # 从 ConfigBackupView 迁移：最近备份版本记录
+        from backups.models import ConfigBackup
+        context['recent_backups'] = ConfigBackup.objects.select_related('device', 'backed_up_by').order_by('-backed_up_at')[:10]
         return context
 
 
 class ConfigDetailView(LoginRequiredMixin, DetailView):
-    """配置模板详情"""
-
+    # 配置模板详情页面
     model = ConfigTemplate
     template_name = 'configs/config_detail.html'
     context_object_name = 'config'
@@ -203,7 +198,7 @@ class ConfigDetailView(LoginRequiredMixin, DetailView):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def config_template_list_api(request):
-    """配置模板列表API"""
+    # 配置模板列表API：GET获取列表，POST创建模板
     if request.method == 'GET':
         page = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('page_size', 20))
@@ -260,7 +255,7 @@ def config_template_list_api(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def config_template_detail_api(request, pk):
-    """配置模板详情API"""
+    # 配置模板详情API：GET获取，PUT更新，DELETE删除
     try:
         template = ConfigTemplate.objects.get(pk=pk)
     except ConfigTemplate.DoesNotExist:
@@ -302,7 +297,7 @@ def config_template_detail_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def validate_template_api(request):
-    """验证配置模板API"""
+    # 验证配置模板API
     template_content = request.data.get('template_content', '')
     template_type = request.data.get('template_type', 'device_commands')
     variables = request.data.get('variables', {})
@@ -331,7 +326,7 @@ def validate_template_api(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def config_task_list_api(request):
-    """配置任务列表API"""
+    # 配置任务列表API：GET获取列表，POST创建任务
     if request.method == 'GET':
         page = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('page_size', 20))
@@ -413,7 +408,7 @@ def config_task_list_api(request):
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def config_task_detail_api(request, pk):
-    """配置任务详情API"""
+    # 配置任务详情API
     try:
         task = ConfigTask.objects.prefetch_related('results__device', 'devices', 'template').get(pk=pk)
     except ConfigTask.DoesNotExist:
@@ -463,7 +458,7 @@ def config_task_detail_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def config_task_execute_api(request, pk):
-    """执行配置任务API"""
+    # 执行配置任务API
     from .tasks import execute_config_task
 
     try:
@@ -493,7 +488,7 @@ def config_task_execute_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def config_backup_trigger_api(request):
-    """触发配置备份API"""
+    # 触发配置备份API：单设备或全量备份
     device_id = request.data.get('device_id')
     schedule, _ = _get_or_create_backup_schedule(request.user)
     
@@ -521,7 +516,7 @@ def config_backup_trigger_api(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def config_backup_schedule_api(request):
-    """配置备份调度API"""
+    # 配置备份调度API：GET获取，POST更新
     from datetime import datetime
     
     if request.method == 'GET':
@@ -573,7 +568,7 @@ def config_backup_schedule_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def config_backup_status_api(request):
-    """配置备份状态API"""
+    # 配置备份状态API：返回各设备备份时间
     from .services import ConfigManagementService
 
     service = ConfigManagementService()
@@ -598,25 +593,12 @@ def config_backup_status_api(request):
     })
 
 
-class ConfigBackupView(LoginRequiredMixin, TemplateView):
-    """配置备份管理页面"""
-
-    template_name = 'configs/config_backup.html'
-    login_url = 'homepage:login'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['user'] = self.request.user
-        context['recent_backups'] = ConfigBackup.objects.select_related('device', 'backed_up_by').order_by('-backed_up_at')[:10]
-        return context
-
-
 # ==================== 定时任务 API ====================
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def schedule_list_api(request):
-    """定时任务列表API"""
+    # 定时任务列表API
     if request.method == 'GET':
         task_type = request.GET.get('task_type')
         schedules = ConfigFetchSchedule.objects.prefetch_related('target_devices', 'logs').all().order_by('-created_at')
@@ -651,7 +633,7 @@ def schedule_list_api(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def schedule_detail_api(request, pk):
-    """定时任务详情API"""
+    # 定时任务详情API
     try:
         schedule = ConfigFetchSchedule.objects.get(pk=pk)
     except ConfigFetchSchedule.DoesNotExist:
@@ -680,8 +662,9 @@ def schedule_detail_api(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def schedule_run_api(request, pk):
-    """立即执行定时任务API"""
+    # 立即执行定时任务API
     from .tasks import backup_all_devices_configs, preload_device_configs_task
+    from celery.result import AsyncResult
 
     try:
         schedule = ConfigFetchSchedule.objects.get(pk=pk)
@@ -694,17 +677,56 @@ def schedule_run_api(request, pk):
         job = preload_device_configs_task.delay(schedule.id)
 
     return Response({
-        'success': True,
+        'in_line': True,
         'job_id': job.id,
         'task_type': schedule.task_type,
-        'message': '任务已触发执行',
+        'message': '任务已提交，正在执行中',
     })
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def task_status_api(request, job_id):
+    # 查询Celery任务状态API
+    from celery.result import AsyncResult
+    from network_management.celery import app
+
+    result = AsyncResult(job_id, app=app)
+
+    response_data = {
+        'job_id': job_id,
+        'status': result.state,
+        'is_finish': result.ready(),
+    }
+
+    if result.ready():
+        # 任务已完成
+        if result.successful():
+            response_data['success'] = True
+            response_data['result'] = result.result
+        else:
+            response_data['success'] = False
+            try:
+                response_data['error'] = str(result.result)
+            except Exception:
+                response_data['error'] = '任务执行失败'
+    else:
+        # 任务还在执行中或排队中
+        response_data['in_line'] = True
+        if result.state == 'PENDING':
+            response_data['message'] = '任务在队列中等待执行'
+        elif result.state == 'STARTED':
+            response_data['message'] = '任务正在执行中'
+        else:
+            response_data['message'] = f'任务状态: {result.state}'
+
+    return Response(response_data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def schedule_logs_api(request, pk):
-    """定时任务执行日志API"""
+    # 定时任务执行日志API
     try:
         schedule = ConfigFetchSchedule.objects.get(pk=pk)
     except ConfigFetchSchedule.DoesNotExist:
@@ -729,7 +751,7 @@ def schedule_logs_api(request, pk):
 
 
 def _format_exec_plan(schedule):
-    """格式化执行计划显示"""
+    # 格式化执行计划显示
     if schedule.exec_mode == 'interval':
         choices = dict(ConfigFetchSchedule.INTERVAL_CHOICES)
         return choices.get(schedule.interval_seconds, f'每{schedule.interval_seconds}秒')

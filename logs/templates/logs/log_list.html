@@ -256,7 +256,6 @@
     </a>
     <div class="nb-topbar-spacer"></div>
     <div class="nb-topbar-actions">
-        <a href="/admin/" class="nb-topbar-btn">管理后台</a>
         <div class="nb-topbar-user">
             <div class="nb-topbar-avatar">{{ user.username|make_list|first|upper }}</div>
             <span>{{ user.username }}</span>
@@ -296,13 +295,9 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             告警管理
         </a>
-                <a href="{% url 'logs:runtime_log_list' %}" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-            设备日志
-        </a>
 <a href="{% url 'logs:log_list' %}" class="nb-sidebar-item active">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            系统日志
+            日志中心
         </a>
         <a href="{% url 'accounts:account_list' %}" class="nb-sidebar-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -310,10 +305,12 @@
         </a>
         <div class="nb-sidebar-divider"></div>
         <div class="nb-sidebar-section">系统</div>
-        <a href="/admin/" class="nb-sidebar-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            管理后台
+        <a href="{% url 'admin_panel:scheduled_tasks' %}" class="nb-sidebar-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            定时任务
         </a>
+
+        
     </aside>
 
     <!-- Main content -->
@@ -321,23 +318,70 @@
         <!-- Page header -->
         <div class="nb-page-header">
             <div>
-                <div class="nb-page-title">系统日志</div>
-                <div class="nb-page-subtitle">查看和分析系统日志记录</div>
+                <div class="nb-page-title">日志中心</div>
+                <div class="nb-page-subtitle">查看和分析系统操作日志、设备日志及告警记录</div>
+            </div>
+            <div style="display:flex;gap:0.5rem;">
+                <button class="btn btn-secondary" onclick="loadStatistics()">刷新统计</button>
+                <button class="btn btn-danger" onclick="showCleanupModal()">清理旧日志</button>
+            </div>
+        </div>
+
+        <!-- 统计概览卡片 -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="value" id="statTotal">-</div>
+                <div class="label">近7天总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statToday">-</div>
+                <div class="label">今日新增</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statAlert">-</div>
+                <div class="label">告警日志</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statSyslog">-</div>
+                <div class="label">设备日志</div>
+            </div>
+        </div>
+
+        <!-- 趋势图表 -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-body">
+                <div style="font-size:0.875rem;font-weight:600;color:var(--gray-700);margin-bottom:0.75rem;">近7天日志趋势</div>
+                <div style="position:relative;height:220px;">
+                    <canvas id="logTrendChart"></canvas>
+                </div>
             </div>
         </div>
 
         <div class="action-bar">
+            <select id="sourceFilter" class="nb-select" onchange="filterLogs()">
+                <option value="">全部日志</option>
+                <option value="operation">系统操作日志</option>
+                <option value="syslog">设备日志</option>
+                <option value="alert">告警日志</option>
+            </select>
             <select id="deviceFilter" class="nb-select" onchange="filterLogs()">
                 <option value="">所有设备</option>
                 {% for device in devices %}
                 <option value="{{ device.id }}">{{ device.name }}</option>
                 {% endfor %}
             </select>
-            <select id="logTypeFilter" class="nb-select" onchange="filterLogs()">
-                <option value="">所有类型</option>
-                <option value="alert">告警日志</option>
-                <option value="system">系统日志</option>
+            <select id="severityFilter" class="nb-select" onchange="filterLogs()" style="display:none;">
+                <option value="">所有级别</option>
+                <option value="emergency">Emergency (0)</option>
+                <option value="alert">Alert (1)</option>
+                <option value="critical">Critical (2)</option>
+                <option value="error">Error (3)</option>
+                <option value="warning">Warning (4)</option>
+                <option value="notice">Notice (5)</option>
+                <option value="informational">Informational (6)</option>
+                <option value="debug">Debug (7)</option>
             </select>
+            <input type="text" id="sourceIpInput" class="nb-select" placeholder="来源 IP" onkeyup="filterLogs()" style="display:none;">
             <div class="time-range-group">
                 <input type="datetime-local" id="startTime" onchange="filterLogs()">
                 <span>至</span>
@@ -352,7 +396,7 @@
         <div class="card" id="logCard">
             <div class="card-body" style="padding: 0;">
                 <table class="data-table" id="logTable">
-                    <thead>
+                    <thead id="logTableHead">
                         <tr>
                             <th>时间</th>
                             <th>类型</th>
@@ -387,27 +431,63 @@
     /* ── 日志类型映射 ── */
     const logTypeMap = { 'alert': '告警日志', 'system': '系统日志' };
 
+    /* ── 渲染表头 ── */
+    function renderTableHead(source) {
+        const thead = document.getElementById('logTableHead');
+        if (source === 'syslog') {
+            thead.innerHTML = `<tr>
+                <th>时间</th>
+                <th>级别</th>
+                <th>来源 IP</th>
+                <th>设备</th>
+                <th>消息</th>
+            </tr>`;
+        } else {
+            thead.innerHTML = `<tr>
+                <th>时间</th>
+                <th>类型</th>
+                <th>消息</th>
+                <th>设备</th>
+                <th>操作者</th>
+            </tr>`;
+        }
+    }
+
     /* ── 渲染日志表格 ── */
-    function renderLogs(logs) {
+    function renderLogs(logs, source) {
         const tbody = document.getElementById('logTableBody');
+        const isSyslog = (source === 'syslog');
+        const colCount = 5;
         if (!logs || logs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--gray-500);">暂无日志</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:2rem;color:var(--gray-500);">暂无日志</td></tr>`;
             return;
         }
         let html = '';
         logs.forEach(log => {
             const timestamp = log.timestamp ? new Date(log.timestamp).toLocaleString('zh-CN') : '-';
-            const logTypeDisplay = logTypeMap[log.log_type] || log.log_type || '-';
-            const message = log.message ? log.message.substring(0, 80) + (log.message.length > 80 ? '...' : '') : '-';
             const deviceName = log.device_name || '-';
-            const userName = log.user_name || '-';
-            html += `<tr style="border-bottom:1px solid var(--gray-100);cursor:pointer;" onclick="showLogDetail(${log.id})" title="点击查看详情">
-                <td style="padding:1rem;">${timestamp}</td>
-                <td style="padding:1rem;">${logTypeDisplay}</td>
-                <td style="padding:1rem;">${message}</td>
-                <td style="padding:1rem;">${deviceName}</td>
-                <td style="padding:1rem;">${userName}</td>
-            </tr>`;
+            const message = log.message ? log.message.substring(0, 80) + (log.message.length > 80 ? '...' : '') : '-';
+            if (isSyslog) {
+                const severity = log.severity || '-';
+                const sourceIp = log.source_ip || '-';
+                html += `<tr style="border-bottom:1px solid var(--gray-100);cursor:pointer;" onclick="showLogDetail(${log.id})" title="点击查看详情">
+                    <td style="padding:1rem;">${timestamp}</td>
+                    <td style="padding:1rem;">${severity}</td>
+                    <td style="padding:1rem;">${sourceIp}</td>
+                    <td style="padding:1rem;">${deviceName}</td>
+                    <td style="padding:1rem;">${message}</td>
+                </tr>`;
+            } else {
+                const logTypeDisplay = logTypeMap[log.log_type] || log.log_type || '-';
+                const userName = log.user_name || '-';
+                html += `<tr style="border-bottom:1px solid var(--gray-100);cursor:pointer;" onclick="showLogDetail(${log.id})" title="点击查看详情">
+                    <td style="padding:1rem;">${timestamp}</td>
+                    <td style="padding:1rem;">${logTypeDisplay}</td>
+                    <td style="padding:1rem;">${message}</td>
+                    <td style="padding:1rem;">${deviceName}</td>
+                    <td style="padding:1rem;">${userName}</td>
+                </tr>`;
+            }
         });
         tbody.innerHTML = html;
     }
@@ -435,20 +515,36 @@
     /* ── 加载日志 ── */
     let currentFilters = {};
     function loadLogs(page = 1) {
+        const source = document.getElementById('sourceFilter').value;
         const deviceId = document.getElementById('deviceFilter').value;
-        const logType = document.getElementById('logTypeFilter').value;
         const keyword = document.getElementById('searchInput').value;
         const startTime = document.getElementById('startTime').value;
         const endTime = document.getElementById('endTime').value;
 
         const params = new URLSearchParams({ page, page_size: 50 });
+        if (source) params.append('source', source);
         if (deviceId) params.append('device_id', deviceId);
-        if (logType) params.append('log_type', logType);
         if (keyword) params.append('keyword', keyword);
         if (startTime) params.append('start_time', startTime);
         if (endTime) params.append('end_time', endTime);
 
-        currentFilters = { deviceId, logType, keyword, startTime, endTime };
+        // 设备日志专属筛选
+        if (source === 'syslog') {
+            const severity = document.getElementById('severityFilter').value;
+            const sourceIp = document.getElementById('sourceIpInput').value;
+            if (severity) params.append('severity', severity);
+            if (sourceIp) params.append('source_ip', sourceIp);
+        }
+
+        currentFilters = { source, deviceId, keyword, startTime, endTime };
+
+        // 动态控制设备日志专属筛选器显隐
+        const severityFilter = document.getElementById('severityFilter');
+        const sourceIpInput = document.getElementById('sourceIpInput');
+        if (severityFilter) severityFilter.style.display = (source === 'syslog') ? '' : 'none';
+        if (sourceIpInput) sourceIpInput.style.display = (source === 'syslog') ? '' : 'none';
+
+        renderTableHead(source);
 
         const tbody = document.getElementById('logTableBody');
         tbody.innerHTML = `<tr id="logLoadingRow"><td colspan="5" style="text-align:center;padding:2rem;color:var(--gray-500);">加载中...</td></tr>`;
@@ -458,7 +554,7 @@
         })
         .then(res => res.json())
         .then(data => {
-            renderLogs(data.logs);
+            renderLogs(data.logs, source);
             renderPagination(data);
         })
         .catch(err => {
@@ -469,6 +565,7 @@
     /* ── 筛选触发 ── */
     function filterLogs() {
         loadLogs(1);
+        loadStatistics();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -486,8 +583,184 @@
             document.getElementById('endTime').value = formatDateTime(now);
         }
 
+        // URL 参数同步到日志分类下拉框
+        const urlParams = new URLSearchParams(window.location.search);
+        const sourceParam = urlParams.get('source');
+        if (sourceParam) {
+            document.getElementById('sourceFilter').value = sourceParam;
+        }
+
         loadLogs(1);
+        loadStatistics();
     });
+
+    /* ── 统计与图表 ── */
+    let logTrendChart = null;
+
+    function loadStatistics() {
+        const source = document.getElementById('sourceFilter').value;
+        const deviceId = document.getElementById('deviceFilter').value;
+        const keyword = document.getElementById('searchInput').value;
+        const startTime = document.getElementById('startTime').value;
+        const endTime = document.getElementById('endTime').value;
+        const severity = document.getElementById('severityFilter').value;
+        const sourceIp = document.getElementById('sourceIpInput').value;
+
+        const params = new URLSearchParams({ days: 7 });
+        if (source) params.append('source', source);
+        if (deviceId) params.append('device_id', deviceId);
+        if (keyword) params.append('keyword', keyword);
+        if (startTime) params.append('start_time', startTime);
+        if (endTime) params.append('end_time', endTime);
+        if (severity && source === 'syslog') params.append('severity', severity);
+        if (sourceIp && source === 'syslog') params.append('source_ip', sourceIp);
+
+        fetch('/logs/api/statistics/?' + params.toString(), {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        })
+        .then(res => res.json())
+        .then(data => {
+            renderStats(data);
+            renderTrendChart(data);
+        })
+        .catch(err => {
+            console.error('加载统计失败:', err);
+        });
+    }
+
+    function renderStats(data) {
+        document.getElementById('statTotal').textContent = data.total ?? '-';
+        document.getElementById('statToday').textContent = data.today_count ?? '-';
+
+        let alertCount = 0;
+        let syslogCount = 0;
+        if (data.by_source_type) {
+            alertCount = data.by_source_type.alert || 0;
+            syslogCount = data.by_source_type.syslog || 0;
+        } else if (data.by_type) {
+            data.by_type.forEach(item => {
+                if (item.log_type === 'alert') alertCount = item.count;
+                if (item.log_type === 'system') syslogCount = item.count;
+            });
+        }
+        document.getElementById('statAlert').textContent = alertCount;
+        document.getElementById('statSyslog').textContent = syslogCount;
+    }
+
+    function renderTrendChart(data) {
+        const ctx = document.getElementById('logTrendChart');
+        if (!ctx) return;
+
+        const detail = data.by_date_detail || [];
+        const labels = detail.map(item => item.date);
+
+        const source = document.getElementById('sourceFilter').value;
+
+        const typeConfig = {
+            'alert': { label: '告警日志', color: 'rgba(220, 38, 38, 0.7)', border: 'rgba(220, 38, 38, 1)' },
+            'syslog': { label: '设备日志', color: 'rgba(37, 99, 235, 0.7)', border: 'rgba(37, 99, 235, 1)' },
+            'operation': { label: '系统操作日志', color: 'rgba(22, 163, 74, 0.7)', border: 'rgba(22, 163, 74, 1)' },
+        };
+
+        const datasets = [];
+        const showTypes = [];
+        if (!source || source === 'alert') showTypes.push('alert');
+        if (!source || source === 'syslog') showTypes.push('syslog');
+        if (!source || source === 'operation') showTypes.push('operation');
+
+        showTypes.forEach(key => {
+            datasets.push({
+                label: typeConfig[key].label,
+                data: detail.map(item => item[key]),
+                backgroundColor: typeConfig[key].color,
+                borderColor: typeConfig[key].border,
+                borderWidth: 1,
+                borderRadius: 4,
+            });
+        });
+
+        if (logTrendChart) {
+            logTrendChart.destroy();
+        }
+
+        logTrendChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { usePointStyle: true, boxWidth: 8 }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+
+    /* ── 清理旧日志 ── */
+    function showCleanupModal() {
+        document.getElementById('cleanupModal').style.display = 'flex';
+    }
+
+    function closeCleanupModal() {
+        document.getElementById('cleanupModal').style.display = 'none';
+    }
+
+    function confirmCleanup() {
+        const days = parseInt(document.getElementById('cleanupDays').value, 10);
+        const btn = document.getElementById('cleanupConfirmBtn');
+        btn.disabled = true;
+        btn.textContent = '清理中...';
+
+        fetch('/logs/api/cleanup/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify({ days: days })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(`清理完成！共删除 ${data.deleted_count || 0} 条日志。`);
+            closeCleanupModal();
+            loadLogs(1);
+            loadStatistics();
+        })
+        .catch(err => {
+            alert('清理失败: ' + err);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = '确认清理';
+        });
+    }
 
     /* ── 显示日志详情 ── */
     function showLogDetail(logId) {
@@ -634,6 +907,34 @@
         <div id="logDetailContent"></div>
     </div>
 </div>
+
+<!-- 清理旧日志确认模态框 -->
+<div id="cleanupModal" class="modal-overlay" onclick="closeCleanupModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title">清理旧日志</div>
+            <button class="modal-close" onclick="closeCleanupModal()">&times;</button>
+        </div>
+        <div>
+            <p style="color:#6c757d;margin-bottom:1rem;">此操作将永久删除指定天数之前的日志，无法恢复。</p>
+            <div style="margin-bottom:1rem;">
+                <strong style="display:inline-block;min-width:80px;">保留天数:</strong>
+                <select id="cleanupDays" class="nb-select">
+                    <option value="7">保留最近 7 天</option>
+                    <option value="30">保留最近 30 天</option>
+                    <option value="90">保留最近 90 天</option>
+                </select>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:0.5rem;">
+                <button class="btn btn-secondary" onclick="closeCleanupModal()">取消</button>
+                <button id="cleanupConfirmBtn" class="btn btn-danger" onclick="confirmCleanup()">确认清理</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 </body>
 </html>

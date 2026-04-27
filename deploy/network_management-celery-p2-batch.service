@@ -1,0 +1,25 @@
+[Unit]
+Description=Network Management Celery Worker - P2 Batch (Backups & Background Tasks)
+After=network.target redis.service
+Requires=redis.service
+
+[Service]
+Type=simple
+User=seth
+WorkingDirectory=/opt/network_management
+Environment="PATH=/opt/network_management/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+Environment="DJANGO_SETTINGS_MODULE=network_management.settings"
+ExecStart=/opt/network_management/venv/bin/celery \
+    -A network_management \
+    worker \
+    -Q default,low \
+    -n p2-batch@%h \
+    --loglevel=info \
+    --concurrency=8
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

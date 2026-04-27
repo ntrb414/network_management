@@ -1,6 +1,6 @@
 {% extends 'ipmanagement/base_ipmanagement.html' %}
 
-{% block title %}{{ subnet.cidr }}{% endblock %}
+{% block title %}{{ subnet.name|default:subnet.cidr }}{% endblock %}
 {% block ipmanagement_active %}active{% endblock %}
 
 {% block extra_css %}
@@ -248,7 +248,6 @@
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="搜索IP、主机名、描述..." value="{{ search }}">
             <button type="button" class="btn btn-secondary btn-sm" onclick="doSearch()">搜索</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="alert('JavaScript正常工作!')">测试</button>
             {% if search %}
             <a href="?status={{ status_filter }}" class="btn btn-outline-secondary btn-sm">清除</a>
             {% endif %}

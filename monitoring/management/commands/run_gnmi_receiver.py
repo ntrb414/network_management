@@ -45,7 +45,7 @@ _H3C_OSPF_ZERO_BASE_STATE_MAP = {
 
 
 def _decode_h3c_ospf_state(raw_state):
-    """Normalize H3C OSPF state to standard 1-based values used by the UI."""
+    # Normalize H3C OSPF state to standard 1-based values used by UI
     if raw_state is None:
         return None, 'Unknown', False
 

@@ -171,21 +171,13 @@ class ConfigManagementService:
         return None
 
     def backup_device_configs(self, device) -> Dict[str, Any]:
-        """
-        备份设备配置到 Redis（用于定时任务）
-
-        Args:
-            device: 设备对象
-
-        Returns:
-            备份结果字典
-        """
+        # 备份设备配置，返回实际的配置内容文本
         result = {
             'device_id': device.id,
             'device_name': device.name,
             'success': False,
-            'running_config': None,
-            'startup_config': None,
+            'running_config_content': None,
+            'startup_config_content': None,
             'error': None,
             'running_config_time': None,
             'startup_config_time': None,
@@ -195,25 +187,122 @@ class ConfigManagementService:
             # 备份运行配置
             running_config = self.get_current_config(device, use_cache=False)
             if running_config:
-                result['running_config'] = True
+                result['running_config_content'] = running_config
                 result['running_config_time'] = timezone.now().isoformat()
                 logger.info(f"设备 {device.name} 运行配置备份成功")
 
             # 备份启动配置
             startup_config = self.get_startup_config(device, use_cache=False)
             if startup_config:
-                result['startup_config'] = True
+                result['startup_config_content'] = startup_config
                 result['startup_config_time'] = timezone.now().isoformat()
                 logger.info(f"设备 {device.name} 启动配置备份成功")
 
-            # 改进成功判断逻辑：至少有一种配置备份成功即为成功
+            # 至少有一种配置备份成功即为成功
             result['success'] = bool(running_config or startup_config)
 
-        except Exception as e:
-            result['error'] = str(e)
-            logger.error(f"备份设备 {device.name} 配置失败: {e}")
+        except Exception as error:
+            result['error'] = str(error)
+            logger.error(f"备份设备 {device.name} 配置失败: {error}")
 
         return result
+
+    def save_device_configs(self, device) -> Dict[str, Any]:
+        # 在设备上执行 save 命令保存配置，然后获取 running-config 和 startup-config
+        # H3C 设备执行 save force（无需确认）
+        # 华为设备执行 save（需要交互确认 y）
+        from nornir import InitNornir
+        from nornir_netmiko.tasks import netmiko_save_config
+
+        device_vendor = self._detect_vendor(device)
+
+        # 构造 Nornir inventory（单设备）
+        inventory = self._build_simple_inventory_files([device])
+
+        nornir_instance = InitNornir(
+            runner={'plugin': 'threaded', 'options': {'num_workers': 1}},
+            inventory={'plugin': 'SimpleInventory', 'options': inventory}
+        )
+
+        save_success = False
+        save_output = ''
+        try:
+            # 根据设备厂商选择 save 方式
+            if device_vendor == 'huawei':
+                save_result = nornir_instance.run(
+                    task=netmiko_save_config,
+                    cmd='save',
+                    confirm=True,
+                    confirm_response='y',
+                )
+            elif device_vendor == 'h3c':
+                save_result = nornir_instance.run(
+                    task=netmiko_save_config,
+                    cmd='save force',
+                )
+            else:
+                save_result = nornir_instance.run(
+                    task=netmiko_save_config,
+                    cmd='write memory',
+                )
+
+            # 检查 Nornir 结果，提取可序列化的字符串输出
+            for host_name, host_result in save_result.items():
+                if host_result.failed:
+                    # 提取失败原因
+                    exc = getattr(host_result, 'exception', None)
+                    save_output = str(exc) if exc else '保存配置失败'
+                    break
+                result_val = getattr(host_result, 'result', None)
+                save_output = str(result_val) if result_val is not None else ''
+                save_success = True
+            else:
+                # 循环正常结束（没有 break）
+                save_success = True
+
+        except Exception as e:
+            save_success = False
+            save_output = str(e)
+            logger.error(f"设备 {device.name} 保存配置异常: {e}")
+        finally:
+            # 关闭 Nornir 连接，清理临时 inventory 文件
+            try:
+                nornir_instance.close_connections()
+            except Exception:
+                pass
+            self._cleanup_temp_inventory_files(inventory)
+
+        if not save_success:
+            return {
+                'success': False,
+                'device_id': device.id,
+                'device_name': device.name,
+                'error': save_output,
+                'running_config': '',
+                'startup_config': '',
+            }
+
+        # save 成功后拉取设备配置
+        try:
+            running_config = self.get_current_config(device, use_cache=False)
+        except Exception as e:
+            running_config = ''
+            logger.error(f"设备 {device.name} 获取运行配置失败: {e}")
+
+        try:
+            startup_config = self.get_startup_config(device, use_cache=False)
+        except Exception as e:
+            startup_config = ''
+            logger.error(f"设备 {device.name} 获取启动配置失败: {e}")
+
+        return {
+            'success': True,
+            'device_id': device.id,
+            'device_name': device.name,
+            'save_output': save_output,
+            'running_config': running_config,
+            'startup_config': startup_config,
+        }
 
     def _get_config_via_netmiko(self, device, config_type='running') -> str:
         """通过 Netmiko 获取设备配置。"""
