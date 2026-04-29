@@ -877,6 +877,50 @@ class IPAMService:
             'failed_count': len(failed),
         }
 
+    def _get_local_ip_addresses(self) -> set:
+        """获取本机所有IP地址（IPv4）"""
+        local_ips = set()
+        try:
+            # 方法1: hostname -I 获取所有IP
+            result = subprocess.run(
+                ['hostname', '-I'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=2
+            )
+            if result.returncode == 0:
+                ips = result.stdout.decode().strip().split()
+                local_ips.update(ips)
+        except Exception:
+            pass
+
+        # 方法2: 通过socket获取
+        try:
+            import socket
+            hostname = socket.gethostname()
+            local_ips.add(socket.gethostbyname(hostname))
+        except Exception:
+            pass
+
+        # 方法3: 从网络接口获取
+        try:
+            result = subprocess.run(
+                ['ip', 'addr', 'show'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=2
+            )
+            if result.returncode == 0:
+                output = result.stdout.decode()
+                # 匹配 inet x.x.x.x/xx 格式
+                import re
+                matches = re.findall(r'inet\s+([\d.]+)/', output)
+                local_ips.update(matches)
+        except Exception:
+            pass
+
+        return local_ips
+
     def sync_scan_results(self, subnet_id: int, scan_results: List[Dict]) -> Dict:
         """
         将扫描结果同步到IPAM，自动根据存活状态设置IP使用状态
@@ -885,6 +929,7 @@ class IPAMService:
         - 存活的 IP：自动标记为已分配（allocated）
         - 离线的 IP：若无设备关联且无分配人，则标记为可用（available）
         - 预留的 IP：不改变状态（预留状态不受扫描影响）
+        - 本机 IP：始终标记为已分配，不会被释放
         """
         from .models import IPAddress, AllocationLog, Subnet
         from django.utils import timezone
@@ -893,6 +938,9 @@ class IPAMService:
             subnet = Subnet.objects.get(id=subnet_id)
         except Subnet.DoesNotExist:
             return {'success': False, 'error': 'Subnet不存在'}
+
+        # 获取本机IP地址列表，本机IP不应被释放
+        local_ips = self._get_local_ip_addresses()
 
         created_count = 0
         allocated_count = 0
@@ -974,8 +1022,27 @@ class IPAMService:
 
             # === 离线的 IP：若无设备关联则标记为可用 ===
             else:
+                # 本机IP不应被释放，始终标记为已分配
+                if ip_str in local_ips:
+                    if ip.status == 'available':
+                        ip.status = 'allocated'
+                        ip.allocated_at = timezone.now()
+                        ip.save()
+                        allocated_count += 1
+                        updated = True
+
+                        AllocationLog.objects.create(
+                            ip_address=ip_str,
+                            hostname=ip.hostname,
+                            action='scan_allocate',
+                            old_value={'status': old_status, 'hostname': old_hostname, 'mac_address': old_mac},
+                            new_value={'status': 'allocated', 'hostname': ip.hostname, 'mac_address': ip.mac_address},
+                            notes='本机IP，自动标记为已分配'
+                        )
+                    logger.debug(f"IP {ip_str} is local IP, skip release")
+
                 # 预留状态不改变
-                if ip.status == 'reserved':
+                elif ip.status == 'reserved':
                     pass
 
                 # 已分配且无设备关联、无分配人 -> 可用（清理历史数据）

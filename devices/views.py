@@ -50,13 +50,11 @@ class DeviceDetailView(LoginRequiredMixin, DetailView):
     login_url = 'homepage:login'
 
     def get_context_data(self, **kwargs):
-        # 添加用户权限和端口信息到上下文
+        # 添加用户权限到上下文
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         context["can_manage_devices"] = has_module_permission(self.request.user, "devices", "edit")
         context["is_readonly_user"] = not context["can_manage_devices"]
-        
-        context['ports'] = self.object.ports.all()
         return context
 
 

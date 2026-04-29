@@ -9,7 +9,7 @@ import subprocess
 from ipaddress import ip_network, ip_address
 from typing import List, Optional, Dict, Any
 
-from .models import Device, Port
+from .models import Device
 
 
 class DeviceDiscoveryService:
@@ -332,7 +332,6 @@ class DeviceDiscoveryService:
             ssh_port=device_info.get('ssh_port', 22),
             ssh_username=device_info.get('ssh_username', ''),
             ssh_password=device_info.get('ssh_password', ''),
-            snmp_community=device_info.get('snmp_community', ''),
             layer=device_info.get('layer'),
         )
         return device
@@ -357,41 +356,6 @@ class DeviceDiscoveryService:
             'status': device.status,
             'location': device.location,
             'layer': device.layer,
-            'ports': [],
         }
 
-        # 获取端口信息
-        ports = device.ports.all()
-        for port in ports:
-            details['ports'].append({
-                'name': port.name,
-                'port_type': port.port_type,
-                'status': port.status,
-                'speed': port.speed,
-                'mac_address': port.mac_address,
-            })
-
-        # 尝试通过SSH获取更多信息
-        if device.status == 'online' and device.ssh_username:
-            try:
-                ssh_info = self._get_device_info_via_ssh(device)
-                if ssh_info:
-                    details.update(ssh_info)
-            except Exception as e:
-                print(f"通过SSH获取设备信息失败: {e}")
-
         return details
-
-    def _get_device_info_via_ssh(self, device: Device) -> Optional[Dict[str, Any]]:
-        """
-        通过SSH获取设备信息
-
-        Args:
-            device: 设备对象
-
-        Returns:
-            设备信息字典
-        """
-        # 实际实现需要使用Netmiko库
-        # 这里返回None，让调用者处理
-        return None

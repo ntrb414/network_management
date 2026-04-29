@@ -12,7 +12,7 @@ from unittest.mock import patch
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from devices.models import Device, Port
+from devices.models import Device
 from devices.services import DeviceDiscoveryService
 from accounts.models import UserProfile
 
@@ -80,23 +80,12 @@ class DeviceDiscoveryServiceTestCase(TestCase):
             model='Cisco 2960',
         )
 
-        # 添加端口
-        Port.objects.create(
-            device=device,
-            name='GigabitEthernet0/1',
-            port_type='ethernet',
-            status='up',
-            speed='1000Mbps',
-        )
-
         details = self.service.get_device_details(device)
 
         self.assertEqual(details['name'], 'detail-test-device')
         self.assertEqual(details['device_type'], 'switch')
         self.assertEqual(details['ip_address'], '192.168.1.50')
         self.assertEqual(details['status'], 'online')
-        self.assertEqual(len(details['ports']), 1)
-        self.assertEqual(details['ports'][0]['name'], 'GigabitEthernet0/1')
 
 
 class DeviceModelTestCase(TestCase):

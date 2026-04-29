@@ -137,65 +137,6 @@ def scheduled_device_discovery(self):
 @shared_task(
     bind=True,
     max_retries=3,
-    time_limit=120,
-    soft_time_limit=100,
-    queue='default',
-)
-def discover_device_details(self, device_id: int):
-    # 发现设备详细信息并更新端口
-    # 参数: device_id-设备ID
-    from .services import DeviceDiscoveryService
-    from .models import Device, Port
-
-    service = DeviceDiscoveryService()
-
-    try:
-        device = Device.objects.get(id=device_id)
-
-        # 获取设备详细信息
-        details = service.get_device_details(device)
-
-        # 更新设备信息
-        device.model = details.get('model', '')
-        device.status = details.get('status', device.status)
-        device.save()
-
-        # 更新端口信息
-        # 先删除旧端口
-        device.ports.all().delete()
-
-        # 创建新端口
-        for port_info in details.get('ports', []):
-            Port.objects.create(
-                device=device,
-                name=port_info['name'],
-                port_type=port_info.get('port_type', ''),
-                status=port_info.get('status', ''),
-                speed=port_info.get('speed', ''),
-                mac_address=port_info.get('mac_address', ''),
-            )
-
-        return {
-            'success': True,
-            'device_id': device_id,
-            'ports_count': len(details.get('ports', [])),
-        }
-
-    except Device.DoesNotExist:
-        return {
-            'success': False,
-            'error': f'Device with id {device_id} not found',
-        }
-    except Exception as exc:
-        return {
-            'success': False,
-            'error': str(exc),
-        }
-
-
-@shared_task(
-    bind=True,
-    max_retries=3,
     time_limit=45,
     soft_time_limit=40,
     queue='critical',
